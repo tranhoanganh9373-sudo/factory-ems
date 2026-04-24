@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ems-postgres-dev
+    environment:
+      POSTGRES_DB: factory_ems
+      POSTGRES_USER: ems
+      POSTGRES_PASSWORD: ems_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - ems_pg_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ems -d factory_ems"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  ems_pg_dev:
