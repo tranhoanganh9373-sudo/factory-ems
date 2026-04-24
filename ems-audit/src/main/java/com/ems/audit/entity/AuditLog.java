@@ -1,6 +1,8 @@
 package com.ems.audit.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.OffsetDateTime;
 
 @Entity
@@ -18,7 +20,13 @@ public class AuditLog {
     @Column(name = "resource_id")     private String resourceId;
     @Column(columnDefinition = "text") private String summary;
 
-    @Column
+    // Hibernate 6 native JSON handling. String here holds JSON text;
+    // Hibernate binds it as JSON at the JDBC layer, matching the
+    // production JSONB column created by Flyway V1.0.7. Without
+    // @JdbcTypeCode(SqlTypes.JSON), prod startup fails schema validation
+    // (Hibernate would expect VARCHAR, DB has JSONB).
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
     private String detail;
 
     private String ip;
