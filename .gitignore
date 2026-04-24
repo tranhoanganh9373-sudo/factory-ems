@@ -1,0 +1,37 @@
+# Java
+target/
+*.class
+*.jar
+*.war
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+.pnpm-store/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime
+logs/
+*.log
+
+# Secrets & data
+.env
+data/
+backup/
+
+# E2E
+e2e/test-results/
+e2e/playwright-report/
