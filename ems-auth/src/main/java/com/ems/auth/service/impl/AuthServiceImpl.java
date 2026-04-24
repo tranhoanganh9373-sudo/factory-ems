@@ -43,7 +43,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional
+    @Transactional(noRollbackFor = UnauthorizedException.class)
     public LoginResult login(String username, String password, String ip, String ua) {
         User u = users.findByUsername(username).orElseThrow(() ->
             authFail(null, username, ip, ua, "用户不存在"));
@@ -58,10 +58,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         if (!encoder.matches(password, u.getPasswordHash())) {
-            u.setFailedAttempts(u.getFailedAttempts() + 1);
-            if (u.getFailedAttempts() >= maxFailed) {
+            int n = (u.getFailedAttempts() == null ? 0 : u.getFailedAttempts()) + 1;
+            if (n >= maxFailed) {
                 u.setLockedUntil(OffsetDateTime.now().plusMinutes(lockoutMinutes));
                 u.setFailedAttempts(0);
+            } else {
+                u.setFailedAttempts(n);
             }
             users.save(u);
             audit(u.getId(), u.getUsername(), "LOGIN_FAIL", ip, ua, "密码错误");
