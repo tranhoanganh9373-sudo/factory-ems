@@ -1603,8 +1603,8 @@ git commit -m "feat(audit): flyway migration for audit_logs"
 package com.ems.audit.entity;
 
 import jakarta.persistence.*;
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -1623,6 +1623,11 @@ public class AuditLog {
     @Column(name = "resource_id")     private String resourceId;
     @Column(columnDefinition = "text") private String summary;
 
+    // Hibernate 6 native JSON binding. String holds JSON text; @JdbcTypeCode
+    // tells Hibernate to bind at JDBC layer as JSON so the Flyway-created
+    // JSONB column validates cleanly in prod (ddl-auto=validate) AND the
+    // test's ddl-auto=create-drop generates a JSONB column.
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private String detail;
 
@@ -1660,11 +1665,11 @@ public class AuditLog {
 }
 ```
 
-> **Note:** `detail` 字段用 `String (jsonb)` 简化——存入时手动 `objectMapper.writeValueAsString(...)`，读取时手动反序列化。避免引入 hibernate-types 依赖。
+> **Note:** `detail` 字段用 `String` + Hibernate 6 原生 JSON 绑定（`@JdbcTypeCode(SqlTypes.JSON)`）。存入时调用方手动 `objectMapper.writeValueAsString(...)` 得到 JSON 文本赋给 `detail`；Hibernate 在 JDBC 层把它作为 JSON 类型绑定到 PG 的 JSONB 列。这样 prod（`ddl-auto=validate` + Flyway 建的 JSONB 列）和 test（`ddl-auto=create-drop` 让 Hibernate 直接建 JSONB 列）两头都对齐，不用引入 hibernate-types 第三方依赖。
+>
+> **坑**：如果只写 `@Column(columnDefinition = "jsonb")` 没加 `@JdbcTypeCode(SqlTypes.JSON)`，Hibernate 把 String 当 VARCHAR 绑定到 JSONB 列会报 SQL 类型不匹配；如果只加 `@JdbcTypeCode` 没写 columnDefinition，测试里 Hibernate 生成的 schema 类型不定。两个一起写最稳。
 
-- [ ] **Step 2: 把 `detail` 改为 `String`（jsonb 用 columnDefinition），移除 import `io.hypersistence.*` 和 `@Type`**（上面示例已去）
-
-- [ ] **Step 3: 写 Repository**
+- [ ] **Step 2: 写 Repository**
 
 ```java
 package com.ems.audit.repository;
@@ -1698,7 +1703,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 }
 ```
 
-- [ ] **Step 4: 提交**
+- [ ] **Step 3: 提交**
 
 ```bash
 git add ems-audit/src/main/java/com/ems/audit/entity/ ems-audit/src/main/java/com/ems/audit/repository/
