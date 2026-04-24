@@ -554,6 +554,7 @@ git commit -m "chore: initial gitignore and readme"
         <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId></dependency>
         <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
         <dependency><groupId>net.logstash.logback</groupId><artifactId>logstash-logback-encoder</artifactId><version>8.0</version></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
     </dependencies>
 
     <build>
@@ -568,13 +569,17 @@ git commit -m "chore: initial gitignore and readme"
 </project>
 ```
 
-- [ ] **Step 7: 验证构建**
+- [ ] **Step 7: 验证 POM 结构**
 
 ```bash
-./mvnw -T 4 -DskipTests clean install
+mvn -T 4 -DskipTests clean compile
 ```
 
-Expected: `BUILD SUCCESS`，5 个 JAR 生成。
+Expected: `BUILD SUCCESS`，6 个 reactor module（父 + 5 子）全部 SUCCESS。
+
+> **注意**：这里用 `compile` 而不是 `install`——`ems-app` 的 `spring-boot-maven-plugin:repackage` 在 `install` 阶段会找 main class，而主类要到 Task 4 才加。此时用 `install` 会报 `Unable to find main class`。等 Task 4 之后再用 `install`。
+>
+> 并且此时 `./mvnw` 还没装（Task 12 才装），先用系统 `mvn`。
 
 - [ ] **Step 8: 提交**
 
