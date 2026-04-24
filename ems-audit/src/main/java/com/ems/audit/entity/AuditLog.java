@@ -18,7 +18,7 @@ public class AuditLog {
     @Column(name = "resource_id")     private String resourceId;
     @Column(columnDefinition = "text") private String summary;
 
-    @Column(columnDefinition = "jsonb")
+    @Column
     private String detail;
 
     private String ip;
