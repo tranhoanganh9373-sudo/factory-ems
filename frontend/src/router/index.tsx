@@ -1,0 +1,43 @@
+import { Routes, Route } from 'react-router-dom';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import AppLayout from '@/layouts/AppLayout';
+import LoginPage from '@/pages/login';
+import ProfilePage from '@/pages/profile';
+import ForbiddenPage from '@/pages/forbidden';
+import NotFoundPage from '@/pages/not-found';
+import OrgTreePage from '@/pages/orgtree';
+import UserListPage from '@/pages/admin/users/list';
+import UserEditPage from '@/pages/admin/users/edit';
+import UserPermissionPage from '@/pages/admin/users/permissions';
+import RoleListPage from '@/pages/admin/roles/list';
+import AuditListPage from '@/pages/admin/audit/list';
+import HomePage from '@/pages/home';
+
+export function AppRouter() {
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/forbidden" element={<ForbiddenPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<HomePage />} />
+        <Route path="profile" element={<ProfilePage />} />
+        <Route path="orgtree" element={<OrgTreePage />} />
+        <Route path="admin" element={<ProtectedRoute requiredRole="ADMIN"><></></ProtectedRoute>}>
+          <Route path="users" element={<UserListPage />} />
+          <Route path="users/:id" element={<UserEditPage />} />
+          <Route path="users/:id/permissions" element={<UserPermissionPage />} />
+          <Route path="roles" element={<RoleListPage />} />
+          <Route path="audit" element={<AuditListPage />} />
+        </Route>
+      </Route>
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  );
+}
