@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: factory-ems
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: Asia/Shanghai
+      hibernate.format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  tomcat:
+    max-threads: 200
+  forward-headers-strategy: native
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+ems:
+  jwt:
+    secret: ${EMS_JWT_SECRET:changeme-dev-only-32bytes-minimum!}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  login:
+    max-failed-attempts: 5
+    lockout-minutes: 15

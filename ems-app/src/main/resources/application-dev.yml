@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/factory_ems
+    username: ems
+    password: ${EMS_DB_PASSWORD:ems_dev}
+    hikari:
+      maximum-pool-size: 10
+
+logging:
+  level:
+    root: INFO
+    com.ems: DEBUG
+    org.hibernate.SQL: DEBUG

@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${EMS_DB_HOST:postgres}:5432/${EMS_DB_NAME:factory_ems}
+    username: ${EMS_DB_USER:ems}
+    password: ${EMS_DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 30
+      connection-timeout: 10000
+
+logging:
+  level:
+    root: INFO
+    com.ems: INFO
