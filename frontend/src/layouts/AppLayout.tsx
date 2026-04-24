@@ -1,0 +1,93 @@
+import { useMemo } from 'react';
+import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
+import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/authStore';
+import { authApi } from '@/api/auth';
+
+const { Header, Sider, Content } = Layout;
+
+export default function AppLayout() {
+  const { user, clear, hasRole } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const menuItems = useMemo(() => {
+    const items: {
+      key: string;
+      label: React.ReactNode;
+      children?: { key: string; label: React.ReactNode }[];
+    }[] = [
+      { key: '/', label: <Link to="/">首页</Link> },
+      { key: '/orgtree', label: <Link to="/orgtree">组织树</Link> },
+    ];
+    if (hasRole('ADMIN')) {
+      items.push({
+        key: 'admin',
+        label: '管理',
+        children: [
+          { key: '/admin/users', label: <Link to="/admin/users">用户</Link> },
+          { key: '/admin/roles', label: <Link to="/admin/roles">角色</Link> },
+          { key: '/admin/audit', label: <Link to="/admin/audit">审计日志</Link> },
+        ],
+      });
+    }
+    return items;
+  }, [hasRole]);
+
+  const userMenu = {
+    items: [
+      { key: 'profile', icon: <SettingOutlined />, label: <Link to="/profile">修改密码</Link> },
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: '退出登录',
+        onClick: async () => {
+          try {
+            await authApi.logout();
+          } catch {
+            // ignore
+          }
+          clear();
+          navigate('/login');
+        },
+      },
+    ],
+  };
+
+  return (
+    <Layout style={{ minHeight: '100vh' }}>
+      <Header
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 24px',
+        }}
+      >
+        <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
+          工厂能源管理系统
+        </Typography.Title>
+        <Dropdown menu={userMenu} trigger={['click']}>
+          <span style={{ color: 'white', cursor: 'pointer' }}>
+            <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
+          </span>
+        </Dropdown>
+      </Header>
+      <Layout>
+        <Sider width={220} theme="light">
+          <Menu
+            mode="inline"
+            selectedKeys={[location.pathname]}
+            defaultOpenKeys={['admin']}
+            items={menuItems}
+            style={{ height: '100%', borderRight: 0 }}
+          />
+        </Sider>
+        <Content style={{ padding: 24, background: '#fff', margin: 16 }}>
+          <Outlet />
+        </Content>
+      </Layout>
+    </Layout>
+  );
+}
