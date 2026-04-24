@@ -1,0 +1,15 @@
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    out-of-order: true
+  jpa:
+    hibernate.ddl-auto: none
+ems:
+  jwt:
+    secret: this-is-a-test-secret-at-least-32-bytes-long!!!
+    access-token-minutes: 15
+    refresh-token-days: 7
+  login:
+    max-failed-attempts: 5
+    lockout-minutes: 15
