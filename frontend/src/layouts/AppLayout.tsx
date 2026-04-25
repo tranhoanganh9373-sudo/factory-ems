@@ -52,6 +52,14 @@ export default function AppLayout() {
         ),
       },
       { key: '/tariff', label: <Link to="/tariff">电价方案</Link> },
+      {
+        key: 'production',
+        label: '生产',
+        children: [
+          { key: '/production/shifts', label: <Link to="/production/shifts">班次管理</Link> },
+          { key: '/production/entry', label: <Link to="/production/entry">日产量录入</Link> },
+        ],
+      },
     ];
     if (hasRole('ADMIN')) {
       items.push({

@@ -16,6 +16,8 @@ import HomePage from '@/pages/home';
 import DashboardPage from '@/pages/dashboard';
 import ReportPage from '@/pages/report';
 import TariffPage from '@/pages/tariff';
+import ShiftsPage from '@/pages/production/shifts';
+import ProductionEntryPage from '@/pages/production/entry';
 
 export function AppRouter() {
   return (
@@ -38,6 +40,8 @@ export function AppRouter() {
         <Route path="meters" element={<MetersPage />} />
         <Route path="report" element={<ReportPage />} />
         <Route path="tariff" element={<TariffPage />} />
+        <Route path="production/shifts" element={<ShiftsPage />} />
+        <Route path="production/entry" element={<ProductionEntryPage />} />
         <Route
           path="admin"
           element={
