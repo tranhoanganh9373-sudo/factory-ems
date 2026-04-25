@@ -44,12 +44,20 @@ export default function AppLayout() {
         ),
       },
       {
-        key: '/report',
+        key: 'report',
         label: (
-          <Link to="/report">
-            <FileTextOutlined /> 报表导出
-          </Link>
+          <span>
+            <FileTextOutlined /> 报表
+          </span>
         ),
+        children: [
+          { key: '/report', label: <Link to="/report">即席查询</Link> },
+          { key: '/report/daily', label: <Link to="/report/daily">日报</Link> },
+          { key: '/report/monthly', label: <Link to="/report/monthly">月报</Link> },
+          { key: '/report/yearly', label: <Link to="/report/yearly">年报</Link> },
+          { key: '/report/shift', label: <Link to="/report/shift">班次</Link> },
+          { key: '/report/export', label: <Link to="/report/export">异步导出</Link> },
+        ],
       },
       { key: '/tariff', label: <Link to="/tariff">电价方案</Link> },
       {
