@@ -33,4 +33,7 @@ public interface DashboardService {
 
     /** ⑦ 单位产量能耗：按日聚合电耗 / 产量 → 强度曲线。 */
     EnergyIntensityDTO energyIntensity(RangeQuery query);
+
+    /** ⑧ 能流 Sankey：基于 meter_topology 父子关系，边权重 = source 累计读数。 */
+    SankeyDTO sankey(RangeQuery query);
 }

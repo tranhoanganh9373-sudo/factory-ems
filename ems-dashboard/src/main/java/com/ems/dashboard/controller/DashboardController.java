@@ -92,4 +92,15 @@ public class DashboardController {
             @RequestParam(required = false) Long orgNodeId) {
         return Result.ok(service.energyIntensity(new RangeQuery(range, from, to, orgNodeId, "ELEC")));
     }
+
+    /** ⑧ 能流 Sankey */
+    @GetMapping("/sankey")
+    public Result<SankeyDTO> sankey(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId,
+            @RequestParam(required = false) String energyType) {
+        return Result.ok(service.sankey(new RangeQuery(range, from, to, orgNodeId, energyType)));
+    }
 }

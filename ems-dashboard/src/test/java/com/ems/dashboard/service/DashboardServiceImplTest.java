@@ -4,7 +4,9 @@ import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
+import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.meter.repository.MeterTopologyRepository;
 import com.ems.production.service.ProductionEntryService;
 import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.MeterPoint;
@@ -30,6 +32,7 @@ class DashboardServiceImplTest {
     TariffService tariff;
     EnergyTypeRepository energyTypes;
     ProductionEntryService production;
+    MeterTopologyRepository topology;
     DashboardServiceImpl svc;
 
     static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
@@ -43,7 +46,8 @@ class DashboardServiceImplTest {
         tariff = mock(TariffService.class);
         energyTypes = mock(EnergyTypeRepository.class);
         production = mock(ProductionEntryService.class);
-        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production);
+        topology = mock(MeterTopologyRepository.class);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology);
     }
 
     /* ---------------- KPI ---------------- */
@@ -243,6 +247,53 @@ class DashboardServiceImplTest {
         var out = svc.tariffDistribution(new RangeQuery(RangeType.TODAY, null, null, null, null));
         assertThat(out.total()).isEqualTo(0.0);
         assertThat(out.slices()).isEmpty();
+    }
+
+    /* ---------------- ⑧ Sankey ---------------- */
+
+    private static MeterTopology edge(Long parent, Long child) {
+        MeterTopology e = new MeterTopology();
+        e.setParentMeterId(parent);
+        e.setChildMeterId(child);
+        return e;
+    }
+
+    @Test
+    void sankey_buildsNodesAndLinks_fromTopology() {
+        when(support.resolveMeters(any(), any())).thenReturn(List.of(M1, M3));
+        when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 100.0, 3L, 30.0));
+        when(topology.findAll()).thenReturn(List.of(edge(1L, 3L)));
+
+        var out = svc.sankey(new RangeQuery(RangeType.TODAY, null, null, null, null));
+
+        assertThat(out.nodes()).hasSize(2);
+        assertThat(out.nodes()).extracting(SankeyDTO.Node::id).containsExactlyInAnyOrder("1", "3");
+        assertThat(out.links()).singleElement().satisfies(l -> {
+            assertThat(l.source()).isEqualTo("1");
+            assertThat(l.target()).isEqualTo("3");
+            assertThat(l.value()).isEqualTo(30.0);  // child 累计
+        });
+    }
+
+    @Test
+    void sankey_filtersOutEdges_outsideVisibleScope() {
+        // 仅 M1 可见；topology 中 5L 不在可见集合中 → 边丢弃
+        when(support.resolveMeters(any(), any())).thenReturn(List.of(M1));
+        when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 50.0));
+        when(topology.findAll()).thenReturn(List.of(edge(1L, 5L), edge(99L, 1L)));
+
+        var out = svc.sankey(new RangeQuery(RangeType.TODAY, null, null, null, null));
+        assertThat(out.nodes()).isEmpty();
+        assertThat(out.links()).isEmpty();
+    }
+
+    @Test
+    void sankey_emptyMeters_returnsEmpty() {
+        when(support.resolveMeters(any(), any())).thenReturn(List.of());
+        var out = svc.sankey(new RangeQuery(RangeType.TODAY, null, null, null, null));
+        assertThat(out.nodes()).isEmpty();
+        assertThat(out.links()).isEmpty();
+        verify(topology, never()).findAll();
     }
 
 }

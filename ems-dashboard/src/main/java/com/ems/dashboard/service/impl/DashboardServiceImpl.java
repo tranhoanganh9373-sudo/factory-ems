@@ -6,7 +6,9 @@ import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
 import com.ems.dashboard.support.RangeResolver;
 import com.ems.meter.entity.EnergyType;
+import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.meter.repository.MeterTopologyRepository;
 import com.ems.production.service.ProductionEntryService;
 import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.Granularity;
@@ -25,9 +27,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -42,15 +46,18 @@ public class DashboardServiceImpl implements DashboardService {
     private final TariffService tariff;
     private final EnergyTypeRepository energyTypes;
     private final ProductionEntryService production;
+    private final MeterTopologyRepository topology;
 
     public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
                                 TariffService tariff, EnergyTypeRepository energyTypes,
-                                ProductionEntryService production) {
+                                ProductionEntryService production,
+                                MeterTopologyRepository topology) {
         this.support = support;
         this.tsq = tsq;
         this.tariff = tariff;
         this.energyTypes = energyTypes;
         this.production = production;
+        this.topology = topology;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -286,6 +293,56 @@ public class DashboardServiceImpl implements DashboardService {
         }
 
         return new EnergyIntensityDTO(elecUnit, "件", new ArrayList<>(merged.values()));
+    }
+
+    /* ---------------- ⑧ Sankey ---------------- */
+
+    @Override
+    public SankeyDTO sankey(RangeQuery query) {
+        TimeRange range = RangeResolver.resolve(query);
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
+        if (meters.isEmpty()) {
+            return new SankeyDTO(List.of(), List.of());
+        }
+
+        Map<Long, MeterRecord> byId = new HashMap<>();
+        for (MeterRecord m : meters) byId.put(m.meterId(), m);
+
+        // 累计值（用于边权重 — 取 source 测点累计）
+        Map<Long, Double> sums = tsq.sumByMeter(toRefs(meters), range);
+
+        // 仅取在可见范围内的拓扑边
+        List<MeterTopology> edges = topology.findAll().stream()
+                .filter(e -> byId.containsKey(e.getParentMeterId()) && byId.containsKey(e.getChildMeterId()))
+                .toList();
+
+        // 节点：包含所有出现在边上的测点（避免孤儿）
+        Set<Long> involved = new HashSet<>();
+        for (MeterTopology e : edges) {
+            involved.add(e.getParentMeterId());
+            involved.add(e.getChildMeterId());
+        }
+
+        List<SankeyDTO.Node> nodes = new ArrayList<>(involved.size());
+        for (Long id : involved) {
+            MeterRecord m = byId.get(id);
+            String label = m.code() + (m.name() != null ? " " + m.name() : "");
+            nodes.add(new SankeyDTO.Node(String.valueOf(id), label, m.energyTypeCode(), m.unit()));
+        }
+        nodes.sort(Comparator.comparing(SankeyDTO.Node::id));
+
+        List<SankeyDTO.Link> links = new ArrayList<>(edges.size());
+        for (MeterTopology e : edges) {
+            // 边权重 = child 累计（视作流向 child 的流量）；fallback 0.0
+            double v = sums.getOrDefault(e.getChildMeterId(), 0.0);
+            links.add(new SankeyDTO.Link(
+                    String.valueOf(e.getParentMeterId()),
+                    String.valueOf(e.getChildMeterId()),
+                    v
+            ));
+        }
+        links.sort(Comparator.comparing(SankeyDTO.Link::source).thenComparing(SankeyDTO.Link::target));
+        return new SankeyDTO(nodes, links);
     }
 
     /* ---------------- helpers ---------------- */
