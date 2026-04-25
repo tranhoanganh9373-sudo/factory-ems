@@ -13,6 +13,7 @@
         <dependency><groupId>com.ems</groupId><artifactId>ems-orgtree</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-auth</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-meter</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.ems</groupId><artifactId>ems-timeseries</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
         <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
         <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId></dependency>
