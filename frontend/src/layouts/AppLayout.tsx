@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, ApiOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, SettingOutlined, ApiOutlined, DashboardOutlined } from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
@@ -18,7 +18,15 @@ export default function AppLayout() {
       label: React.ReactNode;
       children?: { key: string; label: React.ReactNode }[];
     }[] = [
-      { key: '/', label: <Link to="/">首页</Link> },
+      {
+        key: '/dashboard',
+        label: (
+          <Link to="/dashboard">
+            <DashboardOutlined /> 实时看板
+          </Link>
+        ),
+      },
+      { key: '/home', label: <Link to="/home">首页</Link> },
       { key: '/orgtree', label: <Link to="/orgtree">组织树</Link> },
       {
         key: '/meters',

@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet } from 'react-router-dom';
+import { Routes, Route, Outlet, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import AppLayout from '@/layouts/AppLayout';
 import LoginPage from '@/pages/login';
@@ -13,6 +13,7 @@ import UserPermissionPage from '@/pages/admin/users/permissions';
 import RoleListPage from '@/pages/admin/roles/list';
 import AuditListPage from '@/pages/admin/audit/list';
 import HomePage from '@/pages/home';
+import DashboardPage from '@/pages/dashboard';
 
 export function AppRouter() {
   return (
@@ -27,7 +28,9 @@ export function AppRouter() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<HomePage />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="home" element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="orgtree" element={<OrgTreePage />} />
         <Route path="meters" element={<MetersPage />} />
