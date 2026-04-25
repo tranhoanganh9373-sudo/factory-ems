@@ -1,0 +1,45 @@
+spring:
+  application:
+    name: mock-data-generator
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:mock}
+  datasource:
+    url: jdbc:postgresql://${EMS_DB_HOST:localhost}:5432/${EMS_DB_NAME:factory_ems}
+    username: ${EMS_DB_USER:ems}
+    password: ${EMS_DB_PASSWORD:ems_dev}
+    hikari:
+      maximum-pool-size: 5
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: Asia/Shanghai
+      hibernate.format_sql: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    out-of-order: true
+    locations: classpath:db/migration
+
+ems:
+  influx:
+    url: ${EMS_INFLUX_URL:http://localhost:8086}
+    token: ${EMS_INFLUX_TOKEN:changeme}
+    org: ${EMS_INFLUX_ORG:factory}
+    bucket: ${EMS_INFLUX_BUCKET:factory_ems}
+    measurement: ${EMS_INFLUX_MEASUREMENT:energy_reading}
+  # Disable auth-related beans that aren't needed in CLI mode
+  jwt:
+    secret: ${EMS_JWT_SECRET:mock-tool-not-used-32bytes-minimum!!}
+    access-token-minutes: 15
+    refresh-token-days: 7
+  login:
+    max-failed-attempts: 5
+    lockout-minutes: 15
+
+logging:
+  level:
+    root: WARN
+    com.ems.mockdata: INFO
+    org.flywaydb: INFO
