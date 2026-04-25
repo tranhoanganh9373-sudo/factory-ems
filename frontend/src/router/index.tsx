@@ -6,6 +6,7 @@ import ProfilePage from '@/pages/profile';
 import ForbiddenPage from '@/pages/forbidden';
 import NotFoundPage from '@/pages/not-found';
 import OrgTreePage from '@/pages/orgtree';
+import MetersPage from '@/pages/meters';
 import UserListPage from '@/pages/admin/users/list';
 import UserEditPage from '@/pages/admin/users/edit';
 import UserPermissionPage from '@/pages/admin/users/permissions';
@@ -29,6 +30,7 @@ export function AppRouter() {
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="orgtree" element={<OrgTreePage />} />
+        <Route path="meters" element={<MetersPage />} />
         <Route
           path="admin"
           element={
