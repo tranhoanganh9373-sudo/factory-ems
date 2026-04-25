@@ -22,7 +22,15 @@ public class FileTokenStore {
     private static final Logger log = LoggerFactory.getLogger(FileTokenStore.class);
     private static final Duration TTL = Duration.ofMinutes(30);
 
-    public enum Status { PENDING, RUNNING, READY, FAILED }
+    /**
+     * READY/DONE 含义相同，二者并存仅为兼容历史 API（CSV 同步导出走 READY；
+     * 新版异步导出 /reports/export/{token} 走 DONE）。Controller 层判断 isTerminalSuccess()。
+     */
+    public enum Status {
+        PENDING, RUNNING, READY, DONE, FAILED;
+
+        public boolean isTerminalSuccess() { return this == READY || this == DONE; }
+    }
 
     public static final class Entry {
         public final String token;
