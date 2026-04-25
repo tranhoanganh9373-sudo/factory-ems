@@ -60,6 +60,7 @@ export default function AppLayout() {
           { key: '/production/entry', label: <Link to="/production/entry">日产量录入</Link> },
         ],
       },
+      { key: '/floorplan', label: <Link to="/floorplan">平面图</Link> },
     ];
     if (hasRole('ADMIN')) {
       items.push({

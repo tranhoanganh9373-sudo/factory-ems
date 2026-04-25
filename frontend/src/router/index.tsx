@@ -18,6 +18,8 @@ import ReportPage from '@/pages/report';
 import TariffPage from '@/pages/tariff';
 import ShiftsPage from '@/pages/production/shifts';
 import ProductionEntryPage from '@/pages/production/entry';
+import FloorplanListPage from '@/pages/floorplan/list';
+import FloorplanEditorPage from '@/pages/floorplan/editor';
 
 export function AppRouter() {
   return (
@@ -42,6 +44,8 @@ export function AppRouter() {
         <Route path="tariff" element={<TariffPage />} />
         <Route path="production/shifts" element={<ShiftsPage />} />
         <Route path="production/entry" element={<ProductionEntryPage />} />
+        <Route path="floorplan" element={<FloorplanListPage />} />
+        <Route path="floorplan/editor/:id" element={<FloorplanEditorPage />} />
         <Route
           path="admin"
           element={
