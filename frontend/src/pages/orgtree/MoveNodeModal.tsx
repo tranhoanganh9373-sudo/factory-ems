@@ -34,7 +34,8 @@ export function MoveNodeModal({ open, node, tree, onClose }: {
     return ids;
   }, [node, tree]);
 
-  const toSelectData = (nodes: OrgNodeDTO[]): any[] =>
+  interface SelectNode { title: string; value: number; disabled: boolean; children: SelectNode[]; }
+  const toSelectData = (nodes: OrgNodeDTO[]): SelectNode[] =>
     nodes.map((n) => ({
       title: n.name, value: n.id,
       disabled: excludedIds.has(n.id),
@@ -44,7 +45,7 @@ export function MoveNodeModal({ open, node, tree, onClose }: {
   return (
     <Modal title={`移动 ${node?.name ?? ''}`} open={open} onCancel={onClose}
       onOk={() => mut.mutate()} confirmLoading={mut.isPending} destroyOnClose>
-      <Alert type="info" showIcon message="选择新的父节点；选择"根"将成为顶级节点。" style={{ marginBottom: 16 }} />
+      <Alert type="info" showIcon message={'选择新的父节点；选择\u201c根\u201d将成为顶级节点。'} style={{ marginBottom: 16 }} />
       <TreeSelect style={{ width: '100%' }}
         placeholder="选择新父节点（空=根）"
         allowClear treeDefaultExpandAll

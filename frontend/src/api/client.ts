@@ -92,7 +92,11 @@ apiClient.interceptors.response.use(
 );
 
 export class BizError extends Error {
-  constructor(public code: number, message: string, public traceId?: string) {
+  constructor(
+    public code: number,
+    message: string,
+    public traceId?: string
+  ) {
     super(message);
   }
 }

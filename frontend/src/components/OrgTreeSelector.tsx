@@ -14,7 +14,8 @@ export function OrgTreeSelector({
   const { data: tree = [] } = useQuery({
     queryKey: ['orgtree'], queryFn: () => orgTreeApi.getTree(), staleTime: 60_000,
   });
-  const toSelectData = (nodes: OrgNodeDTO[]): any[] =>
+  interface SelectNode { title: string; value: number; children: SelectNode[]; }
+  const toSelectData = (nodes: OrgNodeDTO[]): SelectNode[] =>
     nodes.map((n) => ({ title: n.name, value: n.id, children: toSelectData(n.children) }));
   return (
     <TreeSelect

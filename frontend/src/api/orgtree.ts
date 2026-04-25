@@ -32,9 +32,7 @@ export const orgTreeApi = {
   create: (req: CreateOrgNodeReq) =>
     apiClient.post<OrgNodeDTO>('/org-nodes', req).then((r) => r.data as unknown as OrgNodeDTO),
   update: (id: number, req: UpdateOrgNodeReq) =>
-    apiClient
-      .put<OrgNodeDTO>(`/org-nodes/${id}`, req)
-      .then((r) => r.data as unknown as OrgNodeDTO),
+    apiClient.put<OrgNodeDTO>(`/org-nodes/${id}`, req).then((r) => r.data as unknown as OrgNodeDTO),
   move: (id: number, newParentId: number | null) =>
     apiClient.patch(`/org-nodes/${id}/move`, { newParentId }),
   delete: (id: number) => apiClient.delete(`/org-nodes/${id}`),

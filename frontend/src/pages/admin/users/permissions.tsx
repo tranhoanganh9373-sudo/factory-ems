@@ -45,7 +45,8 @@ export default function UserPermissionPage() {
     }
     return null;
   };
-  const toSelectData = (nodes: OrgNodeDTO[]): any[] =>
+  interface SelectNode { title: string; value: number; children: SelectNode[]; }
+  const toSelectData = (nodes: OrgNodeDTO[]): SelectNode[] =>
     nodes.map((n) => ({ title: n.name, value: n.id, children: toSelectData(n.children) }));
 
   return (

@@ -29,7 +29,14 @@ export function AppRouter() {
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="orgtree" element={<OrgTreePage />} />
-        <Route path="admin" element={<ProtectedRoute requiredRole="ADMIN"><></></ProtectedRoute>}>
+        <Route
+          path="admin"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <></>
+            </ProtectedRoute>
+          }
+        >
           <Route path="users" element={<UserListPage />} />
           <Route path="users/:id" element={<UserEditPage />} />
           <Route path="users/:id/permissions" element={<UserPermissionPage />} />

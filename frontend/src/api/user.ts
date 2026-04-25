@@ -23,8 +23,12 @@ export const userApi = {
       .then((r) => r.data as unknown as PageDTO<UserDTO>),
   getById: (id: number) =>
     apiClient.get<UserDTO>(`/users/${id}`).then((r) => r.data as unknown as UserDTO),
-  create: (req: { username: string; password: string; displayName?: string; roleCodes?: string[] }) =>
-    apiClient.post<UserDTO>('/users', req).then((r) => r.data as unknown as UserDTO),
+  create: (req: {
+    username: string;
+    password: string;
+    displayName?: string;
+    roleCodes?: string[];
+  }) => apiClient.post<UserDTO>('/users', req).then((r) => r.data as unknown as UserDTO),
   update: (id: number, req: { displayName?: string; enabled?: boolean }) =>
     apiClient.put<UserDTO>(`/users/${id}`, req).then((r) => r.data as unknown as UserDTO),
   delete: (id: number) => apiClient.delete(`/users/${id}`),
