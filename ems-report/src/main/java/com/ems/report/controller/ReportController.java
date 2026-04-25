@@ -90,7 +90,7 @@ public class ReportController {
         return switch (e.status) {
             case PENDING, RUNNING -> ResponseEntity.accepted().body(toDto(e));
             case FAILED -> ResponseEntity.internalServerError().body(toDto(e));
-            case READY -> {
+            case READY, DONE -> {
                 StreamingResponseBody body = out -> {
                     try (InputStream in = Files.newInputStream(e.file)) {
                         in.transferTo(out);
