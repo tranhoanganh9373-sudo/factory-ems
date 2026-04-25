@@ -1,6 +1,13 @@
 import { useMemo } from 'react';
 import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, ApiOutlined, DashboardOutlined } from '@ant-design/icons';
+import {
+  UserOutlined,
+  LogoutOutlined,
+  SettingOutlined,
+  ApiOutlined,
+  DashboardOutlined,
+  FileTextOutlined,
+} from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
@@ -33,6 +40,14 @@ export default function AppLayout() {
         label: (
           <Link to="/meters">
             <ApiOutlined /> 测点管理
+          </Link>
+        ),
+      },
+      {
+        key: '/report',
+        label: (
+          <Link to="/report">
+            <FileTextOutlined /> 报表导出
           </Link>
         ),
       },

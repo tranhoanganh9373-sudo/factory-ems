@@ -14,7 +14,14 @@ import { dashboardApi, type SeriesDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
 import dayjs from 'dayjs';
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, ToolboxComponent, CanvasRenderer]);
+echarts.use([
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  ToolboxComponent,
+  CanvasRenderer,
+]);
 
 function buildOption(series: SeriesDTO[]) {
   return {
@@ -50,7 +57,14 @@ export default function RealtimeSeriesPanel() {
 
   const { data, isLoading, isError } = useQuery<SeriesDTO[]>({
     queryKey: ['dashboard', 'series', { range, customFrom, customTo, orgNodeId, energyType }],
-    queryFn: () => dashboardApi.getRealtimeSeries({ range, from: customFrom, to: customTo, orgNodeId, energyType }),
+    queryFn: () =>
+      dashboardApi.getRealtimeSeries({
+        range,
+        from: customFrom,
+        to: customTo,
+        orgNodeId,
+        energyType,
+      }),
     enabled: isCustomReady,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
@@ -78,7 +92,8 @@ export default function RealtimeSeriesPanel() {
     }
   }, [data]);
 
-  if (!isCustomReady) return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
+  if (!isCustomReady)
+    return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
   if (isLoading) return <Skeleton active paragraph={{ rows: 5 }} />;
   if (isError) return <Alert type="error" message="实时曲线加载失败" showIcon />;
   if (!data?.length) return <Empty description="暂无实时曲线数据" />;

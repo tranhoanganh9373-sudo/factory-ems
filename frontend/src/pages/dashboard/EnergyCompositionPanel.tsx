@@ -29,7 +29,9 @@ function buildOption(data: CompositionDTO[]) {
             formatter: `{b}\n${(d.share * 100).toFixed(1)}%`,
           },
         })),
-        emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+        emphasis: {
+          itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' },
+        },
       },
     ],
   };
@@ -41,7 +43,8 @@ export default function EnergyCompositionPanel() {
 
   const { data, isLoading, isError } = useQuery<CompositionDTO[]>({
     queryKey: ['dashboard', 'composition', { range, customFrom, customTo, orgNodeId }],
-    queryFn: () => dashboardApi.getEnergyComposition({ range, from: customFrom, to: customTo, orgNodeId }),
+    queryFn: () =>
+      dashboardApi.getEnergyComposition({ range, from: customFrom, to: customTo, orgNodeId }),
     enabled: isCustomReady,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
@@ -69,7 +72,8 @@ export default function EnergyCompositionPanel() {
     }
   }, [data]);
 
-  if (!isCustomReady) return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
+  if (!isCustomReady)
+    return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
   if (isLoading) return <Skeleton active paragraph={{ rows: 5 }} />;
   if (isError) return <Alert type="error" message="能耗构成加载失败" showIcon />;
   if (!data?.length) return <Empty description="暂无能耗构成数据" />;

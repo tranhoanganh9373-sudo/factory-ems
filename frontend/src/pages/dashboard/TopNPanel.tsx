@@ -22,7 +22,8 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
 
   const { data, isLoading, isError } = useQuery<TopNItemDTO[]>({
     queryKey: ['dashboard', 'topn', { range, customFrom, customTo, orgNodeId, energyType, limit }],
-    queryFn: () => dashboardApi.getTopN({ range, from: customFrom, to: customTo, orgNodeId, energyType }, limit),
+    queryFn: () =>
+      dashboardApi.getTopN({ range, from: customFrom, to: customTo, orgNodeId, energyType }, limit),
     enabled: isCustomReady,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
@@ -41,11 +42,7 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
       dataIndex: 'name',
       key: 'name',
       render: (name, record) =>
-        onMeterClick ? (
-          <a onClick={() => onMeterClick(record.meterId)}>{name}</a>
-        ) : (
-          name
-        ),
+        onMeterClick ? <a onClick={() => onMeterClick(record.meterId)}>{name}</a> : name,
     },
     {
       title: '能源类型',
@@ -61,18 +58,21 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
     },
   ];
 
-  if (!isCustomReady) return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
+  if (!isCustomReady)
+    return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 8,
+        }}
+      >
         <Typography.Text strong>用能 Top N</Typography.Text>
-        <Select
-          options={LIMIT_OPTIONS}
-          value={limit}
-          onChange={setLimit}
-          style={{ width: 100 }}
-        />
+        <Select options={LIMIT_OPTIONS} value={limit} onChange={setLimit} style={{ width: 100 }} />
       </div>
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 5 }} />

@@ -82,11 +82,7 @@ export default function FilterBar() {
         onChange={handleRangeChange}
       />
       {range === 'CUSTOM' && (
-        <DatePicker.RangePicker
-          showTime
-          value={dateValue}
-          onChange={handleDateRange}
-        />
+        <DatePicker.RangePicker showTime value={dateValue} onChange={handleDateRange} />
       )}
       <TreeSelect
         allowClear

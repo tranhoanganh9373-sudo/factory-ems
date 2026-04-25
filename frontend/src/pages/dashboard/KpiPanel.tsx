@@ -18,12 +18,7 @@ function DeltaBadge({ value, label }: { value: number | null; label: string }) {
 function KpiCard({ item }: { item: KpiDTO }) {
   return (
     <Card size="small" style={{ minWidth: 160 }}>
-      <Statistic
-        title={item.energyType}
-        value={item.total ?? 0}
-        precision={2}
-        suffix={item.unit}
-      />
+      <Statistic title={item.energyType} value={item.total ?? 0} precision={2} suffix={item.unit} />
       <div style={{ marginTop: 4 }}>
         <DeltaBadge value={item.mom} label="环比" />
         <DeltaBadge value={item.yoy} label="同比" />
@@ -38,7 +33,8 @@ export default function KpiPanel() {
 
   const { data, isLoading, isError } = useQuery<KpiDTO[]>({
     queryKey: ['dashboard', 'kpi', { range, customFrom, customTo, orgNodeId, energyType }],
-    queryFn: () => dashboardApi.getKpi({ range, from: customFrom, to: customTo, orgNodeId, energyType }),
+    queryFn: () =>
+      dashboardApi.getKpi({ range, from: customFrom, to: customTo, orgNodeId, energyType }),
     enabled: isCustomReady,
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,

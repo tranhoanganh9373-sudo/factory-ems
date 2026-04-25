@@ -14,6 +14,7 @@ import RoleListPage from '@/pages/admin/roles/list';
 import AuditListPage from '@/pages/admin/audit/list';
 import HomePage from '@/pages/home';
 import DashboardPage from '@/pages/dashboard';
+import ReportPage from '@/pages/report';
 
 export function AppRouter() {
   return (
@@ -34,6 +35,7 @@ export function AppRouter() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="orgtree" element={<OrgTreePage />} />
         <Route path="meters" element={<MetersPage />} />
+        <Route path="report" element={<ReportPage />} />
         <Route
           path="admin"
           element={

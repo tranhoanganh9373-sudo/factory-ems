@@ -87,7 +87,9 @@ export const dashboardApi = {
 
   getEnergyComposition: (q: Omit<DashboardQuery, 'energyType'>) =>
     apiClient
-      .get<CompositionDTO[]>('/dashboard/energy-composition', { params: toParams(q as DashboardQuery) })
+      .get<
+        CompositionDTO[]
+      >('/dashboard/energy-composition', { params: toParams(q as DashboardQuery) })
       .then((r) => r.data as unknown as CompositionDTO[]),
 
   getMeterDetail: (id: number, q: Pick<DashboardQuery, 'range' | 'from' | 'to'>) =>
