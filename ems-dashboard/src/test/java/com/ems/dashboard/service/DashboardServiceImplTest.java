@@ -4,6 +4,10 @@ import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
+import com.ems.floorplan.dto.FloorplanDTO;
+import com.ems.floorplan.dto.FloorplanPointDTO;
+import com.ems.floorplan.dto.FloorplanWithPointsDTO;
+import com.ems.floorplan.service.FloorplanService;
 import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterTopologyRepository;
@@ -17,7 +21,9 @@ import com.ems.timeseries.query.TimeSeriesQueryService.MeterRef;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -33,6 +39,7 @@ class DashboardServiceImplTest {
     EnergyTypeRepository energyTypes;
     ProductionEntryService production;
     MeterTopologyRepository topology;
+    FloorplanService floorplans;
     DashboardServiceImpl svc;
 
     static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
@@ -47,7 +54,8 @@ class DashboardServiceImplTest {
         energyTypes = mock(EnergyTypeRepository.class);
         production = mock(ProductionEntryService.class);
         topology = mock(MeterTopologyRepository.class);
-        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology);
+        floorplans = mock(FloorplanService.class);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans);
     }
 
     /* ---------------- KPI ---------------- */
@@ -294,6 +302,70 @@ class DashboardServiceImplTest {
         assertThat(out.nodes()).isEmpty();
         assertThat(out.links()).isEmpty();
         verify(topology, never()).findAll();
+    }
+
+    /* ---------------- ⑨ Floorplan live ---------------- */
+
+    private static FloorplanWithPointsDTO fpFixture(Long fpId, FloorplanPointDTO... pts) {
+        FloorplanDTO fp = new FloorplanDTO(fpId, "车间A", 10L, "image/png",
+                1024, 768, 1234L, true, OffsetDateTime.parse("2026-04-25T08:00:00Z"));
+        return new FloorplanWithPointsDTO(fp, List.of(pts));
+    }
+
+    @Test
+    void floorplanLive_returnsPointsWithLevels() {
+        FloorplanPointDTO p1 = new FloorplanPointDTO(101L, 1L, new BigDecimal("0.10"), new BigDecimal("0.20"), "A");
+        FloorplanPointDTO p2 = new FloorplanPointDTO(102L, 3L, new BigDecimal("0.30"), new BigDecimal("0.40"), "B");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, p1, p2));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1, M3));
+        when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 100.0, 3L, 30.0));
+
+        var out = svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null));
+
+        assertThat(out.floorplan().id()).isEqualTo(7L);
+        assertThat(out.points()).hasSize(2);
+        var hi = out.points().stream().filter(p -> p.meterId().equals(1L)).findFirst().orElseThrow();
+        assertThat(hi.value()).isEqualTo(100.0);
+        assertThat(hi.level()).isEqualTo("HIGH");  // 100/100 = 1.0
+        assertThat(hi.energyType()).isEqualTo("ELEC");
+        var lo = out.points().stream().filter(p -> p.meterId().equals(3L)).findFirst().orElseThrow();
+        assertThat(lo.level()).isEqualTo("LOW");   // 30/100 = 0.3 → LOW
+    }
+
+    @Test
+    void floorplanLive_filtersOutInvisibleMeters() {
+        FloorplanPointDTO visible = new FloorplanPointDTO(101L, 1L, BigDecimal.ZERO, BigDecimal.ZERO, "A");
+        FloorplanPointDTO hidden = new FloorplanPointDTO(102L, 999L, BigDecimal.ZERO, BigDecimal.ZERO, "X");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, visible, hidden));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1));
+        when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 50.0));
+
+        var out = svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null));
+        assertThat(out.points()).hasSize(1);
+        assertThat(out.points().get(0).meterId()).isEqualTo(1L);
+    }
+
+    @Test
+    void floorplanLive_throwsForbidden_whenAllPointsInvisible() {
+        FloorplanPointDTO hidden = new FloorplanPointDTO(102L, 999L, BigDecimal.ZERO, BigDecimal.ZERO, "X");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, hidden));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() ->
+                svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null)))
+                .isInstanceOf(com.ems.core.exception.ForbiddenException.class);
+    }
+
+    @Test
+    void floorplanLive_zeroValues_yieldNoneLevel() {
+        FloorplanPointDTO p = new FloorplanPointDTO(101L, 1L, BigDecimal.ZERO, BigDecimal.ZERO, "A");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, p));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1));
+        when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of());  // 全 0
+
+        var out = svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null));
+        assertThat(out.points().get(0).level()).isEqualTo("NONE");
+        assertThat(out.points().get(0).value()).isEqualTo(0.0);
     }
 
 }

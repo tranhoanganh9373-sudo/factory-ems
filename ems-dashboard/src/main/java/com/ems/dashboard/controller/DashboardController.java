@@ -103,4 +103,15 @@ public class DashboardController {
             @RequestParam(required = false) String energyType) {
         return Result.ok(service.sankey(new RangeQuery(range, from, to, orgNodeId, energyType)));
     }
+
+    /** ⑨ 平面图实时 */
+    @GetMapping("/floorplan/{id}/live")
+    public Result<FloorplanLiveDTO> floorplanLive(
+            @PathVariable("id") Long id,
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.floorplanLive(id, new RangeQuery(range, from, to, orgNodeId, null)));
+    }
 }

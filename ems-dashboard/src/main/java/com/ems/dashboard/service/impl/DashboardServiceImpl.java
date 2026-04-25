@@ -1,10 +1,14 @@
 package com.ems.dashboard.service.impl;
 
+import com.ems.core.exception.ForbiddenException;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.DashboardService;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
 import com.ems.dashboard.support.RangeResolver;
+import com.ems.floorplan.dto.FloorplanPointDTO;
+import com.ems.floorplan.dto.FloorplanWithPointsDTO;
+import com.ems.floorplan.service.FloorplanService;
 import com.ems.meter.entity.EnergyType;
 import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
@@ -47,17 +51,20 @@ public class DashboardServiceImpl implements DashboardService {
     private final EnergyTypeRepository energyTypes;
     private final ProductionEntryService production;
     private final MeterTopologyRepository topology;
+    private final FloorplanService floorplans;
 
     public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
                                 TariffService tariff, EnergyTypeRepository energyTypes,
                                 ProductionEntryService production,
-                                MeterTopologyRepository topology) {
+                                MeterTopologyRepository topology,
+                                FloorplanService floorplans) {
         this.support = support;
         this.tsq = tsq;
         this.tariff = tariff;
         this.energyTypes = energyTypes;
         this.production = production;
         this.topology = topology;
+        this.floorplans = floorplans;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -343,6 +350,68 @@ public class DashboardServiceImpl implements DashboardService {
         }
         links.sort(Comparator.comparing(SankeyDTO.Link::source).thenComparing(SankeyDTO.Link::target));
         return new SankeyDTO(nodes, links);
+    }
+
+    /* ---------------- ⑨ Floorplan live ---------------- */
+
+    @Override
+    public FloorplanLiveDTO floorplanLive(Long floorplanId, RangeQuery query) {
+        FloorplanWithPointsDTO fp = floorplans.getById(floorplanId);
+
+        // 用范围 + 用户可见性约束加载所有可见测点（不限制 energyType）
+        TimeRange range = RangeResolver.resolve(query);
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), null);
+        Map<Long, MeterRecord> byId = new HashMap<>();
+        for (MeterRecord m : meters) byId.put(m.meterId(), m);
+
+        // 仅保留底图测点中权限可见的部分
+        List<FloorplanPointDTO> visiblePts = fp.points().stream()
+                .filter(p -> byId.containsKey(p.meterId()))
+                .toList();
+        if (fp.points().size() > 0 && visiblePts.isEmpty()) {
+            // 整图都不可见 — 视作越权
+            throw new ForbiddenException("无权访问该平面图上的任意测点");
+        }
+
+        Map<Long, Double> sums = visiblePts.isEmpty()
+                ? Map.of()
+                : tsq.sumByMeter(toRefsForMeters(visiblePts, byId), range);
+
+        double max = sums.values().stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+
+        List<FloorplanLiveDTO.Point> out = new ArrayList<>(visiblePts.size());
+        for (FloorplanPointDTO p : visiblePts) {
+            MeterRecord m = byId.get(p.meterId());
+            double v = sums.getOrDefault(p.meterId(), 0.0);
+            String level = heatLevel(v, max);
+            out.add(new FloorplanLiveDTO.Point(
+                    p.id(), p.meterId(), m.code(), m.name(),
+                    m.energyTypeCode(), m.unit(),
+                    p.xRatio(), p.yRatio(), p.label(),
+                    v, level
+            ));
+        }
+        return new FloorplanLiveDTO(fp.floorplan(), out);
+    }
+
+    private static String heatLevel(double v, double max) {
+        if (max <= 0) return "NONE";
+        double r = v / max;
+        if (r >= 0.7) return "HIGH";
+        if (r >= 0.4) return "MEDIUM";
+        if (r > 0) return "LOW";
+        return "NONE";
+    }
+
+    private List<MeterRef> toRefsForMeters(List<FloorplanPointDTO> pts, Map<Long, MeterRecord> byId) {
+        List<MeterRef> refs = new ArrayList<>(pts.size());
+        for (FloorplanPointDTO p : pts) {
+            MeterRecord m = byId.get(p.meterId());
+            if (m != null) {
+                refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()));
+            }
+        }
+        return refs;
     }
 
     /* ---------------- helpers ---------------- */

@@ -36,4 +36,7 @@ public interface DashboardService {
 
     /** ⑧ 能流 Sankey：基于 meter_topology 父子关系，边权重 = source 累计读数。 */
     SankeyDTO sankey(RangeQuery query);
+
+    /** ⑨ 平面图实时：底图 + 测点 + 当期累计 + 热力等级。 */
+    FloorplanLiveDTO floorplanLive(Long floorplanId, RangeQuery query);
 }
