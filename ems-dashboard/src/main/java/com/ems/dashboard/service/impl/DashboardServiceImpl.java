@@ -7,6 +7,7 @@ import com.ems.dashboard.support.MeterRecord;
 import com.ems.dashboard.support.RangeResolver;
 import com.ems.meter.entity.EnergyType;
 import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.production.service.ProductionEntryService;
 import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.Granularity;
 import com.ems.timeseries.model.MeterPoint;
@@ -16,7 +17,9 @@ import com.ems.timeseries.query.TimeSeriesQueryService;
 import com.ems.timeseries.query.TimeSeriesQueryService.MeterRef;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -38,13 +41,16 @@ public class DashboardServiceImpl implements DashboardService {
     private final TimeSeriesQueryService tsq;
     private final TariffService tariff;
     private final EnergyTypeRepository energyTypes;
+    private final ProductionEntryService production;
 
     public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
-                                TariffService tariff, EnergyTypeRepository energyTypes) {
+                                TariffService tariff, EnergyTypeRepository energyTypes,
+                                ProductionEntryService production) {
         this.support = support;
         this.tsq = tsq;
         this.tariff = tariff;
         this.energyTypes = energyTypes;
+        this.production = production;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -228,6 +234,58 @@ public class DashboardServiceImpl implements DashboardService {
             slices.add(new TariffDistributionDTO.Slice(e.getKey(), v, share));
         }
         return new TariffDistributionDTO(unit, total, slices);
+    }
+
+    /* ---------------- ⑦ Energy intensity ---------------- */
+
+    @Override
+    public EnergyIntensityDTO energyIntensity(RangeQuery query) {
+        TimeRange range = RangeResolver.resolve(query);
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), "ELEC");
+
+        // 电耗按日聚合
+        TreeMap<LocalDate, Double> elecByDay = new TreeMap<>();
+        String elecUnit = null;
+        if (!meters.isEmpty()) {
+            elecUnit = unitByEnergyType(meters).get("ELEC");
+            List<MeterPoint> pts = tsq.queryByMeter(toRefs(meters), range, Granularity.DAY);
+            for (MeterPoint mp : pts) {
+                for (TimePoint p : mp.points()) {
+                    LocalDate d = p.ts().atZone(RangeResolver.ZONE).toLocalDate();
+                    elecByDay.merge(d, p.value(), Double::sum);
+                }
+            }
+        }
+
+        // 产量按日聚合
+        Long orgNodeId = query.orgNodeId();
+        LocalDate fromDate = range.start().atZone(RangeResolver.ZONE).toLocalDate();
+        LocalDate toDate = range.end().atZone(RangeResolver.ZONE).toLocalDate();
+        Map<LocalDate, BigDecimal> prodByDay = (orgNodeId == null)
+                ? Map.of()
+                : production.dailyTotals(orgNodeId, fromDate, toDate);
+
+        TreeMap<LocalDate, EnergyIntensityDTO.Point> merged = new TreeMap<>();
+        for (Map.Entry<LocalDate, Double> e : elecByDay.entrySet()) {
+            merged.put(e.getKey(), new EnergyIntensityDTO.Point(e.getKey(), e.getValue(), 0.0, null));
+        }
+        for (Map.Entry<LocalDate, BigDecimal> e : prodByDay.entrySet()) {
+            EnergyIntensityDTO.Point cur = merged.get(e.getKey());
+            double elec = cur != null ? cur.electricity() : 0.0;
+            double prod = e.getValue().doubleValue();
+            Double intensity = prod > 0 ? elec / prod : null;
+            merged.put(e.getKey(), new EnergyIntensityDTO.Point(e.getKey(), elec, prod, intensity));
+        }
+        // recompute intensity for entries that came in via elecByDay only
+        for (Map.Entry<LocalDate, EnergyIntensityDTO.Point> e : merged.entrySet()) {
+            EnergyIntensityDTO.Point pt = e.getValue();
+            if (pt.intensity() == null && pt.production() > 0) {
+                e.setValue(new EnergyIntensityDTO.Point(pt.date(), pt.electricity(), pt.production(),
+                        pt.electricity() / pt.production()));
+            }
+        }
+
+        return new EnergyIntensityDTO(elecUnit, "件", new ArrayList<>(merged.values()));
     }
 
     /* ---------------- helpers ---------------- */

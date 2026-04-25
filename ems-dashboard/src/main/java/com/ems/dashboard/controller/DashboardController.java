@@ -82,4 +82,14 @@ public class DashboardController {
             @RequestParam(required = false) Long orgNodeId) {
         return Result.ok(service.tariffDistribution(new RangeQuery(range, from, to, orgNodeId, "ELEC")));
     }
+
+    /** ⑦ 单位产量能耗 */
+    @GetMapping("/energy-intensity")
+    public Result<EnergyIntensityDTO> energyIntensity(
+            @RequestParam(defaultValue = "THIS_MONTH") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.energyIntensity(new RangeQuery(range, from, to, orgNodeId, "ELEC")));
+    }
 }

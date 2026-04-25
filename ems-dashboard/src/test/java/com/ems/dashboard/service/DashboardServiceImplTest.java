@@ -5,6 +5,7 @@ import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
 import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.production.service.ProductionEntryService;
 import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.MeterPoint;
 import com.ems.timeseries.model.TimePoint;
@@ -28,6 +29,7 @@ class DashboardServiceImplTest {
     TimeSeriesQueryService tsq;
     TariffService tariff;
     EnergyTypeRepository energyTypes;
+    ProductionEntryService production;
     DashboardServiceImpl svc;
 
     static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
@@ -40,7 +42,8 @@ class DashboardServiceImplTest {
         tsq = mock(TimeSeriesQueryService.class);
         tariff = mock(TariffService.class);
         energyTypes = mock(EnergyTypeRepository.class);
-        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes);
+        production = mock(ProductionEntryService.class);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production);
     }
 
     /* ---------------- KPI ---------------- */

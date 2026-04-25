@@ -30,4 +30,7 @@ public interface DashboardService {
 
     /** ⑥ 尖峰平谷分布：电耗按 tariff 时段类型聚合 + 占比。 */
     TariffDistributionDTO tariffDistribution(RangeQuery query);
+
+    /** ⑦ 单位产量能耗：按日聚合电耗 / 产量 → 强度曲线。 */
+    EnergyIntensityDTO energyIntensity(RangeQuery query);
 }
