@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1,                         // 共享 admin 账号，串行
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:8888',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',

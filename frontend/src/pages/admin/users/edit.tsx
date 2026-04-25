@@ -13,19 +13,29 @@ export default function UserEditPage() {
   const nav = useNavigate();
 
   const { data: user, isLoading } = useQuery({
-    queryKey: ['user', userId], queryFn: () => userApi.getById(userId), enabled: !!userId
+    queryKey: ['user', userId],
+    queryFn: () => userApi.getById(userId),
+    enabled: !!userId,
   });
   const { data: roles = [] } = useQuery({ queryKey: ['roles'], queryFn: roleApi.list });
 
-  useEffect(() => { if (user) form.setFieldsValue(user); }, [user, form]);
+  useEffect(() => {
+    if (user) form.setFieldsValue(user);
+  }, [user, form]);
 
   const updateMut = useMutation({
     mutationFn: (v: { displayName?: string; enabled?: boolean }) => userApi.update(userId, v),
-    onSuccess: () => { message.success('基础信息已更新'); qc.invalidateQueries({ queryKey: ['user', userId] }); },
+    onSuccess: () => {
+      message.success('基础信息已更新');
+      qc.invalidateQueries({ queryKey: ['user', userId] });
+    },
   });
   const rolesMut = useMutation({
     mutationFn: (codes: string[]) => userApi.assignRoles(userId, codes),
-    onSuccess: () => { message.success('角色已更新'); qc.invalidateQueries({ queryKey: ['user', userId] }); },
+    onSuccess: () => {
+      message.success('角色已更新');
+      qc.invalidateQueries({ queryKey: ['user', userId] });
+    },
   });
 
   if (isLoading) return <Spin />;
@@ -34,18 +44,36 @@ export default function UserEditPage() {
   return (
     <Card title={`编辑用户 ${user.username}`} extra={<Button onClick={() => nav(-1)}>返回</Button>}>
       <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
-        <Form.Item label="用户名"><Input disabled value={user.username} /></Form.Item>
-        <Form.Item name="displayName" label="姓名" rules={[{ max: 128 }]}><Input /></Form.Item>
-        <Form.Item name="enabled" label="启用" valuePropName="checked"><Switch /></Form.Item>
-        <Button type="primary" onClick={() => form.validateFields()
-          .then((v) => updateMut.mutate({ displayName: v.displayName, enabled: v.enabled }))}
-          loading={updateMut.isPending}>保存基础信息</Button>
+        <Form.Item label="用户名">
+          <Input disabled value={user.username} />
+        </Form.Item>
+        <Form.Item name="displayName" label="姓名" rules={[{ max: 128 }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="enabled" label="启用" valuePropName="checked">
+          <Switch />
+        </Form.Item>
+        <Button
+          type="primary"
+          onClick={() =>
+            form
+              .validateFields()
+              .then((v) => updateMut.mutate({ displayName: v.displayName, enabled: v.enabled }))
+          }
+          loading={updateMut.isPending}
+        >
+          保存基础信息
+        </Button>
       </Form>
 
       <Card type="inner" title="角色" style={{ marginTop: 24, maxWidth: 480 }}>
         <Form.Item label="角色" name="roleCodes" initialValue={user.roles}>
-          <Select mode="multiple" options={roles.map(r => ({ label: r.name, value: r.code }))}
-            defaultValue={user.roles} onChange={(codes) => rolesMut.mutate(codes)} />
+          <Select
+            mode="multiple"
+            options={roles.map((r) => ({ label: r.name, value: r.code }))}
+            defaultValue={user.roles}
+            onChange={(codes) => rolesMut.mutate(codes)}
+          />
         </Form.Item>
       </Card>
     </Card>

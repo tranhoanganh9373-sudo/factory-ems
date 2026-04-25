@@ -34,8 +34,10 @@ apiClient.interceptors.response.use(
     const body = err.response?.data;
     const code = body?.code;
 
-    // token 过期 → 刷新
-    if (status === 401 && code === 40001 && !original._retry) {
+    // token 过期 → 刷新（排除登录/刷新接口本身，避免错误密码触发刷新流）
+    const url = original.url || '';
+    const isAuthEndpoint = url.includes('/auth/login') || url.includes('/auth/refresh');
+    if (status === 401 && code === 40001 && !original._retry && !isAuthEndpoint) {
       original._retry = true;
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

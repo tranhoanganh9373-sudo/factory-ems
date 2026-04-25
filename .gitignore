@@ -35,3 +35,7 @@ backup/
 # E2E
 e2e/test-results/
 e2e/playwright-report/
+
+# Tooling state
+.omc/
+e2e/.omc/

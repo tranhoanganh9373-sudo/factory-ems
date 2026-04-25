@@ -4,8 +4,14 @@ import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 
 const NODE_TYPES = ['PLANT', 'WORKSHOP', 'LINE', 'DEVICE', 'GROUP', 'OTHER'];
 
-export function CreateNodeModal({ open, parent, onClose }: {
-  open: boolean; parent: OrgNodeDTO | null; onClose: () => void;
+export function CreateNodeModal({
+  open,
+  parent,
+  onClose,
+}: {
+  open: boolean;
+  parent: OrgNodeDTO | null;
+  onClose: () => void;
 }) {
   const [form] = Form.useForm();
   const qc = useQueryClient();
@@ -22,20 +28,31 @@ export function CreateNodeModal({ open, parent, onClose }: {
   return (
     <Modal
       title={`新建节点${parent ? ' (父: ' + parent.name + ')' : ' (根节点)'}`}
-      open={open} onCancel={onClose}
-      onOk={() => form.validateFields().then((v) => mut.mutate({
-        parentId: parent?.id ?? null, ...v,
-      }))}
-      confirmLoading={mut.isPending} destroyOnClose
+      open={open}
+      onCancel={onClose}
+      onOk={() =>
+        form.validateFields().then((v) =>
+          mut.mutate({
+            parentId: parent?.id ?? null,
+            ...v,
+          })
+        )
+      }
+      confirmLoading={mut.isPending}
+      destroyOnClose
     >
       <Form form={form} layout="vertical">
         <Form.Item name="name" label="名称" rules={[{ required: true, max: 128 }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="code" label="编码" rules={[
-          { required: true, max: 64 },
-          { pattern: /^[A-Za-z0-9_-]+$/, message: '只允许字母数字下划线横线' },
-        ]}>
+        <Form.Item
+          name="code"
+          label="编码"
+          rules={[
+            { required: true, max: 64 },
+            { pattern: /^[A-Za-z0-9_-]+$/, message: '只允许字母数字下划线横线' },
+          ]}
+        >
           <Input />
         </Form.Item>
         <Form.Item name="nodeType" label="节点类型" rules={[{ required: true }]}>

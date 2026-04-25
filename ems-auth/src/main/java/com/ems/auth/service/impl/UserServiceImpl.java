@@ -29,7 +29,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    @Audited(action = "CREATE", resourceType = "USER", resourceIdExpr = "#result.id()")
+    @Audited(action = "CREATE", resourceType = "USER", resourceIdExpr = "#result.id()",
+             summaryExpr = "'创建用户: ' + #result.username()")
     public UserDTO create(CreateUserReq req) {
         if (users.existsByUsername(req.username()))
             throw new BusinessException(ErrorCode.CONFLICT, "用户名已存在");

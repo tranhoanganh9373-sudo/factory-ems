@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import AppLayout from '@/layouts/AppLayout';
 import LoginPage from '@/pages/login';
@@ -33,7 +33,7 @@ export function AppRouter() {
           path="admin"
           element={
             <ProtectedRoute requiredRole="ADMIN">
-              <></>
+              <Outlet />
             </ProtectedRoute>
           }
         >

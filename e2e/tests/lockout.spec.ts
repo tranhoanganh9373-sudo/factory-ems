@@ -19,13 +19,13 @@ test('account lockout after 5 failed attempts', async ({ page, request }) => {
     await page.goto('/login');
     await page.getByPlaceholder('用户名').fill(uname);
     await page.getByPlaceholder('密码').fill('wrongwrong');
-    await page.getByRole('button', { name: '登录' }).click();
+    await page.getByRole('button', { name: /登\s*录/ }).click();
     await expect(page.getByText(/用户名或密码错误|锁定/)).toBeVisible();
   }
   // 第 6 次用正确密码 — 应被告知锁定
   await page.goto('/login');
   await page.getByPlaceholder('用户名').fill(uname);
   await page.getByPlaceholder('密码').fill('TempPass_1');
-  await page.getByRole('button', { name: '登录' }).click();
+  await page.getByRole('button', { name: /登\s*录/ }).click();
   await expect(page.getByText(/锁定/)).toBeVisible();
 });

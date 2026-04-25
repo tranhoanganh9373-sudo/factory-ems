@@ -11,19 +11,29 @@ import java.time.OffsetDateTime;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
-    @Query("""
-        SELECT a FROM AuditLog a
-        WHERE (:actor IS NULL OR a.actorUserId = :actor)
-          AND (:resType IS NULL OR a.resourceType = :resType)
-          AND (:action IS NULL OR a.action = :action)
-          AND (:from IS NULL OR a.occurredAt >= :from)
-          AND (:to IS NULL OR a.occurredAt < :to)
-        ORDER BY a.occurredAt DESC
-    """)
+    // 使用 native + CAST 避免 PostgreSQL 推断不出空参数类型 (ERROR: could not determine data type of parameter)
+    @Query(value = """
+        SELECT * FROM audit_logs
+        WHERE (CAST(:actor AS bigint) IS NULL OR actor_user_id = :actor)
+          AND (CAST(:resType AS varchar) IS NULL OR resource_type = :resType)
+          AND (CAST(:action AS varchar) IS NULL OR action = :action)
+          AND (CAST(:fromTs AS timestamptz) IS NULL OR occurred_at >= :fromTs)
+          AND (CAST(:toTs AS timestamptz) IS NULL OR occurred_at < :toTs)
+        ORDER BY occurred_at DESC
+        """,
+        countQuery = """
+        SELECT count(*) FROM audit_logs
+        WHERE (CAST(:actor AS bigint) IS NULL OR actor_user_id = :actor)
+          AND (CAST(:resType AS varchar) IS NULL OR resource_type = :resType)
+          AND (CAST(:action AS varchar) IS NULL OR action = :action)
+          AND (CAST(:fromTs AS timestamptz) IS NULL OR occurred_at >= :fromTs)
+          AND (CAST(:toTs AS timestamptz) IS NULL OR occurred_at < :toTs)
+        """,
+        nativeQuery = true)
     Page<AuditLog> search(@Param("actor") Long actor,
                           @Param("resType") String resType,
                           @Param("action") String action,
-                          @Param("from") OffsetDateTime from,
-                          @Param("to") OffsetDateTime to,
+                          @Param("fromTs") OffsetDateTime from,
+                          @Param("toTs") OffsetDateTime to,
                           Pageable pageable);
 }
