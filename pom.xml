@@ -31,6 +31,7 @@
         <module>ems-auth</module>
         <module>ems-meter</module>
         <module>ems-timeseries</module>
+        <module>ems-dashboard</module>
         <module>ems-app</module>
     </modules>
 
