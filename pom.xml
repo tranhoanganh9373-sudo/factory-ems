@@ -30,6 +30,7 @@
         <module>ems-orgtree</module>
         <module>ems-auth</module>
         <module>ems-meter</module>
+        <module>ems-tariff</module>
         <module>ems-timeseries</module>
         <module>ems-dashboard</module>
         <module>ems-report</module>
