@@ -6,6 +6,8 @@ COPY frontend/package.json frontend/pnpm-lock.yaml frontend/
 WORKDIR /build/frontend
 RUN pnpm install --frozen-lockfile
 COPY frontend .
+# Re-run install to ensure node_modules are correct after COPY (handles Windows host node_modules)
+RUN pnpm install --frozen-lockfile
 RUN pnpm build
 
 # 产物镜像：只含 dist/，通过 volume 暴露给 Nginx
