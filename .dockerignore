@@ -1,0 +1,9 @@
+target/
+**/target/
+.git/
+.idea/
+.vscode/
+node_modules/
+frontend/dist/
+e2e/
+docs/
