@@ -59,22 +59,24 @@ public class AuthServiceImpl implements AuthService {
 
         if (!encoder.matches(password, u.getPasswordHash())) {
             int n = (u.getFailedAttempts() == null ? 0 : u.getFailedAttempts()) + 1;
+            OffsetDateTime now = OffsetDateTime.now();
+            int attempts;
+            OffsetDateTime lockedUntil;
             if (n >= maxFailed) {
-                u.setLockedUntil(OffsetDateTime.now().plusMinutes(lockoutMinutes));
-                u.setFailedAttempts(0);
+                attempts = 0;
+                lockedUntil = now.plusMinutes(lockoutMinutes);
             } else {
-                u.setFailedAttempts(n);
+                attempts = n;
+                lockedUntil = null;
             }
-            users.save(u);
+            users.markLoginFailure(u.getId(), attempts, lockedUntil, now);
             audit(u.getId(), u.getUsername(), "LOGIN_FAIL", ip, ua, "密码错误");
             throw new UnauthorizedException("用户名或密码错误");
         }
 
-        // Login success
-        u.setFailedAttempts(0);
-        u.setLockedUntil(null);
-        u.setLastLoginAt(OffsetDateTime.now());
-        users.save(u);
+        // Login success — bypass @Version via @Modifying query so concurrent logins
+        // on the same user don't trigger ObjectOptimisticLockingFailureException.
+        users.markLoginSuccess(u.getId(), OffsetDateTime.now());
 
         List<String> roles = userRoles.findRoleCodesByUserId(u.getId());
         String accessToken = jwt.signAccessToken(u.getId(), u.getUsername(), roles);

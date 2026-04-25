@@ -2,7 +2,10 @@ package com.ems.auth.service.impl;
 
 import com.ems.auth.repository.NodePermissionRepository;
 import com.ems.auth.repository.UserRoleRepository;
-import com.ems.auth.service.PermissionResolver;
+import com.ems.auth.security.AuthUser;
+import com.ems.core.security.PermissionResolver;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
@@ -14,7 +17,8 @@ public class PermissionResolverImpl implements PermissionResolver {
     private final UserRoleRepository userRoles;
 
     public PermissionResolverImpl(NodePermissionRepository p, UserRoleRepository ur) {
-        this.perms = p; this.userRoles = ur;
+        this.perms = p;
+        this.userRoles = ur;
     }
 
     @Override
@@ -35,5 +39,12 @@ public class PermissionResolverImpl implements PermissionResolver {
     @Override
     public boolean hasAllNodes(Set<Long> visible) {
         return visible == ALL_NODE_IDS_MARKER;
+    }
+
+    @Override
+    public Long currentUserId() {
+        Authentication a = SecurityContextHolder.getContext().getAuthentication();
+        if (a != null && a.getPrincipal() instanceof AuthUser u) return u.getUserId();
+        return null;
     }
 }

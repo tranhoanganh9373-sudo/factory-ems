@@ -2,6 +2,7 @@ package com.ems.auth;
 
 import com.ems.auth.dto.*;
 import com.ems.auth.service.*;
+import com.ems.core.security.PermissionResolver;
 import com.ems.orgtree.dto.CreateOrgNodeReq;
 import com.ems.orgtree.service.OrgNodeService;
 import org.junit.jupiter.api.Test;

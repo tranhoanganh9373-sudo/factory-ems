@@ -1,6 +1,7 @@
 package com.ems.orgtree.service;
 
 import com.ems.core.exception.BusinessException;
+import com.ems.core.security.PermissionResolver;
 import com.ems.orgtree.dto.CreateOrgNodeReq;
 import com.ems.orgtree.entity.OrgNode;
 import com.ems.orgtree.repository.OrgNodeClosureRepository;
@@ -18,12 +19,14 @@ class OrgNodeServiceUnitTest {
 
     OrgNodeRepository nodes;
     OrgNodeClosureRepository closure;
+    PermissionResolver permissions;
     OrgNodeServiceImpl svc;
 
     @BeforeEach void setup() {
         nodes = mock(OrgNodeRepository.class);
         closure = mock(OrgNodeClosureRepository.class);
-        svc = new OrgNodeServiceImpl(nodes, closure);
+        permissions = mock(PermissionResolver.class);
+        svc = new OrgNodeServiceImpl(nodes, closure, permissions);
     }
 
     @Test void create_root_insertsSelfClosure() {

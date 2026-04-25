@@ -4,6 +4,7 @@ import com.ems.audit.annotation.Audited;
 import com.ems.core.exception.BusinessException;
 import com.ems.core.exception.NotFoundException;
 import com.ems.core.constant.ErrorCode;
+import com.ems.core.security.PermissionResolver;
 import com.ems.orgtree.dto.*;
 import com.ems.orgtree.entity.OrgNode;
 import com.ems.orgtree.repository.OrgNodeClosureRepository;
@@ -20,9 +21,13 @@ public class OrgNodeServiceImpl implements OrgNodeService {
 
     private final OrgNodeRepository nodes;
     private final OrgNodeClosureRepository closure;
+    private final PermissionResolver permissions;
 
-    public OrgNodeServiceImpl(OrgNodeRepository n, OrgNodeClosureRepository c) {
-        this.nodes = n; this.closure = c;
+    public OrgNodeServiceImpl(OrgNodeRepository n, OrgNodeClosureRepository c,
+                              PermissionResolver permissions) {
+        this.nodes = n;
+        this.closure = c;
+        this.permissions = permissions;
     }
 
     @Override
@@ -69,14 +74,31 @@ public class OrgNodeServiceImpl implements OrgNodeService {
             scope = new HashSet<>(closure.findDescendantIds(rootId));
             if (scope.isEmpty()) throw new NotFoundException("OrgNode", rootId);
         }
+
+        // Apply per-user node-permission filter. ADMIN sentinel returns ALL_NODE_IDS_MARKER → skip.
+        Long uid = permissions.currentUserId();
+        Set<Long> visible = uid == null ? Set.of() : permissions.visibleNodeIds(uid);
+        boolean filterByVisibility = uid != null && !permissions.hasAllNodes(visible);
+        if (filterByVisibility) {
+            scope.retainAll(visible);
+        }
+
         Map<Long, List<OrgNode>> byParent = new HashMap<>();
         for (OrgNode n : all) {
             if (!scope.contains(n.getId())) continue;
-            byParent.computeIfAbsent(n.getParentId(), k -> new ArrayList<>()).add(n);
+            // For VIEWER: if a node's parent is not visible, promote it to a forest root
+            // by attaching it under the synthetic null-parent bucket.
+            Long parentKey = filterByVisibility && n.getParentId() != null
+                && !scope.contains(n.getParentId()) ? null : n.getParentId();
+            byParent.computeIfAbsent(parentKey, k -> new ArrayList<>()).add(n);
         }
         List<OrgNode> roots;
-        if (rootId == null) roots = byParent.getOrDefault(null, List.of());
-        else roots = all.stream().filter(x -> x.getId().equals(rootId)).toList();
+        if (rootId == null) {
+            roots = byParent.getOrDefault(null, List.of());
+        } else {
+            roots = all.stream().filter(x -> x.getId().equals(rootId))
+                .filter(x -> scope.contains(x.getId())).toList();
+        }
 
         return roots.stream().map(r -> buildSubtree(r, byParent)).toList();
     }
