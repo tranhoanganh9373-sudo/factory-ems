@@ -105,6 +105,32 @@ public final class FluxQueryBuilder {
             .toString();
     }
 
+    /**
+     * 拉取指定 meter_code 在 [start, stop) 区间的所有原始点（用于 rollup 计算输入）。
+     * 返回行：_time, _value, meter_code
+     */
+    public static String rawPointsForMeter(
+        String bucket,
+        String measurement,
+        String meterCode,
+        TimeRange range
+    ) {
+        require(bucket, "bucket");
+        require(measurement, "measurement");
+        if (meterCode == null || !SAFE_TAG.matcher(meterCode).matches()) {
+            throw new IllegalArgumentException("非法 meter_code: " + meterCode);
+        }
+        return new StringBuilder(192)
+            .append("from(bucket: \"").append(escapeQuotes(bucket)).append("\")\n")
+            .append("  |> range(start: ").append(RFC3339.format(range.start()))
+            .append(", stop: ").append(RFC3339.format(range.end())).append(")\n")
+            .append("  |> filter(fn: (r) => r._measurement == \"").append(escapeQuotes(measurement)).append("\")\n")
+            .append("  |> filter(fn: (r) => r._field == \"value\")\n")
+            .append("  |> filter(fn: (r) => r.meter_code == \"").append(meterCode).append("\")\n")
+            .append("  |> keep(columns: [\"_time\", \"_value\", \"meter_code\"])")
+            .toString();
+    }
+
     private static void require(String s, String name) {
         if (s == null || s.isBlank()) throw new IllegalArgumentException(name + " 不能为空");
     }
