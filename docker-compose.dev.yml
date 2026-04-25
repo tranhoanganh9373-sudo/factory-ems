@@ -17,5 +17,9 @@ services:
       timeout: 3s
       retries: 10
 
+  influxdb:
+    ports:
+      - "8086:8086"
+
 volumes:
   ems_pg_dev:

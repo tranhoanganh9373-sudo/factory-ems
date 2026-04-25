@@ -23,11 +23,18 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       EMS_DB_HOST: postgres
+      EMS_INFLUX_URL: http://influxdb:8086
+      EMS_INFLUX_TOKEN: ${EMS_INFLUX_TOKEN}
+      EMS_INFLUX_ORG: ${EMS_INFLUX_ORG:-factory}
+      EMS_INFLUX_BUCKET: ${EMS_INFLUX_BUCKET:-factory_ems}
+      EMS_INFLUX_MEASUREMENT: ${EMS_INFLUX_MEASUREMENT:-energy_reading}
     volumes:
       - ./data/ems_uploads:/data/ems_uploads
       - ./logs/ems:/app/logs
     depends_on:
       postgres:
+        condition: service_healthy
+      influxdb:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health/liveness"]
@@ -56,6 +63,26 @@ services:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s
       timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUXDB_ADMIN_USER:-influx_admin}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUXDB_ADMIN_PASSWORD}
+      DOCKER_INFLUXDB_INIT_ORG: ${EMS_INFLUX_ORG:-factory}
+      DOCKER_INFLUXDB_INIT_BUCKET: ${EMS_INFLUX_BUCKET:-factory_ems}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${EMS_INFLUX_TOKEN}
+    volumes:
+      - ./data/influxdb:/var/lib/influxdb2
+    # ports:
+    #   - "8086:8086"  # uncomment for direct access when debugging
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8086/health || exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 10
     restart: unless-stopped
 
