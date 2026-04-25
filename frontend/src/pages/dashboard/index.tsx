@@ -8,6 +8,10 @@ import RealtimeSeriesPanel from './RealtimeSeriesPanel';
 import EnergyCompositionPanel from './EnergyCompositionPanel';
 import TopNPanel from './TopNPanel';
 import MeterDetailDrawer from './MeterDetailDrawer';
+import TariffDistributionPanel from './TariffDistributionPanel';
+import EnergyIntensityPanel from './EnergyIntensityPanel';
+import SankeyPanel from './SankeyPanel';
+import FloorplanLivePanel from './FloorplanLivePanel';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
@@ -70,10 +74,38 @@ export default function DashboardPage() {
       </Row>
 
       {/* Row 3: Top N */}
-      <Row>
+      <Row style={{ marginBottom: 16 }}>
         <Col span={24}>
           <Card size="small" bodyStyle={{ padding: 16 }}>
             <TopNPanel onMeterClick={handleMeterClick} />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 4: ⑥ Tariff distribution + ⑦ Energy intensity */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={8}>
+          <Card size="small" bodyStyle={{ padding: 16 }}>
+            <TariffDistributionPanel />
+          </Card>
+        </Col>
+        <Col xs={24} lg={16}>
+          <Card size="small" bodyStyle={{ padding: 16 }}>
+            <EnergyIntensityPanel />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 5: ⑧ Sankey + ⑨ Floorplan live */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card size="small" bodyStyle={{ padding: 16 }}>
+            <SankeyPanel />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card size="small" bodyStyle={{ padding: 16 }}>
+            <FloorplanLivePanel />
           </Card>
         </Col>
       </Row>

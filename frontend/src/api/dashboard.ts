@@ -62,6 +62,57 @@ export interface TopNItemDTO {
   total: number;
 }
 
+export interface TariffDistributionDTO {
+  unit: string;
+  total: number;
+  slices: Array<{ periodType: string; value: number; share: number | null }>;
+}
+
+export interface EnergyIntensityPoint {
+  date: string;
+  electricity: number;
+  production: number;
+  intensity: number | null;
+}
+export interface EnergyIntensityDTO {
+  electricityUnit: string;
+  productionUnit: string;
+  points: EnergyIntensityPoint[];
+}
+
+export interface SankeyDTO {
+  nodes: Array<{ id: string; name: string; energyType: string; unit: string }>;
+  links: Array<{ source: string; target: string; value: number }>;
+}
+
+export interface FloorplanLivePoint {
+  pointId: number;
+  meterId: number;
+  meterCode: string;
+  meterName: string;
+  energyType: string;
+  unit: string;
+  xRatio: number | string;
+  yRatio: number | string;
+  label: string | null;
+  value: number;
+  level: 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
+}
+export interface FloorplanLiveDTO {
+  floorplan: {
+    id: number;
+    name: string;
+    orgNodeId: number;
+    contentType: string;
+    widthPx: number;
+    heightPx: number;
+    fileSizeBytes: number;
+    enabled: boolean;
+    createdAt: string;
+  };
+  points: FloorplanLivePoint[];
+}
+
 type Params = Record<string, string | number | undefined>;
 
 function toParams(q: DashboardQuery): Params {
@@ -103,4 +154,30 @@ export const dashboardApi = {
     apiClient
       .get<TopNItemDTO[]>('/dashboard/top-n', { params: { ...toParams(q), limit } })
       .then((r) => r.data as unknown as TopNItemDTO[]),
+
+  getTariffDistribution: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<TariffDistributionDTO>('/dashboard/tariff-distribution', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as TariffDistributionDTO),
+
+  getEnergyIntensity: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<EnergyIntensityDTO>('/dashboard/energy-intensity', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as EnergyIntensityDTO),
+
+  getSankey: (q: DashboardQuery) =>
+    apiClient
+      .get<SankeyDTO>('/dashboard/sankey', { params: toParams(q) })
+      .then((r) => r.data as unknown as SankeyDTO),
+
+  getFloorplanLive: (id: number, q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<FloorplanLiveDTO>(`/dashboard/floorplan/${id}/live`, {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as FloorplanLiveDTO),
 };

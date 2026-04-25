@@ -15,6 +15,16 @@ import AuditListPage from '@/pages/admin/audit/list';
 import HomePage from '@/pages/home';
 import DashboardPage from '@/pages/dashboard';
 import ReportPage from '@/pages/report';
+import TariffPage from '@/pages/tariff';
+import ShiftsPage from '@/pages/production/shifts';
+import ProductionEntryPage from '@/pages/production/entry';
+import FloorplanListPage from '@/pages/floorplan/list';
+import FloorplanEditorPage from '@/pages/floorplan/editor';
+import DailyReportPage from '@/pages/report/daily';
+import MonthlyReportPage from '@/pages/report/monthly';
+import YearlyReportPage from '@/pages/report/yearly';
+import ShiftReportPage from '@/pages/report/shift';
+import ExportReportPage from '@/pages/report/export';
 
 export function AppRouter() {
   return (
@@ -36,6 +46,16 @@ export function AppRouter() {
         <Route path="orgtree" element={<OrgTreePage />} />
         <Route path="meters" element={<MetersPage />} />
         <Route path="report" element={<ReportPage />} />
+        <Route path="tariff" element={<TariffPage />} />
+        <Route path="production/shifts" element={<ShiftsPage />} />
+        <Route path="production/entry" element={<ProductionEntryPage />} />
+        <Route path="floorplan" element={<FloorplanListPage />} />
+        <Route path="floorplan/editor/:id" element={<FloorplanEditorPage />} />
+        <Route path="report/daily" element={<DailyReportPage />} />
+        <Route path="report/monthly" element={<MonthlyReportPage />} />
+        <Route path="report/yearly" element={<YearlyReportPage />} />
+        <Route path="report/shift" element={<ShiftReportPage />} />
+        <Route path="report/export" element={<ExportReportPage />} />
         <Route
           path="admin"
           element={
