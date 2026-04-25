@@ -1,10 +1,13 @@
 package com.ems.orgtree;
 
 import com.ems.audit.aspect.AuditContext;
+import com.ems.core.security.PermissionResolver;
 import com.ems.orgtree.dto.*;
 import com.ems.orgtree.repository.*;
 import com.ems.orgtree.service.*;
 import com.ems.orgtree.service.impl.OrgNodeServiceImpl;
+
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -95,6 +98,16 @@ class ClosureConsistencyIT {
                 public String currentUsername() { return "tester"; }
                 public String currentIp() { return "127.0.0.1"; }
                 public String currentUserAgent() { return "it"; }
+            };
+        }
+
+        @Bean PermissionResolver permissions() {
+            // 测试视角：模拟超管（visibleNodeIds 命中 ALL_NODE_IDS_MARKER），跳过权限过滤。
+            return new PermissionResolver() {
+                @Override public Set<Long> visibleNodeIds(Long userId) { return ALL_NODE_IDS_MARKER; }
+                @Override public boolean canAccess(Long userId, Long orgNodeId) { return true; }
+                @Override public boolean hasAllNodes(Set<Long> v) { return v == ALL_NODE_IDS_MARKER; }
+                @Override public Long currentUserId() { return 1L; }
             };
         }
     }

@@ -32,6 +32,7 @@
         <module>ems-meter</module>
         <module>ems-timeseries</module>
         <module>ems-dashboard</module>
+        <module>ems-report</module>
         <module>ems-app</module>
     </modules>
 

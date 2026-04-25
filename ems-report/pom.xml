@@ -6,34 +6,25 @@
         <artifactId>factory-ems</artifactId>
         <version>1.1.0-SNAPSHOT</version>
     </parent>
-    <artifactId>ems-app</artifactId>
+    <artifactId>ems-report</artifactId>
     <dependencies>
         <dependency><groupId>com.ems</groupId><artifactId>ems-core</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-audit</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-orgtree</artifactId><version>${project.version}</version></dependency>
-        <dependency><groupId>com.ems</groupId><artifactId>ems-auth</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-meter</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-timeseries</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>com.ems</groupId><artifactId>ems-dashboard</artifactId><version>${project.version}</version></dependency>
-        <dependency><groupId>com.ems</groupId><artifactId>ems-report</artifactId><version>${project.version}</version></dependency>
-        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
-        <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId></dependency>
-        <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId></dependency>
-        <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>runtime</scope></dependency>
-        <dependency><groupId>net.logstash.logback</groupId><artifactId>logstash-logback-encoder</artifactId><version>8.0</version></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
+        <dependency><groupId>org.apache.commons</groupId><artifactId>commons-csv</artifactId><version>1.11.0</version></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-testcontainers</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.postgresql</groupId><artifactId>postgresql</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-core</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.flywaydb</groupId><artifactId>flyway-database-postgresql</artifactId><scope>test</scope></dependency>
     </dependencies>
-
-    <build>
-        <finalName>factory-ems</finalName>
-        <plugins>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-            </plugin>
-        </plugins>
-    </build>
 </project>
