@@ -51,6 +51,7 @@ export default function AppLayout() {
           </Link>
         ),
       },
+      { key: '/tariff', label: <Link to="/tariff">电价方案</Link> },
     ];
     if (hasRole('ADMIN')) {
       items.push({
