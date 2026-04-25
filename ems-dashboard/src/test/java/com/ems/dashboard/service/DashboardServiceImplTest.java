@@ -4,6 +4,8 @@ import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
+import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.MeterPoint;
 import com.ems.timeseries.model.TimePoint;
 import com.ems.timeseries.model.TimeRange;
@@ -24,6 +26,8 @@ class DashboardServiceImplTest {
 
     DashboardSupport support;
     TimeSeriesQueryService tsq;
+    TariffService tariff;
+    EnergyTypeRepository energyTypes;
     DashboardServiceImpl svc;
 
     static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
@@ -34,7 +38,9 @@ class DashboardServiceImplTest {
     void setup() {
         support = mock(DashboardSupport.class);
         tsq = mock(TimeSeriesQueryService.class);
-        svc = new DashboardServiceImpl(support, tsq);
+        tariff = mock(TariffService.class);
+        energyTypes = mock(EnergyTypeRepository.class);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes);
     }
 
     /* ---------------- KPI ---------------- */
@@ -195,6 +201,45 @@ class DashboardServiceImplTest {
         assertThat(out.get(0).meterId()).isEqualTo(2L);
         assertThat(out.get(1).meterId()).isEqualTo(1L);
         assertThat(out.get(1).total()).isEqualTo(0.0);
+    }
+
+    /* ---------------- ⑥ Tariff distribution ---------------- */
+
+    @Test
+    void tariffDistribution_bucketsByPeriodType_andComputesShare() {
+        when(support.resolveMeters(any(), eq("ELEC"))).thenReturn(List.of(M1, M3));
+        com.ems.meter.entity.EnergyType elec = mock(com.ems.meter.entity.EnergyType.class);
+        when(elec.getId()).thenReturn(1L);
+        when(energyTypes.findByCode("ELEC")).thenReturn(java.util.Optional.of(elec));
+
+        Instant t1 = Instant.parse("2026-04-25T00:00:00Z"); // VALLEY
+        Instant t2 = Instant.parse("2026-04-25T10:00:00Z"); // PEAK
+        Instant t3 = Instant.parse("2026-04-25T18:00:00Z"); // SHARP
+        when(tsq.queryByMeter(anyCollection(), any(), any())).thenReturn(List.of(
+            new MeterPoint(1L, "M-1", "ELEC", List.of(
+                new TimePoint(t1, 10.0), new TimePoint(t2, 30.0), new TimePoint(t3, 20.0)
+            ))
+        ));
+        when(tariff.resolvePeriodType(eq(1L), argThat(o -> o.toInstant().equals(t1)))).thenReturn("VALLEY");
+        when(tariff.resolvePeriodType(eq(1L), argThat(o -> o.toInstant().equals(t2)))).thenReturn("PEAK");
+        when(tariff.resolvePeriodType(eq(1L), argThat(o -> o.toInstant().equals(t3)))).thenReturn("SHARP");
+
+        var out = svc.tariffDistribution(new RangeQuery(RangeType.TODAY, null, null, null, null));
+
+        assertThat(out.unit()).isEqualTo("kWh");
+        assertThat(out.total()).isEqualTo(60.0);
+        assertThat(out.slices()).hasSize(4);
+        assertThat(out.slices().get(0).periodType()).isEqualTo("SHARP");
+        assertThat(out.slices().get(0).value()).isEqualTo(20.0);
+        assertThat(out.slices().get(0).share()).isEqualTo(20.0 / 60.0);
+    }
+
+    @Test
+    void tariffDistribution_emptyMeters_returnsZero() {
+        when(support.resolveMeters(any(), eq("ELEC"))).thenReturn(List.of());
+        var out = svc.tariffDistribution(new RangeQuery(RangeType.TODAY, null, null, null, null));
+        assertThat(out.total()).isEqualTo(0.0);
+        assertThat(out.slices()).isEmpty();
     }
 
 }

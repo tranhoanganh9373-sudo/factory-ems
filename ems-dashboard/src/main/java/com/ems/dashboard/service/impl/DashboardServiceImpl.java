@@ -5,6 +5,9 @@ import com.ems.dashboard.service.DashboardService;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
 import com.ems.dashboard.support.RangeResolver;
+import com.ems.meter.entity.EnergyType;
+import com.ems.meter.repository.EnergyTypeRepository;
+import com.ems.tariff.service.TariffService;
 import com.ems.timeseries.model.Granularity;
 import com.ems.timeseries.model.MeterPoint;
 import com.ems.timeseries.model.TimePoint;
@@ -14,9 +17,12 @@ import com.ems.timeseries.query.TimeSeriesQueryService.MeterRef;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,10 +36,15 @@ public class DashboardServiceImpl implements DashboardService {
 
     private final DashboardSupport support;
     private final TimeSeriesQueryService tsq;
+    private final TariffService tariff;
+    private final EnergyTypeRepository energyTypes;
 
-    public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq) {
+    public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
+                                TariffService tariff, EnergyTypeRepository energyTypes) {
         this.support = support;
         this.tsq = tsq;
+        this.tariff = tariff;
+        this.energyTypes = energyTypes;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -170,6 +181,53 @@ public class DashboardServiceImpl implements DashboardService {
         }
         all.sort(Comparator.comparingDouble(TopNItemDTO::total).reversed());
         return all.size() > topN ? all.subList(0, topN) : all;
+    }
+
+    /* ---------------- ⑥ Tariff distribution ---------------- */
+
+    private static final String[] PERIOD_ORDER = {"SHARP", "PEAK", "FLAT", "VALLEY"};
+
+    @Override
+    public TariffDistributionDTO tariffDistribution(RangeQuery query) {
+        TimeRange range = RangeResolver.resolve(query);
+        // 强制 ELEC：尖峰平谷只针对电
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), "ELEC");
+        if (meters.isEmpty()) {
+            return new TariffDistributionDTO(null, 0.0, List.of());
+        }
+
+        EnergyType elec = energyTypes.findByCode("ELEC")
+                .orElseThrow(() -> new IllegalStateException("ELEC energy type not found"));
+
+        List<MeterPoint> pts = tsq.queryByMeter(toRefs(meters), range, Granularity.HOUR);
+
+        Map<String, Double> byPeriod = new LinkedHashMap<>();
+        for (String p : PERIOD_ORDER) byPeriod.put(p, 0.0);
+
+        for (MeterPoint mp : pts) {
+            for (TimePoint p : mp.points()) {
+                OffsetDateTime at = p.ts().atOffset(ZoneOffset.UTC);
+                String periodType;
+                try {
+                    periodType = tariff.resolvePeriodType(elec.getId(), at);
+                } catch (RuntimeException ignored) {
+                    periodType = "FLAT";
+                }
+                byPeriod.merge(periodType, p.value(), Double::sum);
+            }
+        }
+
+        double total = byPeriod.values().stream().mapToDouble(Double::doubleValue).sum();
+        Map<String, String> unitOf = unitByEnergyType(meters);
+        String unit = unitOf.get("ELEC");
+
+        List<TariffDistributionDTO.Slice> slices = new ArrayList<>(byPeriod.size());
+        for (Map.Entry<String, Double> e : byPeriod.entrySet()) {
+            double v = e.getValue();
+            Double share = total > 0 ? v / total : null;
+            slices.add(new TariffDistributionDTO.Slice(e.getKey(), v, share));
+        }
+        return new TariffDistributionDTO(unit, total, slices);
     }
 
     /* ---------------- helpers ---------------- */

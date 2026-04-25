@@ -72,4 +72,14 @@ public class DashboardController {
             @RequestParam(defaultValue = "10") int limit) {
         return Result.ok(service.topN(new RangeQuery(range, from, to, orgNodeId, energyType), limit));
     }
+
+    /** ⑥ 尖峰平谷分布 */
+    @GetMapping("/tariff-distribution")
+    public Result<TariffDistributionDTO> tariffDistribution(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.tariffDistribution(new RangeQuery(range, from, to, orgNodeId, "ELEC")));
+    }
 }

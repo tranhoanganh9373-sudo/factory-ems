@@ -27,4 +27,7 @@ public interface DashboardService {
 
     /** ⑤ Top-N：按测点累计排名，topN 默认 10。 */
     List<TopNItemDTO> topN(RangeQuery query, int topN);
+
+    /** ⑥ 尖峰平谷分布：电耗按 tariff 时段类型聚合 + 占比。 */
+    TariffDistributionDTO tariffDistribution(RangeQuery query);
 }
