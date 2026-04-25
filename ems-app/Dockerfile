@@ -6,12 +6,14 @@ COPY ems-core/pom.xml    ems-core/
 COPY ems-audit/pom.xml   ems-audit/
 COPY ems-orgtree/pom.xml ems-orgtree/
 COPY ems-auth/pom.xml    ems-auth/
+COPY ems-meter/pom.xml   ems-meter/
 COPY ems-app/pom.xml     ems-app/
 RUN mvn -B -q -T 4 dependency:go-offline -DskipTests
 COPY ems-core    ems-core
 COPY ems-audit   ems-audit
 COPY ems-orgtree ems-orgtree
 COPY ems-auth    ems-auth
+COPY ems-meter   ems-meter
 COPY ems-app     ems-app
 RUN mvn -B -q -T 4 clean package -DskipTests -pl ems-app -am
 

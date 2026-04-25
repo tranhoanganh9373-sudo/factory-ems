@@ -29,6 +29,7 @@
         <module>ems-audit</module>
         <module>ems-orgtree</module>
         <module>ems-auth</module>
+        <module>ems-meter</module>
         <module>ems-app</module>
     </modules>
 
