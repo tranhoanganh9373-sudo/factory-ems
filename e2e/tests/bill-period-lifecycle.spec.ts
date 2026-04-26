@@ -69,7 +69,11 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
     timeout: 10_000,
   });
 
-  // ---- reclose（重写 + 跳到 /bills?periodId=...）----
+  // ---- reclose（重写）----
   await periodRow.getByRole('button', { name: /重新生成/ }).click();
-  await expect(page).toHaveURL(/\/bills\?periodId=\d+/, { timeout: 30_000 });
+  await expect(page.getByText(/已关闭，账单已生成/)).toBeVisible({ timeout: 30_000 });
+
+  // ---- 通过"查看账单"链接跳到 /bills?periodId=... ----
+  await periodRow.getByRole('button', { name: /查看账单/ }).click();
+  await expect(page).toHaveURL(/\/bills\?periodId=\d+/, { timeout: 10_000 });
 });

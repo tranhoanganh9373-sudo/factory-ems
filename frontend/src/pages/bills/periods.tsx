@@ -52,7 +52,8 @@ export default function BillPeriodsPage() {
     onSuccess: (p) => {
       message.success(`账期 ${p.yearMonth} 已关闭，账单已生成`);
       qc.invalidateQueries({ queryKey: ['bill', 'periods'] });
-      navigate(`/bills?periodId=${p.id}`);
+      // 不自动跳转 — 留在账期管理页让用户继续 lock/unlock，
+      // 想看账单时点行内"查看账单"链接（见 columns.操作）。
     },
   });
 
@@ -170,10 +171,19 @@ export default function BillPeriodsPage() {
           { title: '锁定人', dataIndex: 'lockedBy', width: 90 },
           {
             title: '操作',
-            width: 320,
+            width: 360,
             fixed: 'right',
             render: (_, p) => (
               <Space>
+                {p.status !== 'OPEN' && (
+                  <Button
+                    size="small"
+                    type="link"
+                    onClick={() => navigate(`/bills?periodId=${p.id}`)}
+                  >
+                    查看账单
+                  </Button>
+                )}
                 {p.status === 'OPEN' && (
                   <Button
                     size="small"
