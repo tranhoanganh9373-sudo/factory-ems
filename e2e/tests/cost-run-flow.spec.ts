@@ -15,7 +15,7 @@ async function login(page: Page) {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) => {

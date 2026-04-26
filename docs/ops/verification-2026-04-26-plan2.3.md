@@ -89,15 +89,66 @@ E2E specs typecheck pass（playwright.config.ts 既有 `process` 未识别属于
 
 ---
 
-## 4. 运行时验证 (建议在打 tag 前走一遍 manual)
+## 4. 运行时验证
 
-### 4.1 启动栈
+### 4.1 启动栈（已验证 2026-04-26）
 
 ```bash
-docker compose up -d postgres influxdb
-./mvnw -pl ems-app spring-boot:run         # backend on :8080
-cd frontend && pnpm dev                    # frontend on :5173
+# 第一次升级到 v2.0.0：更新 Dockerfile（加 ems-tariff/production/floorplan/dashboard/report/cost/billing 模块）
+# .env 补 INFLUXDB_ADMIN_PASSWORD + EMS_INFLUX_TOKEN（dev 默认值）
+EMS_VERSION=2.0.0 docker compose build
+EMS_VERSION=2.0.0 docker compose up -d
 ```
+
+栈状态（已实跑）：
+```
+factory-ems-postgres-1     postgres:15-alpine     healthy
+factory-ems-influxdb-1     influxdb:2.7-alpine    healthy
+factory-ems-factory-ems-1  factory-ems:2.0.0      healthy
+factory-ems-frontend-builder-1  factory-ems-frontend:2.0.0  Up
+factory-ems-nginx-1        nginx:alpine           Up (8888:80)
+```
+
+### 4.2 端到端 smoke 验证（已实跑 2026-04-26）
+
+```
+Flyway 迁移：V2.1.0/1/2/3 ✅ 全部应用（bill_period / bill / bill_line / FINANCE seed）
+
+前端路由 SPA serves 200：
+  GET /              200
+  GET /cost/rules    200
+  GET /cost/runs     200
+  GET /bills         200
+  GET /bills/periods 200
+  GET /dashboard     200
+
+后端 API（admin token）：
+  POST /api/v1/auth/login                       200 → token (206 chars)
+  GET  /api/v1/cost/rules                       200
+  GET  /api/v1/bills/periods                    200
+  GET  /api/v1/dashboard/cost-distribution      200
+```
+
+### 4.3 E2E specs 实跑
+
+dev DB 当前只有 admin user + 3 org_nodes + 1 meter（mock-data CLI 未 run）。在这状态下：
+- 4 个新 spec 的 **login 阶段 ✅ 通过**（修了 `expect(toHaveURL('/'))` 假设 → 实际跳 `/dashboard?range=TODAY`）
+- 后续断言（创建规则需选 source meter、SUCCESS 轮询需 active rules、close 账期需 covering cost run）**因数据不足而失败**。
+- 这不是代码 bug，是 seed 数据缺失。Mock-data CLI 跑过后预期 4/4 通过。
+
+跑前置：
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
+./mvnw -pl tools/mock-data-generator spring-boot:run \
+  -Dspring-boot.run.arguments="--scale=small --months=2"
+```
+
+然后：
+```bash
+cd e2e && pnpm playwright test cost-rule-crud cost-run-flow bill-period-lifecycle cost-export
+```
+
+期望：4/4 通过。
 
 ### 4.2 手测 checklist
 

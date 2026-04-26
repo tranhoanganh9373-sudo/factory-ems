@@ -2,21 +2,39 @@
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 COPY pom.xml .
-COPY ems-core/pom.xml    ems-core/
-COPY ems-audit/pom.xml   ems-audit/
-COPY ems-orgtree/pom.xml ems-orgtree/
-COPY ems-auth/pom.xml    ems-auth/
-COPY ems-meter/pom.xml   ems-meter/
+COPY ems-core/pom.xml       ems-core/
+COPY ems-audit/pom.xml      ems-audit/
+COPY ems-orgtree/pom.xml    ems-orgtree/
+COPY ems-auth/pom.xml       ems-auth/
+COPY ems-meter/pom.xml      ems-meter/
+COPY ems-tariff/pom.xml     ems-tariff/
+COPY ems-production/pom.xml ems-production/
+COPY ems-floorplan/pom.xml  ems-floorplan/
 COPY ems-timeseries/pom.xml ems-timeseries/
-COPY ems-app/pom.xml     ems-app/
-RUN mvn -B -q -T 4 dependency:go-offline -DskipTests
-COPY ems-core    ems-core
-COPY ems-audit   ems-audit
-COPY ems-orgtree ems-orgtree
-COPY ems-auth    ems-auth
-COPY ems-meter   ems-meter
+COPY ems-dashboard/pom.xml  ems-dashboard/
+COPY ems-report/pom.xml     ems-report/
+COPY ems-cost/pom.xml       ems-cost/
+COPY ems-billing/pom.xml    ems-billing/
+COPY ems-app/pom.xml        ems-app/
+COPY tools/mock-data-generator/pom.xml tools/mock-data-generator/
+# `-pl ems-app -am` 沿 ems-app 的依赖树跳过 tools/mock-data-generator（不是 ems-app 的依赖）。
+RUN mvn -B -q -T 4 -pl ems-app -am dependency:go-offline -DskipTests
+
+COPY ems-core       ems-core
+COPY ems-audit      ems-audit
+COPY ems-orgtree    ems-orgtree
+COPY ems-auth       ems-auth
+COPY ems-meter      ems-meter
+COPY ems-tariff     ems-tariff
+COPY ems-production ems-production
+COPY ems-floorplan  ems-floorplan
 COPY ems-timeseries ems-timeseries
-COPY ems-app     ems-app
+COPY ems-dashboard  ems-dashboard
+COPY ems-report     ems-report
+COPY ems-cost       ems-cost
+COPY ems-billing    ems-billing
+COPY ems-app        ems-app
+COPY tools          tools
 RUN mvn -B -q -T 4 clean package -DskipTests -pl ems-app -am
 
 FROM eclipse-temurin:21-jre-alpine
