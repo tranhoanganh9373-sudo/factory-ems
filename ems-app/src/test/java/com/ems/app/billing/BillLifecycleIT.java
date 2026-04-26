@@ -186,9 +186,9 @@ class BillLifecycleIT {
         assertThat(bills).hasSize(2);   // 两个车间 × 1 能源（ELEC）
         BillDTO billA = bills.stream().filter(b -> b.orgNodeId().equals(workshopAId)).findFirst().orElseThrow();
         BillDTO billB = bills.stream().filter(b -> b.orgNodeId().equals(workshopBId)).findFirst().orElseThrow();
-        // total 720 kWh × 1.0 = 720 元；A=432，B=288
-        assertThat(billA.amount()).isEqualByComparingTo("432");
-        assertThat(billB.amount()).isEqualByComparingTo("288");
+        // March = 31 天 × 24h × 1 kWh × 1.0 元 = 744 元；A 拿 60% = 446.4，B 拿 40% = 297.6
+        assertThat(billA.amount()).isEqualByComparingTo("446.4");
+        assertThat(billB.amount()).isEqualByComparingTo("297.6");
         assertThat(billA.runId()).isEqualTo(runId);
 
         // bill_line 应至少存在

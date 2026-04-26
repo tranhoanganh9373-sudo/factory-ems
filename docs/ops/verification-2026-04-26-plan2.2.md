@@ -23,11 +23,11 @@
 | J | 异步导出 COST_MONTHLY | ✅ | BILL preset 留到 Plan 2.3 |
 | K | DashboardController.costDistribution | ✅ | /api/v1/dashboard/cost-distribution |
 | L | FINANCE 角色 seed (V2.1.3) | ✅ | 完整权限 IT 入 Phase M |
-| M | BillLifecycleIT (Testcontainers) | 🟡 | 已写并 test-compile 通过；**Docker 未启动**，未执行 |
-| N | BillingPerfIT (≤ 5s) | 🟡 | 已写并 test-compile 通过；**Docker 未启动**，未执行 |
-| O | 文档 + tag | 🟡 | runbook 已写；tag 留到 IT 跑过 |
+| M | BillLifecycleIT (Testcontainers) | ✅ | 1/1 通过 (20s)；初次跑发现 March 31 天 ≠ 30 的 math bug，已修 (446.4/297.6) |
+| N | BillingPerfIT (≤ 5s) | ✅ | 1/1 通过 — **PERF: 200 orgs × 5 energies = 1000 bills in 2520 ms**（< 5000 预算 ~50% 余量） |
+| O | 文档 + tag | ✅ | runbook + 本日志写完；tag v1.2.0-plan2.2 已打（不 push，与 v2.1.0-plan2.1 同样） |
 
-**完成度：** 12/15 全验证；M/N 代码就绪等 Docker；tag 待 IT 通过后打。
+**完成度：** 15/15 全过。
 
 ---
 
@@ -73,16 +73,24 @@ ems-billing →  ems-cost / ems-tariff / ems-production / ems-orgtree / ems-audi
 
 ---
 
-## 4. 遗留 / TODO
+## 4. IT 实跑日志
 
-1. **Docker 未启动**：BillLifecycleIT 与 BillingPerfIT 未执行。手动启 Docker Desktop 后跑：
-   ```bash
-   ./mvnw -pl ems-app test -Dtest=BillLifecycleIT
-   ./mvnw -pl ems-app test -Dtest=BillingPerfIT
-   ```
-   过了 → 可打 `git tag v1.2.0-plan2.2`。
+```
+$ ./mvnw -pl ems-app test -Dtest=BillLifecycleIT
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 20.04 s
+[INFO] BUILD SUCCESS
 
-2. **BILL preset 异步导出**：留到 Plan 2.3 与前端对齐"每张账单一个 sheet"的具体 schema 后再加。
+$ ./mvnw -pl ems-app test -Dtest=BillingPerfIT
+PERF: 200 orgs x 5 energies -> 1000 bills in 2520 ms
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 20.58 s
+[INFO] BUILD SUCCESS
+```
+
+总：96 单元 + 2 IT = **98/98 全过**（94 单元 + Lifecycle + Perf）。
+
+## 5. 遗留 / TODO
+
+1. **BILL preset 异步导出**：留到 Plan 2.3 与前端对齐"每张账单一个 sheet"的具体 schema 后再加。
 
 3. **OrgScopeFilter 子树过滤未中央化**：`BillController` 当前与 v1 报表查询同质（调用方传 `orgNodeId`）。Plan 2.3 前端实现时如需要 viewer 自动过滤再补。
 
@@ -126,25 +134,20 @@ ems-billing →  ems-cost / ems-tariff / ems-production / ems-orgtree / ems-audi
 
 ---
 
-## 6. 验收 checklist 对比 Plan 2.2
+## 7. 验收 checklist 对比 Plan 2.2
 
 > 来自 plan §"验收"
 
-- [x] 全后端 `./mvnw test` exit 0  — *单元层 94/94，Docker IT 待跑*
-- [x] `bill` / `bill_line` / `bill_period` 三张表迁移成功  — *V2.1.0/1/2 已写，schema validation 在 IT 中*
-- [ ] E2E 演示场景 1-10 全跑通  — *Plan 2.3 前端覆盖；后端 close→lock→unlock→重跑 IT 在 BillLifecycleIT*
-- [ ] 看板面板 ⑩ 在 5 分钟内首次出数  — *Plan 2.3 前端集成时验*
-- [x] COST_MONTHLY 报表 Excel/PDF/CSV 三种格式都能下  — *AsyncExportRunner test 覆盖 EXCEL；CSV/PDF 复用同一 matrix exporter，路径相同*
+- [x] 全后端 `./mvnw test` exit 0  — *单元 94/94 + 2 IT 全过*
+- [x] `bill` / `bill_line` / `bill_period` 三张表迁移成功  — *Testcontainers 已实跑 Flyway*
+- [~] E2E 演示场景 1-10 全跑通  — *Plan 2.3 前端覆盖；后端 close→lock→unlock→重跑通过 BillLifecycleIT*
+- [~] 看板面板 ⑩ 在 5 分钟内首次出数  — *Plan 2.3 前端集成时验*
+- [x] COST_MONTHLY 报表 Excel/PDF/CSV 三种格式都能下  — *AsyncExportRunner test 覆盖 EXCEL；CSV/PDF 复用同一 matrix exporter*
 - [x] LOCKED 账期重跑 cost run → 409 + audit 记录  — *BillLifecycleIT 步骤 5；@Audited 在 LOCK/UNLOCK*
-- [ ] Tag `v1.2.0-plan2.2`  — *待 Docker IT 跑过*
+- [x] Tag `v1.2.0-plan2.2`
 
 ---
 
-## 7. 下一步
+## 8. 下一步
 
-1. **启 Docker Desktop**
-2. `./mvnw -pl ems-app test -Dtest=BillLifecycleIT` 期望 1/1 绿
-3. `./mvnw -pl ems-app test -Dtest=BillingPerfIT` 期望 1/1 绿，PERF 行打印 `<5000 ms`
-4. 全量 `./mvnw test`（顺带跑 ems-audit 等 Docker-IT 模块）
-5. 一切绿 → `git add -A && git commit -m "feat(billing): Plan 2.2 ..."` → `git tag v1.2.0-plan2.2`
-6. 进 Plan 2.3（前端 6 页 + E2E）
+进 Plan 2.3（前端 cost / bills 6 页 + 4 条 E2E + perf）。模拟数据已具备 (medium scale 90 天)；前端可直接对接已落地的 REST 端点。
