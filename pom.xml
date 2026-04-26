@@ -36,6 +36,7 @@
         <module>ems-timeseries</module>
         <module>ems-dashboard</module>
         <module>ems-report</module>
+        <module>ems-cost</module>
         <module>ems-app</module>
         <module>tools/mock-data-generator</module>
     </modules>
