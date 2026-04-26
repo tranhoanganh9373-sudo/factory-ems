@@ -36,22 +36,30 @@ test('cost rule create + dry-run + delete', async ({ page }) => {
   await modal.getByLabel('编码').fill(RULE_CODE);
   await modal.getByLabel('名称').fill('E2E PROPORTIONAL 规则');
 
-  // 主表 source meter — Select 列表的第 1 个选项
-  await modal.locator('input[id$="sourceMeterId"], .ant-select-selector').first().click();
-  // 等 Select 下拉
-  await page.waitForTimeout(500);
-  const meterOption = page.locator('.ant-select-item-option').first();
-  await meterOption.click();
+  // 主表 source meter — 通过 Form.Item label 精准定位（Select 包装 combobox）
+  const meterCombo = modal.getByLabel('主表 (source meter)');
+  await meterCombo.click();
+  // 等 dropdown 渲染
+  await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option').first().waitFor();
+  await page
+    .locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option')
+    .first()
+    .click();
 
-  // 目标 org — TreeSelect 的第 1 个组织
-  const orgSelect = modal.locator('.ant-tree-select');
-  await orgSelect.click();
-  await page.waitForTimeout(500);
-  await page.locator('.ant-select-tree-node-content-wrapper').first().click();
-  // 关闭下拉
+  // 目标 org — TreeSelect 第 1 个 leaf
+  const orgCombo = modal.getByLabel('目标组织节点');
+  await orgCombo.click();
+  await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-tree-node-content-wrapper').first().waitFor();
+  await page
+    .locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-tree-node-content-wrapper')
+    .first()
+    .click();
+  // 多选 TreeSelect 不会自动关；显式关闭
   await page.keyboard.press('Escape');
+  // 等所有下拉真正消失避免 .ant-modal-wrap intercept
+  await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
 
-  // 提交 — force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap intercept
+  // 提交 — force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap pointer intercept
   await modal.getByRole('button', { name: /确\s*定/ }).click({ force: true });
 
   // 等 modal 关闭并出现 toast
