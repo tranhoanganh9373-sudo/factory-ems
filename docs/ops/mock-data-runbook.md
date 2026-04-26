@@ -134,10 +134,11 @@ more, you may have run the tool twice without resetting — old aggregates stack
 
 After running medium scale, confirm before starting Plan 2.1:
 
-- [ ] `SELECT COUNT(*) FROM ts_rollup_hourly` ≥ 250000
+- [ ] `SELECT COUNT(*) FROM ts_rollup_hourly` ≥ 200000 (medium scale 103 meters × 90 days × 24 hours ≈ 222480 minus noise/missing)
 - [ ] `SELECT COUNT(*) FROM production_entries WHERE entry_date >= '2026-02-01'` ≥ 800
-- [ ] `SELECT COUNT(*) FROM tariff_periods` = 8 (2 plans × 4 periods)
-- [ ] `SELECT COUNT(*) FROM meter_topology` ≥ 80
+- [ ] `SELECT COUNT(*) FROM tariff_periods` ≥ 8 (2 plans, ≥4 periods each)
+- [ ] `SELECT COUNT(*) FROM meter_topology` ≥ 75 (medium scale: 19 sub-mains + 60 leaves = 79 edges)
 - [ ] `target/mock-data-conservation-sidecar.json` exists (lists injected negative-residual hours)
-- [ ] At least 1 cross-midnight TIME band in `tariff_periods`
+- [ ] At least 1 cross-midnight TIME band in `tariff_periods` (`time_start > time_end`)
 - [ ] At least 1 cross-midnight `shifts.time_start > time_end` row
+- [ ] SanityChecker prints `All sanity checks PASSED` (this is the authoritative pass criterion — counts above are sanity ranges, not gates)

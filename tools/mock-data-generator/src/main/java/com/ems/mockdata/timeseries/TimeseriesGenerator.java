@@ -83,6 +83,27 @@ public class TimeseriesGenerator {
             .filter(id -> !parentMeterIds.contains(id))
             .collect(Collectors.toSet());
 
+        // Bottom-up order: a parent only computes after every parent-child of its has been resolved.
+        // Without this, a level-3 parent (e.g. MAIN with sub-mains as children) reads sub-main
+        // accumulators before they are populated, sums to 0, and fails conservation 100% of the time.
+        List<Long> parentMeterIdsBottomUp = new ArrayList<>();
+        {
+            Set<Long> remaining = new HashSet<>(parentMeterIds);
+            while (!remaining.isEmpty()) {
+                List<Long> ready = remaining.stream()
+                    .filter(pid -> parentToChildren.getOrDefault(pid, List.of()).stream()
+                        .noneMatch(remaining::contains))
+                    .toList();
+                if (ready.isEmpty()) {
+                    log.warn("Topology contains a cycle or self-reference; remaining={}", remaining);
+                    parentMeterIdsBottomUp.addAll(remaining);
+                    break;
+                }
+                parentMeterIdsBottomUp.addAll(ready);
+                ready.forEach(remaining::remove);
+            }
+        }
+
         // energy type lookup
         Map<Long, String> etCodeById = new HashMap<>();
         jdbc.query("SELECT id, code FROM energy_types", rs -> {
@@ -187,8 +208,8 @@ public class TimeseriesGenerator {
                     }
                 }
 
-                // compute parent values via conservation
-                for (Long pid : parentMeterIds) {
+                // compute parent values via conservation (bottom-up so multi-level topologies resolve)
+                for (Long pid : parentMeterIdsBottomUp) {
                     Map<Long, Double> childSums = new HashMap<>();
                     for (Long cid : parentToChildren.getOrDefault(pid, List.of())) {
                         double[] ha = hourAcc.get(cid);
