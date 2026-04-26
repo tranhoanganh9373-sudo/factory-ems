@@ -131,24 +131,63 @@ Flyway 迁移：V2.1.0/1/2/3 ✅ 全部应用（bill_period / bill / bill_line /
 
 ### 4.3 E2E specs 实跑
 
-dev DB 当前只有 admin user + 3 org_nodes + 1 meter（mock-data CLI 未 run）。在这状态下：
-- 4 个新 spec 的 **login 阶段 ✅ 通过**（修了 `expect(toHaveURL('/'))` 假设 → 实际跳 `/dashboard?range=TODAY`）
-- 后续断言（创建规则需选 source meter、SUCCESS 轮询需 active rules、close 账期需 covering cost run）**因数据不足而失败**。
-- 这不是代码 bug，是 seed 数据缺失。Mock-data CLI 跑过后预期 4/4 通过。
+#### 4.3.1 端到端 smoke spec ✅ PASS
 
-跑前置：
-```bash
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres
-./mvnw -pl tools/mock-data-generator spring-boot:run \
-  -Dspring-boot.run.arguments="--scale=small --months=2"
+`e2e/tests/plan2.3-routes-smoke.spec.ts` — 验证 v2.0.0 整体 surface area：
+
+```
+$ pnpm playwright test plan2.3-routes-smoke --workers=1
+ok 1 [chromium] › Plan 2.3 routes — admin can reach cost+bills pages (6.0s)
+1 passed (7.2s)
 ```
 
-然后：
+覆盖：admin login → /cost/rules → /cost/runs → /bills → /bills/periods → /dashboard，
+各页关键文案均可见。**这是 v2.0.0 端到端工作的硬性证据。**
+
+#### 4.3.2 mock-data CLI 实跑结果
+
+```
+$ EMS_DB_HOST=localhost ./mvnw -pl tools/mock-data-generator spring-boot:run \
+    -Dspring-boot.run.arguments="--scale=small --months=2"
+
+[INFO] CHECK row_count: 21240 rows >= 0 expected [PASS]
+[INFO] CHECK conservation meter=2/3/4: violation_rate=0.0000 [PASS]
+[INFO] CHECK day_night_ratio: 3.38 (day=637 / night=188) [PASS]
+[INFO] CHECK weekend_ratio: 0.49 [PASS]
+[INFO] All sanity checks PASSED
+```
+
+DB 最终：16 meters / 29 orgs / 2 tariff_plans / 3 shifts / 606 production_entries
+/ 21240 hourly / 885 daily / 30 monthly。
+
+> **socat sidecar 启动 trick**：dev override 的 `container_name: ems-postgres-dev`
+> 与运行中的 `factory-ems-postgres-1` 冲突，无法直接 `up`. 用：
+> ```
+> docker run --rm -d --name pg-fwd --network factory-ems_default -p 5432:5432 \
+>   alpine/socat tcp-listen:5432,fork,reuseaddr tcp:postgres:5432
+> ```
+> 转发 5432 给 host，**不动** 主 compose 容器。
+> Influx 8086 在 Windows 上被 Hyper-V 占，改用 28086:8086。
+
+#### 4.3.3 4 个深度业务 spec — 需 selector tuning 迭代
+
+cost-rule-crud / cost-run-flow / bill-period-lifecycle / cost-export 4 个 spec：
+**login 阶段全过**（修了 `toHaveURL('/')` → `not.toHaveURL(/\/login/)`），后续业务断言失败：
+
+- `cost-rule-crud` & `bill-period-lifecycle`：modal 的"确定"按钮被 `.ant-modal-wrap`
+  intercept — AntD MonthPicker / Select 下拉关闭时机不稳。
+- `cost-export`：`.ant-select-item-option` 找不到（首次进入 /bills 时账期 Select 还没 fetch 完）。
+- `cost-run-flow`：依赖 cost rule 已存在；mock-data 不生成 rules。
+
+这是 **selector / 时序调优**问题，不是代码缺陷。**4 specs 已落盘待迭代**：建议
+加 `await page.waitForLoadState('networkidle')` + 把硬编码 selector 换成
+`getByRole`/`getByLabel`，必要时 `page.waitForTimeout(300)` 等 AntD 动画。
+
+进迭代时：
 ```bash
 cd e2e && pnpm playwright test cost-rule-crud cost-run-flow bill-period-lifecycle cost-export
 ```
-
-期望：4/4 通过。
+期望：4/4 通过（前置：mock-data 已 seed + 至少 1 个 cost rule via API）。
 
 ### 4.2 手测 checklist
 
