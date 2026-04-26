@@ -1,7 +1,13 @@
 package com.ems.report.preset.impl;
 
+import com.ems.billing.dto.BillDTO;
+import com.ems.billing.dto.BillPeriodDTO;
+import com.ems.billing.service.BillingService;
 import com.ems.core.constant.ErrorCode;
 import com.ems.core.exception.BusinessException;
+import com.ems.cost.entity.EnergyTypeCode;
+import com.ems.orgtree.dto.OrgNodeDTO;
+import com.ems.orgtree.service.OrgNodeService;
 import com.ems.production.dto.ShiftDTO;
 import com.ems.production.service.ShiftService;
 import com.ems.report.matrix.ReportMatrix;
@@ -11,6 +17,7 @@ import com.ems.report.preset.ReportPresetService;
 import com.ems.timeseries.model.Granularity;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -18,6 +25,8 @@ import java.time.LocalTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -35,10 +44,15 @@ public class ReportPresetServiceImpl implements ReportPresetService {
 
     private final ReportQueryService query;
     private final ShiftService shifts;
+    private final BillingService billing;
+    private final OrgNodeService orgNodes;
 
-    public ReportPresetServiceImpl(ReportQueryService query, ShiftService shifts) {
+    public ReportPresetServiceImpl(ReportQueryService query, ShiftService shifts,
+                                   BillingService billing, OrgNodeService orgNodes) {
         this.query = query;
         this.shifts = shifts;
+        this.billing = billing;
+        this.orgNodes = orgNodes;
     }
 
     @Override
@@ -106,6 +120,80 @@ public class ReportPresetServiceImpl implements ReportPresetService {
                 startDt.atZone(ZONE).toInstant(),
                 endDt.atZone(ZONE).toInstant()
         };
+    }
+
+    @Override
+    public ReportMatrix costMonthly(YearMonth ym, Long orgNodeId) {
+        require(ym != null, "ym 不能为空");
+        List<ReportMatrix.Column> columns = List.of(
+                new ReportMatrix.Column("SHARP",  "尖"),
+                new ReportMatrix.Column("PEAK",   "峰"),
+                new ReportMatrix.Column("FLAT",   "平"),
+                new ReportMatrix.Column("VALLEY", "谷"),
+                new ReportMatrix.Column("TOTAL",  "合计")
+        );
+
+        BillPeriodDTO period;
+        try {
+            period = billing.getPeriodByYearMonth(ym.toString());
+        } catch (IllegalArgumentException e) {
+            // 账期不存在 → 返回空 matrix，前端展示 "暂无账单"
+            return new ReportMatrix(
+                    "成本月报 " + ym,
+                    ReportMatrix.RowDimension.COST_CENTER,
+                    ReportMatrix.ColumnDimension.TARIFF_BAND,
+                    "CNY", columns, List.of(),
+                    List.of(0.0, 0.0, 0.0, 0.0, 0.0), 0.0
+            );
+        }
+
+        // 仅取 ELEC 账单：4 段电价拆分只对电有意义
+        List<BillDTO> bills = billing.listBills(period.id(), orgNodeId).stream()
+                .filter(b -> b.energyType() == EnergyTypeCode.ELEC)
+                .sorted(Comparator.comparing(BillDTO::orgNodeId))
+                .toList();
+
+        List<ReportMatrix.Row> rows = new ArrayList<>(bills.size());
+        double cSharp = 0, cPeak = 0, cFlat = 0, cValley = 0, cTotal = 0;
+        for (BillDTO b : bills) {
+            double sharp  = nz(b.sharpAmount());
+            double peak   = nz(b.peakAmount());
+            double flat   = nz(b.flatAmount());
+            double valley = nz(b.valleyAmount());
+            double total  = nz(b.amount());
+
+            String orgName;
+            try {
+                OrgNodeDTO n = orgNodes.getById(b.orgNodeId());
+                orgName = n.name();
+            } catch (Exception e) {
+                orgName = "Node " + b.orgNodeId();
+            }
+
+            rows.add(new ReportMatrix.Row(
+                    String.valueOf(b.orgNodeId()),
+                    orgName,
+                    List.of(sharp, peak, flat, valley, total),
+                    total
+            ));
+
+            cSharp += sharp; cPeak += peak; cFlat += flat; cValley += valley; cTotal += total;
+        }
+
+        return new ReportMatrix(
+                "成本月报 " + ym,
+                ReportMatrix.RowDimension.COST_CENTER,
+                ReportMatrix.ColumnDimension.TARIFF_BAND,
+                "CNY",
+                columns,
+                rows,
+                List.of(cSharp, cPeak, cFlat, cValley, cTotal),
+                cTotal
+        );
+    }
+
+    private static double nz(BigDecimal v) {
+        return v == null ? 0.0 : v.doubleValue();
     }
 
     private static void require(boolean cond, String msg) {

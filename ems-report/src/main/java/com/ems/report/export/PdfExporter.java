@@ -93,6 +93,7 @@ public final class PdfExporter {
         return switch (d) {
             case ORG_NODE -> "组织节点";
             case METER -> "测点";
+            case COST_CENTER -> "成本中心";
         };
     }
 

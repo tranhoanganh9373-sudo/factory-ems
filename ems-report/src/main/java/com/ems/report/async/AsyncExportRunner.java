@@ -97,6 +97,10 @@ public class AsyncExportRunner {
                 Long shiftId = require(p.shiftId(), "params.shiftId is required for SHIFT");
                 yield presets.shift(date, shiftId, orgNodeId, energyTypes);
             }
+            case COST_MONTHLY -> {
+                YearMonth ym = require(p.yearMonth(), "params.yearMonth is required for COST_MONTHLY");
+                yield presets.costMonthly(ym, orgNodeId);
+            }
         };
     }
 

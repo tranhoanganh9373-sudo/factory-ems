@@ -27,6 +27,17 @@ public record ReportMatrix(
 
     public record Row(String key, String label, List<Double> cells, double rowTotal) {}
 
-    public enum RowDimension { ORG_NODE, METER }
-    public enum ColumnDimension { TIME_BUCKET, ENERGY_TYPE }
+    /**
+     * 行维度。
+     *  - ORG_NODE / METER：子项目 1 既有
+     *  - COST_CENTER：子项目 2 新增；行 = 组织节点（成本中心视角），与 ORG_NODE 数据来源不同（来自 bill 表而非 telemetry）
+     */
+    public enum RowDimension { ORG_NODE, METER, COST_CENTER }
+
+    /**
+     * 列维度。
+     *  - TIME_BUCKET / ENERGY_TYPE：子项目 1 既有
+     *  - TARIFF_BAND：子项目 2 新增；列 = 尖/峰/平/谷/合计（4 段电价拆分）
+     */
+    public enum ColumnDimension { TIME_BUCKET, ENERGY_TYPE, TARIFF_BAND }
 }

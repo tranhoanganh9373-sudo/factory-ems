@@ -1,6 +1,13 @@
 package com.ems.report.preset;
 
+import com.ems.billing.dto.BillDTO;
+import com.ems.billing.dto.BillPeriodDTO;
+import com.ems.billing.entity.BillPeriodStatus;
+import com.ems.billing.service.BillingService;
 import com.ems.core.exception.BusinessException;
+import com.ems.cost.entity.EnergyTypeCode;
+import com.ems.orgtree.dto.OrgNodeDTO;
+import com.ems.orgtree.service.OrgNodeService;
 import com.ems.production.dto.ShiftDTO;
 import com.ems.production.service.ShiftService;
 import com.ems.report.matrix.ReportMatrix;
@@ -12,12 +19,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,17 +43,44 @@ class ReportPresetServiceImplTest {
 
     ReportQueryService query;
     ShiftService shifts;
+    BillingService billing;
+    OrgNodeService orgNodes;
     ReportPresetServiceImpl svc;
 
     @BeforeEach
     void setup() {
         query = mock(ReportQueryService.class);
         shifts = mock(ShiftService.class);
-        svc = new ReportPresetServiceImpl(query, shifts);
+        billing = mock(BillingService.class);
+        orgNodes = mock(OrgNodeService.class);
+        svc = new ReportPresetServiceImpl(query, shifts, billing, orgNodes);
         ReportMatrix stub = new ReportMatrix("stub",
                 ReportMatrix.RowDimension.ORG_NODE, ReportMatrix.ColumnDimension.TIME_BUCKET,
                 null, List.of(), List.of(), List.of(), 0.0);
         when(query.query(any(ReportMatrixRequest.class))).thenReturn(stub);
+    }
+
+    private BillDTO bill(Long orgId, EnergyTypeCode energy,
+                         String sharp, String peak, String flat, String valley, String total) {
+        return new BillDTO(
+                100L, 1L, 7L, orgId, energy,
+                BigDecimal.ZERO, new BigDecimal(total),
+                new BigDecimal(sharp), new BigDecimal(peak),
+                new BigDecimal(flat), new BigDecimal(valley),
+                null, null, null,
+                OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC)
+        );
+    }
+
+    private OrgNodeDTO orgDto(Long id, String name) {
+        return new OrgNodeDTO(id, null, name, "ORG-" + id, "DEPT", 0, OffsetDateTime.now(ZoneOffset.UTC), List.of());
+    }
+
+    private BillPeriodDTO periodDto(Long id, String ym) {
+        return new BillPeriodDTO(id, ym, BillPeriodStatus.CLOSED,
+                OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC),
+                null, null, null, null,
+                OffsetDateTime.now(ZoneOffset.UTC), OffsetDateTime.now(ZoneOffset.UTC));
     }
 
     private ReportMatrixRequest captureRequest() {
@@ -130,6 +167,78 @@ class ReportPresetServiceImplTest {
     @Test
     void shift_nullShiftId_throws() {
         assertThatThrownBy(() -> svc.shift(LocalDate.parse("2026-04-25"), null, null, null))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    // -------------------- costMonthly (Plan 2.2 Phase H) --------------------
+
+    @Test
+    void costMonthly_returns_empty_matrix_when_period_missing() {
+        when(billing.getPeriodByYearMonth("2026-03")).thenThrow(new IllegalArgumentException("not found"));
+
+        ReportMatrix m = svc.costMonthly(YearMonth.of(2026, 3), null);
+
+        assertThat(m.rowDimension()).isEqualTo(ReportMatrix.RowDimension.COST_CENTER);
+        assertThat(m.columnDimension()).isEqualTo(ReportMatrix.ColumnDimension.TARIFF_BAND);
+        assertThat(m.unit()).isEqualTo("CNY");
+        assertThat(m.columns()).hasSize(5);
+        assertThat(m.rows()).isEmpty();
+        assertThat(m.grandTotal()).isEqualTo(0.0);
+    }
+
+    @Test
+    void costMonthly_filters_to_ELEC_only_and_aggregates_by_org() {
+        when(billing.getPeriodByYearMonth("2026-03")).thenReturn(periodDto(100L, "2026-03"));
+        when(billing.listBills(100L, null)).thenReturn(List.of(
+                bill(50L, EnergyTypeCode.ELEC,  "100", "200", "300", "80", "680"),
+                bill(50L, EnergyTypeCode.WATER, "0",   "0",   "0",   "0",  "120"),   // 应被过滤
+                bill(51L, EnergyTypeCode.ELEC,  "60",  "120", "180", "40", "400")
+        ));
+        when(orgNodes.getById(50L)).thenReturn(orgDto(50L, "一车间"));
+        when(orgNodes.getById(51L)).thenReturn(orgDto(51L, "二车间"));
+
+        ReportMatrix m = svc.costMonthly(YearMonth.of(2026, 3), null);
+
+        assertThat(m.rows()).hasSize(2);
+        assertThat(m.rows().get(0).label()).isEqualTo("一车间");
+        assertThat(m.rows().get(0).cells()).containsExactly(100.0, 200.0, 300.0, 80.0, 680.0);
+        assertThat(m.rows().get(0).rowTotal()).isEqualTo(680.0);
+        assertThat(m.rows().get(1).label()).isEqualTo("二车间");
+        assertThat(m.columnTotals()).containsExactly(160.0, 320.0, 480.0, 120.0, 1080.0);
+        assertThat(m.grandTotal()).isEqualTo(1080.0);
+    }
+
+    @Test
+    void costMonthly_passes_orgNodeId_filter_to_billing_service() {
+        when(billing.getPeriodByYearMonth("2026-03")).thenReturn(periodDto(100L, "2026-03"));
+        when(billing.listBills(100L, 50L)).thenReturn(List.of(
+                bill(50L, EnergyTypeCode.ELEC, "10", "20", "30", "5", "65")
+        ));
+        when(orgNodes.getById(50L)).thenReturn(orgDto(50L, "一车间"));
+
+        ReportMatrix m = svc.costMonthly(YearMonth.of(2026, 3), 50L);
+
+        assertThat(m.rows()).hasSize(1);
+        assertThat(m.grandTotal()).isEqualTo(65.0);
+    }
+
+    @Test
+    void costMonthly_falls_back_when_org_lookup_fails() {
+        when(billing.getPeriodByYearMonth("2026-03")).thenReturn(periodDto(100L, "2026-03"));
+        when(billing.listBills(100L, null)).thenReturn(List.of(
+                bill(99L, EnergyTypeCode.ELEC, "10", "20", "30", "5", "65")
+        ));
+        when(orgNodes.getById(99L)).thenThrow(new RuntimeException("vanished"));
+
+        ReportMatrix m = svc.costMonthly(YearMonth.of(2026, 3), null);
+
+        assertThat(m.rows()).hasSize(1);
+        assertThat(m.rows().get(0).label()).isEqualTo("Node 99");
+    }
+
+    @Test
+    void costMonthly_nullYm_throws() {
+        assertThatThrownBy(() -> svc.costMonthly(null, null))
                 .isInstanceOf(BusinessException.class);
     }
 }

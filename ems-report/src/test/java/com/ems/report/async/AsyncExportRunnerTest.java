@@ -67,6 +67,37 @@ class AsyncExportRunnerTest {
         when(presets.monthly(any(YearMonth.class), any(), any())).thenReturn(sample());
         when(presets.yearly(any(Year.class), any(), any())).thenReturn(sample());
         when(presets.shift(any(LocalDate.class), ArgumentMatchers.anyLong(), any(), any())).thenReturn(sample());
+        when(presets.costMonthly(any(YearMonth.class), any())).thenReturn(sample());
+    }
+
+    @Test
+    void run_costMonthly_excel_dispatches_to_costMonthly_preset() throws IOException {
+        FileTokenStore.Entry entry = store.create("cost-monthly.xlsx");
+        ReportExportRequest req = new ReportExportRequest(
+                ExportFormat.EXCEL,
+                ExportPreset.COST_MONTHLY,
+                new ReportExportRequest.Params(null, YearMonth.parse("2026-03"), null, null, null, null));
+
+        runner.run(entry, req);
+
+        assertThat(entry.status).isEqualTo(FileTokenStore.Status.DONE);
+        assertThat(entry.file).isNotNull();
+        assertThat(Files.size(entry.file)).isPositive();
+        verify(presets).costMonthly(eq(YearMonth.parse("2026-03")), eq(null));
+    }
+
+    @Test
+    void run_costMonthly_missing_yearMonth_fails_with_clear_error() {
+        FileTokenStore.Entry entry = store.create("cost-monthly.csv");
+        ReportExportRequest req = new ReportExportRequest(
+                ExportFormat.CSV,
+                ExportPreset.COST_MONTHLY,
+                new ReportExportRequest.Params(null, null, null, null, null, null));
+
+        runner.run(entry, req);
+
+        assertThat(entry.status).isEqualTo(FileTokenStore.Status.FAILED);
+        assertThat(entry.error).contains("yearMonth");
     }
 
     @Test

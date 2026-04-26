@@ -25,4 +25,11 @@ public interface ReportPresetService {
 
     /** 班次报表：date 当日的指定 shift 时段（跨零点 → 跨日），行 = 节点，列 = 能源品类。 */
     ReportMatrix shift(LocalDate date, Long shiftId, Long orgNodeId, List<String> energyTypes);
+
+    /**
+     * 子项目 2 · 成本月报：行 = 组织节点（成本中心），列 = 尖/峰/平/谷/合计 5 段（CNY）。
+     * 数据来源是 bill 表的 ELEC 账单（4 段电价拆分仅对电有意义）。
+     * orgNodeId 为空 = 当前账期下全部账单。账期不存在时返回空 matrix（不抛异常）。
+     */
+    ReportMatrix costMonthly(YearMonth ym, Long orgNodeId);
 }

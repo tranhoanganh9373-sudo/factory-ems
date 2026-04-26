@@ -85,6 +85,8 @@ public class ReportExportController {
             case YEARLY -> "yearly-" + (req.params().year() != null ? req.params().year() : "");
             case SHIFT -> "shift-" + (req.params().date() != null ? req.params().date() : "")
                     + "-" + (req.params().shiftId() != null ? req.params().shiftId() : "");
+            case COST_MONTHLY -> "cost-monthly-"
+                    + (req.params().yearMonth() != null ? req.params().yearMonth() : "");
         };
         return "report-" + tag + "." + req.format().ext();
     }

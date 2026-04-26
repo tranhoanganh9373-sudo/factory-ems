@@ -78,6 +78,7 @@ public class ReportPresetController {
             return switch (d) {
                 case ORG_NODE -> "组织节点";
                 case METER -> "测点";
+                case COST_CENTER -> "成本中心";
             };
         }
 
@@ -85,6 +86,7 @@ public class ReportPresetController {
             return switch (d) {
                 case TIME_BUCKET -> "时段";
                 case ENERGY_TYPE -> "能源品类";
+                case TARIFF_BAND -> "电价时段";
             };
         }
     }
@@ -120,5 +122,17 @@ public class ReportPresetController {
             @RequestParam(required = false) Long orgNodeId,
             @RequestParam(name = "energyType", required = false) List<String> energyType) {
         return MatrixView.of(presets.shift(date, shiftId, orgNodeId, energyType));
+    }
+
+    /**
+     * Plan 2.2 Phase I — 成本月报。
+     * GET /api/v1/report/preset/cost-monthly?ym=YYYY-MM&orgNodeId=
+     * 行 = 组织节点（成本中心），列 = 尖/峰/平/谷/合计 5 段（CNY）。
+     */
+    @GetMapping("/cost-monthly")
+    public MatrixView costMonthly(
+            @RequestParam("ym") String ym,
+            @RequestParam(required = false) Long orgNodeId) {
+        return MatrixView.of(presets.costMonthly(YearMonth.parse(ym), orgNodeId));
     }
 }

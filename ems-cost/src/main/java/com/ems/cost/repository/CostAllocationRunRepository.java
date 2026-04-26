@@ -37,4 +37,16 @@ public interface CostAllocationRunRepository extends JpaRepository<CostAllocatio
             @Param("periodStart") OffsetDateTime periodStart,
             @Param("periodEnd") OffsetDateTime periodEnd,
             @Param("exceptId") Long exceptId);
+
+    /**
+     * 找最近一次 SUCCESS 且其 [periodStart, periodEnd] 完全覆盖给定窗口的 run。
+     * 用于 ems-billing 账单生成：BillPeriod 必须由完全覆盖它的 cost run 生成账单。
+     */
+    @Query("SELECT r FROM CostAllocationRun r " +
+           "WHERE r.status = com.ems.cost.entity.RunStatus.SUCCESS " +
+           "AND r.periodStart <= :start AND r.periodEnd >= :end " +
+           "ORDER BY r.finishedAt DESC")
+    List<CostAllocationRun> findLatestSuccessCovering(
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end);
 }
