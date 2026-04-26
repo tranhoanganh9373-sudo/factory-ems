@@ -5,6 +5,7 @@ import com.ems.report.async.FileTokenStore;
 import com.ems.report.dto.ExportFormat;
 import com.ems.report.dto.FileTokenDTO;
 import com.ems.report.dto.ReportExportRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -36,10 +37,12 @@ public class ReportExportController {
 
     private final AsyncExportRunner runner;
     private final FileTokenStore store;
+    private final ObjectMapper objectMapper;
 
-    public ReportExportController(AsyncExportRunner runner, FileTokenStore store) {
+    public ReportExportController(AsyncExportRunner runner, FileTokenStore store, ObjectMapper objectMapper) {
         this.runner = runner;
         this.store = store;
+        this.objectMapper = objectMapper;
     }
 
     @PostMapping("/export")
@@ -53,29 +56,45 @@ public class ReportExportController {
         return ResponseEntity.accepted().body(toDto(entry));
     }
 
+    /**
+     * 下载或轮询导出。返回类型固定 ResponseEntity&lt;StreamingResponseBody&gt;
+     * 让 Spring 用 StreamingResponseBodyReturnValueHandler 处理；
+     * 非流的分支用 lambda 写 JSON 到 OutputStream，避开 ResponseEntity&lt;?&gt;
+     * wildcard 触发的 message-converter 调度（旧版用 switch 表达式时
+     * StreamingResponseBody 被当 Object 走 JSON converter，导致 500）。
+     */
     @GetMapping("/export/{token}")
-    public ResponseEntity<?> downloadExport(@PathVariable("token") String token) {
+    public ResponseEntity<StreamingResponseBody> downloadExport(@PathVariable("token") String token) {
         FileTokenStore.Entry e = store.find(token).orElse(null);
         if (e == null) {
-            return ResponseEntity.status(HttpStatus.GONE).body("token expired or not found");
+            return jsonResponse(HttpStatus.GONE, java.util.Map.of("error", "token expired or not found"));
         }
-        return switch (e.status) {
-            case PENDING, RUNNING -> ResponseEntity.status(HttpStatus.ACCEPTED).body(toDto(e));
-            case FAILED -> ResponseEntity.status(HttpStatus.GONE).body(toDto(e));
-            case READY, DONE -> {
-                StreamingResponseBody body = out -> {
-                    try (InputStream in = Files.newInputStream(e.file)) {
-                        in.transferTo(out);
-                    } finally {
-                        store.evict(token);
-                    }
-                };
-                yield ResponseEntity.ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + e.filename + "\"")
-                        .contentType(MediaType.parseMediaType(contentTypeFor(e.filename)))
-                        .body(body);
+        if (e.status == FileTokenStore.Status.PENDING || e.status == FileTokenStore.Status.RUNNING) {
+            return jsonResponse(HttpStatus.ACCEPTED, toDto(e));
+        }
+        if (e.status == FileTokenStore.Status.FAILED) {
+            return jsonResponse(HttpStatus.GONE, toDto(e));
+        }
+        // READY / DONE — 流式回写文件
+        StreamingResponseBody body = out -> {
+            try (InputStream in = Files.newInputStream(e.file)) {
+                in.transferTo(out);
+            } finally {
+                store.evict(token);
             }
         };
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + e.filename + "\"")
+                .contentType(MediaType.parseMediaType(contentTypeFor(e.filename)))
+                .body(body);
+    }
+
+    private ResponseEntity<StreamingResponseBody> jsonResponse(HttpStatus status, Object payload) {
+        StreamingResponseBody body = out -> objectMapper.writeValue(out, payload);
+        return ResponseEntity.status(status)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body);
     }
 
     private static String buildExportFilename(ReportExportRequest req) {

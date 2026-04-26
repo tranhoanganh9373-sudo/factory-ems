@@ -117,15 +117,33 @@ rawClient.interceptors.request.use((cfg) => {
   return cfg;
 });
 
-/** Submit an async export job. Returns the token DTO; tolerates 404 (returns null). */
+/** Submit an async export job. Returns the token DTO; tolerates 404 (returns null).
+ *  后端 ReportExportRequest 是 nested 结构 (`{format, preset, params: {...}}`)，
+ *  这里把前端的 flat ExportRequest 转换成它需要的形状。
+ *  monthly 历史用 `month` 字段，后端 Params 用 `yearMonth` —— 一并 fold。
+ */
 export async function submitExport(req: ExportRequest): Promise<ExportTokenDTO | null> {
+  const body = {
+    format: req.format,
+    preset: req.preset,
+    params: {
+      date: req.date,
+      yearMonth: req.yearMonth ?? req.month,
+      year: req.year,
+      shiftId: req.shiftId,
+      orgNodeId: req.orgNodeId,
+      energyTypes: req.energyTypes,
+    },
+  };
   try {
     // Endpoint per plan-1.3 spec: POST /api/v1/reports/export
     const res = await rawClient.post<
       { code: number; message: string; data: ExportTokenDTO } | ExportTokenDTO
-    >('/reports/export', req);
-    const body = res.data as { code?: number; data?: ExportTokenDTO } & ExportTokenDTO;
-    return body && 'data' in body && body.code === 0 ? body.data! : (body as ExportTokenDTO);
+    >('/reports/export', body);
+    const respBody = res.data as { code?: number; data?: ExportTokenDTO } & ExportTokenDTO;
+    return respBody && 'data' in respBody && respBody.code === 0
+      ? respBody.data!
+      : (respBody as ExportTokenDTO);
   } catch (e: unknown) {
     const status = (e as { response?: { status?: number } })?.response?.status;
     if (status === 404) return null;

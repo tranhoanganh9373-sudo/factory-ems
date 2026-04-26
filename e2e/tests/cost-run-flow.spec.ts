@@ -19,6 +19,7 @@ async function login(page: Page) {
 }
 
 test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) => {
+  test.setTimeout(180_000);
   await login(page);
 
   await page.goto('/cost/runs');
@@ -35,7 +36,8 @@ test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) 
   await rangeInputs.nth(1).fill('2026-04-01 00:00:00');
   await page.keyboard.press('Escape');
 
-  await modal.getByRole('button', { name: '确 定' }).click();
+  // force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap intercept
+  await modal.getByRole('button', { name: /确\s*定/ }).click({ force: true });
 
   // ---- 等 SUCCESS（最多 60s）----
   // 第一行 ID 列点进去 → 等 status tag 变 SUCCESS

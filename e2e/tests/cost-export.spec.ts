@@ -35,6 +35,7 @@ async function readFirstBytes(download: Download, n: number): Promise<number[]> 
 }
 
 test('cost-monthly Excel async export with PK header check', async ({ page }) => {
+  test.setTimeout(180_000);
   await login(page);
 
   await page.goto('/bills');

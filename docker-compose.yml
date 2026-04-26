@@ -28,6 +28,8 @@ services:
       EMS_INFLUX_ORG: ${EMS_INFLUX_ORG:-factory}
       EMS_INFLUX_BUCKET: ${EMS_INFLUX_BUCKET:-factory_ems}
       EMS_INFLUX_MEASUREMENT: ${EMS_INFLUX_MEASUREMENT:-energy_reading}
+      # Plan 2.3 v2.0.0: 导出文件落到挂载点（容器内 /app/./ems_uploads 默认无写权限）
+      EMS_REPORT_EXPORT_BASE_DIR: /data/ems_uploads
     volumes:
       - ./data/ems_uploads:/data/ems_uploads
       - ./logs/ems:/app/logs

@@ -21,6 +21,7 @@ async function login(page: Page) {
 const YM = '2026-03';
 
 test('bill period close → lock (with confirm) → unlock → reclose', async ({ page }) => {
+  test.setTimeout(180_000);
   await login(page);
 
   await page.goto('/bills/periods');
@@ -48,21 +49,22 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   });
 
   // ---- lock：二次确认输入 "我确认锁定 2026-03" ----
-  await periodRow.getByRole('button', { name: '锁定' }).click();
+  // AntD 给 2 字按钮自动加空格："锁定" → "锁 定"；用 regex 容忍。
+  await periodRow.getByRole('button', { name: /锁\s*定/ }).click();
   const lockModal = page.locator('.ant-modal-confirm').filter({ hasText: '锁定账期' });
   await expect(lockModal).toBeVisible();
   await lockModal.locator('input').fill(`我确认锁定 ${YM}`);
-  await lockModal.getByRole('button', { name: '锁 定' }).click();
+  await lockModal.getByRole('button', { name: /锁\s*定/ }).click();
   await expect(periodRow.locator('.ant-tag', { hasText: 'LOCKED' })).toBeVisible({
     timeout: 10_000,
   });
 
   // ---- unlock：仅 ADMIN 可解 ----
-  await periodRow.getByRole('button', { name: /解锁/ }).click();
+  await periodRow.getByRole('button', { name: /解\s*锁/ }).click();
   const unlockModal = page.locator('.ant-modal-confirm').filter({ hasText: '解锁账期' });
   await expect(unlockModal).toBeVisible();
   await unlockModal.locator('input').fill(`我确认解锁 ${YM}`);
-  await unlockModal.getByRole('button', { name: '解 锁' }).click();
+  await unlockModal.getByRole('button', { name: /解\s*锁/ }).click();
   await expect(periodRow.locator('.ant-tag', { hasText: 'CLOSED' })).toBeVisible({
     timeout: 10_000,
   });

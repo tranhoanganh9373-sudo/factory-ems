@@ -38,7 +38,7 @@ class ReportExportControllerTest {
     void setup() {
         exportRunner = mock(AsyncExportRunner.class);
         store = new FileTokenStore();
-        controller = new ReportExportController(exportRunner, store);
+        controller = new ReportExportController(exportRunner, store, new com.fasterxml.jackson.databind.ObjectMapper());
     }
 
     private static ReportExportRequest dailyReq() {

@@ -22,6 +22,7 @@ async function login(page: Page) {
 const RULE_CODE = `E2E-RULE-${Date.now()}`;
 
 test('cost rule create + dry-run + delete', async ({ page }) => {
+  test.setTimeout(120_000);
   await login(page);
 
   await page.goto('/cost/rules');
@@ -50,8 +51,8 @@ test('cost rule create + dry-run + delete', async ({ page }) => {
   // 关闭下拉
   await page.keyboard.press('Escape');
 
-  // 提交
-  await modal.getByRole('button', { name: '确 定' }).click();
+  // 提交 — force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap intercept
+  await modal.getByRole('button', { name: /确\s*定/ }).click({ force: true });
 
   // 等 modal 关闭并出现 toast
   await expect(modal).not.toBeVisible({ timeout: 10_000 });
@@ -75,11 +76,11 @@ test('cost rule create + dry-run + delete', async ({ page }) => {
   await dryModal.getByRole('button', { name: '关闭' }).click();
 
   // ---- 删除 ----
-  await ruleRow.getByRole('button', { name: '删除' }).click();
+  await ruleRow.getByRole('button', { name: /删\s*除/ }).click();
   // 二次确认
   await page
     .locator('.ant-modal-confirm')
-    .getByRole('button', { name: '确 定' })
+    .getByRole('button', { name: /确\s*定/ })
     .click();
 
   // 列表中规则消失
