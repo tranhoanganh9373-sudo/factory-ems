@@ -12,6 +12,7 @@ import TariffDistributionPanel from './TariffDistributionPanel';
 import EnergyIntensityPanel from './EnergyIntensityPanel';
 import SankeyPanel from './SankeyPanel';
 import FloorplanLivePanel from './FloorplanLivePanel';
+import CostDistributionPanel from './CostDistributionPanel';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
@@ -97,7 +98,7 @@ export default function DashboardPage() {
       </Row>
 
       {/* Row 5: ⑧ Sankey + ⑨ Floorplan live */}
-      <Row gutter={[16, 16]}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={12}>
           <Card size="small" bodyStyle={{ padding: 16 }}>
             <SankeyPanel />
@@ -106,6 +107,15 @@ export default function DashboardPage() {
         <Col xs={24} lg={12}>
           <Card size="small" bodyStyle={{ padding: 16 }}>
             <FloorplanLivePanel />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Row 6: ⑩ Cost distribution (Plan 2.2 Phase K backend, Plan 2.3 Phase I frontend) */}
+      <Row gutter={[16, 16]}>
+        <Col span={24}>
+          <Card size="small" bodyStyle={{ padding: 16 }}>
+            <CostDistributionPanel />
           </Card>
         </Col>
       </Row>

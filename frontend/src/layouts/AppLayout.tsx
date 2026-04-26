@@ -7,6 +7,8 @@ import {
   ApiOutlined,
   DashboardOutlined,
   FileTextOutlined,
+  DollarOutlined,
+  AccountBookOutlined,
 } from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
@@ -70,6 +72,32 @@ export default function AppLayout() {
       },
       { key: '/floorplan', label: <Link to="/floorplan">平面图</Link> },
     ];
+    if (hasRole('ADMIN') || hasRole('FINANCE')) {
+      items.push({
+        key: 'cost',
+        label: (
+          <span>
+            <DollarOutlined /> 成本分摊
+          </span>
+        ),
+        children: [
+          { key: '/cost/rules', label: <Link to="/cost/rules">分摊规则</Link> },
+          { key: '/cost/runs', label: <Link to="/cost/runs">分摊批次</Link> },
+        ],
+      });
+      items.push({
+        key: 'bills',
+        label: (
+          <span>
+            <AccountBookOutlined /> 账单
+          </span>
+        ),
+        children: [
+          { key: '/bills', label: <Link to="/bills">账单列表</Link> },
+          { key: '/bills/periods', label: <Link to="/bills/periods">账期管理</Link> },
+        ],
+      });
+    }
     if (hasRole('ADMIN')) {
       items.push({
         key: 'admin',

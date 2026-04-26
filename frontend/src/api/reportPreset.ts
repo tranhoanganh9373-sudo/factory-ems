@@ -12,7 +12,7 @@ import { apiClient } from './client';
  * Phase L-controller / Phase M (export) ship.
  */
 
-export type PresetKind = 'daily' | 'monthly' | 'yearly' | 'shift';
+export type PresetKind = 'daily' | 'monthly' | 'yearly' | 'shift' | 'COST_MONTHLY';
 
 export interface ReportMatrix {
   rowAxis: string; // e.g. "orgNode"
@@ -92,6 +92,8 @@ export interface ExportRequest {
   shiftId?: number;
   orgNodeId?: number;
   energyTypes?: string[];
+  /** Plan 2.2 Phase J — COST_MONTHLY 预设要求 yearMonth (YYYY-MM)。 */
+  yearMonth?: string;
 }
 
 export interface ExportTokenDTO {
@@ -119,10 +121,9 @@ rawClient.interceptors.request.use((cfg) => {
 export async function submitExport(req: ExportRequest): Promise<ExportTokenDTO | null> {
   try {
     // Endpoint per plan-1.3 spec: POST /api/v1/reports/export
-    const res = await rawClient.post<{ code: number; message: string; data: ExportTokenDTO } | ExportTokenDTO>(
-      '/reports/export',
-      req
-    );
+    const res = await rawClient.post<
+      { code: number; message: string; data: ExportTokenDTO } | ExportTokenDTO
+    >('/reports/export', req);
     const body = res.data as { code?: number; data?: ExportTokenDTO } & ExportTokenDTO;
     return body && 'data' in body && body.code === 0 ? body.data! : (body as ExportTokenDTO);
   } catch (e: unknown) {
@@ -133,9 +134,7 @@ export async function submitExport(req: ExportRequest): Promise<ExportTokenDTO |
 }
 
 /** Poll status for an async export. Returns DTO when not ready, Blob when READY, null on 410/404. */
-export async function pollExport(
-  token: string
-): Promise<ExportTokenDTO | Blob | null> {
+export async function pollExport(token: string): Promise<ExportTokenDTO | Blob | null> {
   try {
     const res = await rawClient.get<Blob>(`/reports/export/${token}`, {
       responseType: 'blob',

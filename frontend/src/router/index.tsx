@@ -25,6 +25,12 @@ import MonthlyReportPage from '@/pages/report/monthly';
 import YearlyReportPage from '@/pages/report/yearly';
 import ShiftReportPage from '@/pages/report/shift';
 import ExportReportPage from '@/pages/report/export';
+import CostRulesPage from '@/pages/cost/rules';
+import CostRunsPage from '@/pages/cost/runs';
+import CostRunDetailPage from '@/pages/cost/run-detail';
+import BillsListPage from '@/pages/bills/list';
+import BillPeriodsPage from '@/pages/bills/periods';
+import BillDetailPage from '@/pages/bills/detail';
 
 export function AppRouter() {
   return (
@@ -56,6 +62,30 @@ export function AppRouter() {
         <Route path="report/yearly" element={<YearlyReportPage />} />
         <Route path="report/shift" element={<ShiftReportPage />} />
         <Route path="report/export" element={<ExportReportPage />} />
+        <Route
+          path="cost"
+          element={
+            <ProtectedRoute requiredAnyRole={['FINANCE', 'ADMIN']}>
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="rules" element={<CostRulesPage />} />
+          <Route path="runs" element={<CostRunsPage />} />
+          <Route path="runs/:id" element={<CostRunDetailPage />} />
+        </Route>
+        <Route
+          path="bills"
+          element={
+            <ProtectedRoute requiredAnyRole={['FINANCE', 'ADMIN']}>
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<BillsListPage />} />
+          <Route path="periods" element={<BillPeriodsPage />} />
+          <Route path=":id" element={<BillDetailPage />} />
+        </Route>
         <Route
           path="admin"
           element={
