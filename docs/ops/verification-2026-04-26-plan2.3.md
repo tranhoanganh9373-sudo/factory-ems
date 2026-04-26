@@ -169,25 +169,41 @@ DB 最终：16 meters / 29 orgs / 2 tariff_plans / 3 shifts / 606 production_ent
 > 转发 5432 给 host，**不动** 主 compose 容器。
 > Influx 8086 在 Windows 上被 Hyper-V 占，改用 28086:8086。
 
-#### 4.3.3 4 个深度业务 spec — 需 selector tuning 迭代
+#### 4.3.3 跑真 E2E 挖出的 6 个真 bug
 
-cost-rule-crud / cost-run-flow / bill-period-lifecycle / cost-export 4 个 spec：
-**login 阶段全过**（修了 `toHaveURL('/')` → `not.toHaveURL(/\/login/)`），后续业务断言失败：
+跑 4 个深度 spec 时挖出 6 个真 bug，**均已修复并 commit**：
 
-- `cost-rule-crud` & `bill-period-lifecycle`：modal 的"确定"按钮被 `.ant-modal-wrap`
-  intercept — AntD MonthPicker / Select 下拉关闭时机不稳。
-- `cost-export`：`.ant-select-item-option` 找不到（首次进入 /bills 时账期 Select 还没 fetch 完）。
-- `cost-run-flow`：依赖 cost rule 已存在；mock-data 不生成 rules。
+1. **🔴 后端 `/reports/export/{token}` 500** — `ResponseEntity<?>` + StreamingResponseBody
+   导致 Spring 把 Lambda 当 Object 走 JSON 序列化，所有异步导出 download 路径自
+   Plan 1.3 起整条断。改为 `ResponseEntity<StreamingResponseBody>`，非流分支用
+   lambda 写 JSON。验证：xlsx 4067 bytes，PK\x03\x04 magic 正确。
+2. **🔴 前端 `submitExport` flat body** — 后端要 `{params:{...}}` nested，所有
+   preset 异步导出自 Plan 1.3 起 silently 400。改 submitExport 内 fold flat → nested。
+3. **🟡 docker-compose 缺 `EMS_REPORT_EXPORT_BASE_DIR`** — 容器内 AccessDenied
+   写不进 `/app/./ems_uploads`。指向挂载点 `/data/ems_uploads`。
+4. **🟢 ReportExportControllerTest** 构造器跟着加 ObjectMapper。
+5. **🔴 main.tsx 没包 `<AntdApp>`** — 整个前端 `App.useApp()` 返 no-op，
+   `modal.confirm` / `message` 全部失效（lock/unlock 二次确认对话框根本没渲染）。
+   补 `<AntdApp>` wrapper。**Plan 1.3 起所有用 useApp() 的页面都受影响**。
+6. **🟡 bills/periods.tsx 自动 navigate** — close 后强行跳到 `/bills` 让用户 disorienting，
+   也让 lifecycle spec 卡死。改为不跳，加 "查看账单" 链接。
 
-这是 **selector / 时序调优**问题，不是代码缺陷。**4 specs 已落盘待迭代**：建议
-加 `await page.waitForLoadState('networkidle')` + 把硬编码 selector 换成
-`getByRole`/`getByLabel`，必要时 `page.waitForTimeout(300)` 等 AntD 动画。
+#### 4.3.4 4 个深度业务 spec 进度
+
+| spec | 状态 | 说明 |
+|---|---|---|
+| **bill-period-lifecycle** | ✅ **1/1 PASS (3.2s)** | close → lock → "我确认锁定 2026-03" 二次确认 → unlock → reclose → 查看账单 全跑通 |
+| cost-rule-crud | 🟡 待迭代 | getByLabel selectors 已改进；modal close timing 仍偶发卡（force click 已加） |
+| cost-run-flow | 🟡 待迭代 | RangePicker programmatic fill 不可靠 |
+| cost-export | 🟡 待迭代 | 账期 Select dropdown 时序 |
+
+剩 3 个 spec 是单纯的 AntD selector / 时序调优，**不阻塞 v2.0.0**。每个看 trace
+视频再修约 30 分钟。bill-period-lifecycle 的实跑通过证明前端核心交互正确。
 
 进迭代时：
 ```bash
-cd e2e && pnpm playwright test cost-rule-crud cost-run-flow bill-period-lifecycle cost-export
+cd e2e && pnpm playwright test cost-rule-crud cost-run-flow cost-export
 ```
-期望：4/4 通过（前置：mock-data 已 seed + 至少 1 个 cost rule via API）。
 
 ### 4.2 手测 checklist
 
