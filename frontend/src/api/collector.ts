@@ -22,8 +22,6 @@ export interface RunningInfo {
 }
 
 export const collectorApi = {
-  status: () =>
-    apiClient.get<DeviceStatusDTO[]>('/collector/status').then((r) => r.data),
-  running: () =>
-    apiClient.get<RunningInfo>('/collector/running').then((r) => r.data),
+  status: () => apiClient.get<DeviceStatusDTO[]>('/collector/status').then((r) => r.data),
+  running: () => apiClient.get<RunningInfo>('/collector/running').then((r) => r.data),
 };

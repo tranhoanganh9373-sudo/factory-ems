@@ -69,9 +69,7 @@ export default function CollectorStatusPage() {
               title: '状态',
               dataIndex: 'state',
               width: 100,
-              render: (s: DeviceState) => (
-                <Tag color={STATE_COLOR[s]}>{STATE_LABEL[s]}</Tag>
-              ),
+              render: (s: DeviceState) => <Tag color={STATE_COLOR[s]}>{STATE_LABEL[s]}</Tag>,
             },
             {
               title: '上次读取',
@@ -95,8 +93,7 @@ export default function CollectorStatusPage() {
               title: '连错',
               dataIndex: 'consecutiveErrors',
               width: 80,
-              render: (n: number) =>
-                n > 0 ? <Tag color="red">{n}</Tag> : <span>0</span>,
+              render: (n: number) => (n > 0 ? <Tag color="red">{n}</Tag> : <span>0</span>),
             },
             {
               title: '最近错误',
