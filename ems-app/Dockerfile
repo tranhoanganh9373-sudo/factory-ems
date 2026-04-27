@@ -15,6 +15,7 @@ COPY ems-dashboard/pom.xml  ems-dashboard/
 COPY ems-report/pom.xml     ems-report/
 COPY ems-cost/pom.xml       ems-cost/
 COPY ems-billing/pom.xml    ems-billing/
+COPY ems-collector/pom.xml  ems-collector/
 COPY ems-app/pom.xml        ems-app/
 COPY tools/mock-data-generator/pom.xml tools/mock-data-generator/
 # `-pl ems-app -am` 沿 ems-app 的依赖树跳过 tools/mock-data-generator（不是 ems-app 的依赖）。
@@ -33,6 +34,7 @@ COPY ems-dashboard  ems-dashboard
 COPY ems-report     ems-report
 COPY ems-cost       ems-cost
 COPY ems-billing    ems-billing
+COPY ems-collector  ems-collector
 COPY ems-app        ems-app
 COPY tools          tools
 RUN mvn -B -q -T 4 clean package -DskipTests -pl ems-app -am

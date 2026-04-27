@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ems</groupId>
+        <artifactId>factory-ems</artifactId>
+        <version>1.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>ems-collector</artifactId>
+
+    <dependencies>
+        <!-- Internal deps -->
+        <dependency><groupId>com.ems</groupId><artifactId>ems-core</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.ems</groupId><artifactId>ems-audit</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.ems</groupId><artifactId>ems-meter</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.ems</groupId><artifactId>ems-timeseries</artifactId><version>${project.version}</version></dependency>
+
+        <!-- Spring -->
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-data-jpa</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-validation</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
+
+        <!-- Modbus: j2mod (Apache 2.0) — TCP + RTU master/slave; jSerialComm 是它默认依赖（RTU 串口 IO）。
+             1.5.1 只用 TCP，但 RTU 依赖 1.5.2 会用，pom 里先声明避免后续版本冲突。 -->
+        <dependency>
+            <groupId>com.ghgande</groupId>
+            <artifactId>j2mod</artifactId>
+            <version>3.2.1</version>
+        </dependency>
+
+        <!-- Test -->
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-testcontainers</artifactId><scope>test</scope></dependency>
+        <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
+    </dependencies>
+</project>

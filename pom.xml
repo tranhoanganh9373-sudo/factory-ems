@@ -38,6 +38,7 @@
         <module>ems-report</module>
         <module>ems-cost</module>
         <module>ems-billing</module>
+        <module>ems-collector</module>
         <module>ems-app</module>
         <module>tools/mock-data-generator</module>
     </modules>
