@@ -54,13 +54,13 @@ test('cost rule create + dry-run + delete', async ({ page }) => {
     .locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-tree-node-content-wrapper')
     .first()
     .click();
-  // 多选 TreeSelect 不会自动关；显式关闭
-  await page.keyboard.press('Escape');
-  // 等所有下拉真正消失避免 .ant-modal-wrap intercept
+  // 多选 TreeSelect 不会自动关；点 modal 标题让它失焦关闭。
+  // 不能 press Escape，AntD Modal 默认 keyboard:true 会一并关闭整个 modal。
+  await modal.locator('.ant-modal-title').click();
   await page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden)').waitFor({ state: 'detached', timeout: 5000 }).catch(() => {});
 
-  // 提交 — force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap pointer intercept
-  await modal.getByRole('button', { name: /确\s*定/ }).click({ force: true });
+  // 提交
+  await modal.getByRole('button', { name: /确\s*定/ }).click();
 
   // 等 modal 关闭并出现 toast
   await expect(modal).not.toBeVisible({ timeout: 10_000 });
@@ -74,14 +74,10 @@ test('cost rule create + dry-run + delete', async ({ page }) => {
   const dryModal = page.locator('.ant-modal').filter({ hasText: 'Dry-run' });
   await expect(dryModal).toBeVisible();
 
-  // 选时间区间（任意 24h 即可）
-  const rangePicker = dryModal.locator('.ant-picker').first();
-  await rangePicker.click();
-  // 简化：直接关闭，靠默认值（真实场景 manual 测）
-  await page.keyboard.press('Escape');
-
-  // 关闭 dry-run modal
-  await dryModal.getByRole('button', { name: '关闭' }).click();
+  // 不操作 RangePicker —— 一打开就 Escape 会同时关掉 dry-run modal（AntD keyboard:true）。
+  // 直接关闭确认 modal 渲染正常即可。
+  await dryModal.getByRole('button', { name: /关\s*闭/ }).click();
+  await expect(dryModal).not.toBeVisible({ timeout: 5_000 });
 
   // ---- 删除 ----
   await ruleRow.getByRole('button', { name: /删\s*除/ }).click();

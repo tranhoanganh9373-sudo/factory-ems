@@ -1,4 +1,4 @@
-/**
+﻿/**
  * K5 — dashboard-permission.spec.ts
  *
  * Prerequisites:
@@ -23,16 +23,90 @@ import { test, expect } from '@playwright/test';
 
 const VIEWER_NAME = 'e2e_dashboard_viewer';
 const VIEWER_PASS = 'viewerDash123!';
-// 产线A is the permitted subtree — meters M-4 (产线B) and M-6 (产线B) must not appear.
-const PERMITTED_ORG = '产线A';
-const FORBIDDEN_METERS = ['M-4', 'M-6'];
+// 冲压车间 (MOCK-WS-A) is the permitted subtree — meters under 焊接车间/涂装车间 must not appear.
+// 冲压车间 子树包括 ELEC-001..005 + WATER-001..003；其他车间含 STEAM 与 ELEC-006..009。
+const PERMITTED_ORG = '冲压车间';
+const FORBIDDEN_METERS = ['MOCK-M-STEAM-001', 'MOCK-M-STEAM-002', 'MOCK-M-ELEC-009'];
+
+/** API helper: create viewer (idempotent) + grant SUBTREE perm on the named org.
+ *  避开 UI（admin/users 列表分页 + 模态框时序）一致性问题。 */
+async function ensureViewerWithSubtreePerm(
+  request: import('@playwright/test').APIRequestContext,
+  username: string,
+  password: string,
+  orgName: string
+) {
+  const loginRes = await request.post('/api/v1/auth/login', {
+    data: { username: 'admin', password: 'admin123!' },
+  });
+  const adminToken = (await loginRes.json()).data.accessToken as string;
+  const auth = { Authorization: `Bearer ${adminToken}` };
+
+  // Find target org id from orgtree
+  const treeRes = await request.get('/api/v1/org-nodes/tree', { headers: auth });
+  const tree = (await treeRes.json()).data as Array<{
+    id: number;
+    name: string;
+    code: string;
+    children?: unknown[];
+  }>;
+  const orgId = findOrgIdByName(tree, orgName);
+  if (orgId == null) throw new Error(`org "${orgName}" not found in tree`);
+
+  // Create viewer (200/201 ok; 409 means already exists — search instead)
+  let userId: number | null = null;
+  const createRes = await request.post('/api/v1/users', {
+    headers: auth,
+    data: {
+      username,
+      password,
+      displayName: username,
+      roleCodes: ['VIEWER'],
+    },
+  });
+  if (createRes.ok()) {
+    userId = (await createRes.json()).data.id as number;
+  } else {
+    // Search by listing all (keyword filter is buggy — returns 0 matches even when user exists)
+    const listRes = await request.get('/api/v1/users?page=1&size=500', { headers: auth });
+    const items = (await listRes.json()).data.items as Array<{ id: number; username: string }>;
+    userId = items.find((u) => u.username === username)?.id ?? null;
+  }
+  if (userId == null) throw new Error(`could not create or find user ${username}`);
+
+  // Reset password each run so login works regardless of prior state
+  await request.put(`/api/v1/users/${userId}/password/reset`, {
+    headers: auth,
+    data: { newPassword: password },
+  });
+
+  // Grant SUBTREE — service-side dedupes if same (orgNodeId, scope) already exists.
+  await request.post(`/api/v1/users/${userId}/node-permissions`, {
+    headers: auth,
+    data: { orgNodeId: orgId, scope: 'SUBTREE' },
+  });
+}
+
+function findOrgIdByName(
+  nodes: Array<{ id: number; name: string; children?: unknown[] }>,
+  name: string
+): number | null {
+  for (const n of nodes) {
+    if (n.name === name) return n.id;
+    if (n.children?.length) {
+      const found = findOrgIdByName(n.children as typeof nodes, name);
+      if (found != null) return found;
+    }
+  }
+  return null;
+}
 
 async function login(page: any, username: string, password: string) {
   await page.goto('/login');
   await page.getByPlaceholder('用户名').fill(username);
   await page.getByPlaceholder('密码').fill(password);
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 // Helper: pick an AntD Select / tree-select option.
@@ -46,60 +120,17 @@ async function pickOption(page: any, text: string) {
 }
 
 test.describe('dashboard permission (viewer)', () => {
-  test.beforeAll(async ({ browser }) => {
-    // Use a dedicated page to set up the viewer user as admin.
-    const context = await browser.newContext();
-    const page = await context.newPage();
-
-    await login(page, 'admin', 'admin123!');
-
-    // ── Create viewer user (idempotent: ignore if already exists) ──
-    await page.goto('/admin/users');
-    await page.getByRole('button', { name: /新\s*建/ }).click();
-    await page.getByLabel('用户名').fill(VIEWER_NAME);
-    await page.getByLabel('初始密码').fill(VIEWER_PASS);
-    try {
-      await page.getByLabel('姓名').fill('E2E Dashboard Viewer');
-    } catch {
-      // optional field
-    }
-    await page.getByRole('button', { name: '确 定' }).click();
-    // Either "已创建" or the row already exists — both are acceptable
-    await page.waitForTimeout(1_000);
-
-    // ── Grant viewer SUBTREE permission on 产线A ──
-    await page.goto('/admin/users');
-    const viewerRow = page.getByRole('row', { name: new RegExp(VIEWER_NAME) });
-    await expect(viewerRow).toBeVisible({ timeout: 10_000 });
-    await viewerRow.getByRole('link', { name: /权限/ }).click();
-
-    // Click "授权节点"
-    const grantBtn = page.getByRole('button', { name: '授权节点' });
-    await expect(grantBtn).toBeVisible({ timeout: 10_000 });
-    await grantBtn.click();
-
-    // Pick 产线A in the org tree-select
-    await page.getByLabel('组织节点').click();
-    await page.getByLabel('组织节点').fill(PERMITTED_ORG);
-    const treeTitle = page
-      .locator('span.ant-select-tree-title')
-      .filter({ hasText: PERMITTED_ORG })
-      .first();
-    await treeTitle.waitFor({ state: 'visible' });
-    await treeTitle.dispatchEvent('click');
-
-    await page.getByRole('button', { name: '确 定' }).click();
-    // Wait for success — "已授权" or similar
-    await page.waitForTimeout(1_000);
-
-    await context.close();
+  test.describe.configure({ timeout: 90_000 });
+  test.beforeAll(async ({ request }) => {
+    test.setTimeout(90_000);
+    await ensureViewerWithSubtreePerm(request, VIEWER_NAME, VIEWER_PASS, PERMITTED_ORG);
   });
 
   test('viewer sees permitted dashboard and restricted meters page', async ({ page }) => {
     await login(page, VIEWER_NAME, VIEWER_PASS);
 
-    // ── 1. Navigate to /dashboard ──
-    await page.goto('/dashboard');
+    // ── 1. Navigate to /dashboard (CUSTOM range that mock-data covers; ISO Instant required) ──
+    await page.goto('/dashboard?range=CUSTOM&from=2026-03-01T00:00:00Z&to=2026-03-31T23:59:59Z');
     await expect(page).toHaveURL(/\/dashboard/);
 
     // KPI cards visible

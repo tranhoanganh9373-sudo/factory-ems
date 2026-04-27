@@ -225,7 +225,7 @@ class ReportIT {
     }
 
     @Test @Order(4)
-    void asyncExport_unknownToken_returnsGone() {
+    void asyncExport_unknownToken_returnsGone() throws Exception {
         var resp = controller.download("does-not-exist-" + System.nanoTime());
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.GONE);
     }

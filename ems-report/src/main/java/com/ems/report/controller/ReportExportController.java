@@ -5,6 +5,7 @@ import com.ems.report.async.FileTokenStore;
 import com.ems.report.dto.ExportFormat;
 import com.ems.report.dto.FileTokenDTO;
 import com.ems.report.dto.ReportExportRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 
 /**
@@ -57,14 +57,13 @@ public class ReportExportController {
     }
 
     /**
-     * 下载或轮询导出。返回类型固定 ResponseEntity&lt;StreamingResponseBody&gt;
-     * 让 Spring 用 StreamingResponseBodyReturnValueHandler 处理；
-     * 非流的分支用 lambda 写 JSON 到 OutputStream，避开 ResponseEntity&lt;?&gt;
-     * wildcard 触发的 message-converter 调度（旧版用 switch 表达式时
-     * StreamingResponseBody 被当 Object 走 JSON converter，导致 500）。
+     * 下载或轮询导出。返回类型固定 ResponseEntity&lt;byte[]&gt; 并设 Content-Length，
+     * 避开 chunked encoding —— Chrome/axios 在 responseType=blob 下对 chunked
+     * Excel 流偶发 ERR_INCOMPLETE_CHUNKED_ENCODING（curl 同 endpoint 正常）。
+     * 报表文件单次最多几 MB，全量加载到内存可接受。
      */
     @GetMapping("/export/{token}")
-    public ResponseEntity<StreamingResponseBody> downloadExport(@PathVariable("token") String token) {
+    public ResponseEntity<byte[]> downloadExport(@PathVariable("token") String token) throws IOException {
         FileTokenStore.Entry e = store.find(token).orElse(null);
         if (e == null) {
             return jsonResponse(HttpStatus.GONE, java.util.Map.of("error", "token expired or not found"));
@@ -75,26 +74,28 @@ public class ReportExportController {
         if (e.status == FileTokenStore.Status.FAILED) {
             return jsonResponse(HttpStatus.GONE, toDto(e));
         }
-        // READY / DONE — 流式回写文件
-        StreamingResponseBody body = out -> {
-            try (InputStream in = Files.newInputStream(e.file)) {
-                in.transferTo(out);
-            } finally {
-                store.evict(token);
-            }
-        };
+        // READY / DONE — 一次性读完，显式 Content-Length。
+        byte[] data = Files.readAllBytes(e.file);
+        store.evict(token);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + e.filename + "\"")
                 .contentType(MediaType.parseMediaType(contentTypeFor(e.filename)))
-                .body(body);
+                .contentLength(data.length)
+                .body(data);
     }
 
-    private ResponseEntity<StreamingResponseBody> jsonResponse(HttpStatus status, Object payload) {
-        StreamingResponseBody body = out -> objectMapper.writeValue(out, payload);
+    private ResponseEntity<byte[]> jsonResponse(HttpStatus status, Object payload) {
+        byte[] data;
+        try {
+            data = objectMapper.writeValueAsBytes(payload);
+        } catch (JsonProcessingException ex) {
+            data = ("{\"error\":\"json serialization failed: " + ex.getMessage() + "\"}").getBytes();
+        }
         return ResponseEntity.status(status)
                 .contentType(MediaType.APPLICATION_JSON)
-                .body(body);
+                .contentLength(data.length)
+                .body(data);
     }
 
     private static String buildExportFilename(ReportExportRequest req) {

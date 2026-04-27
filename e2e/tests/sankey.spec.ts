@@ -1,4 +1,4 @@
-/**
+﻿/**
  * T4 — sankey.spec.ts
  *
  * Plan 1.3 / Phase T 保命用例：看板面板 ⑧ Sankey 能流图渲染。
@@ -22,7 +22,7 @@ async function login(page: Page) {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 test('dashboard panel 8 Sankey renders >= 1 link path', async ({ page }) => {

@@ -30,6 +30,8 @@ services:
       EMS_INFLUX_MEASUREMENT: ${EMS_INFLUX_MEASUREMENT:-energy_reading}
       # Plan 2.3 v2.0.0: 导出文件落到挂载点（容器内 /app/./ems_uploads 默认无写权限）
       EMS_REPORT_EXPORT_BASE_DIR: /data/ems_uploads
+      # 平面图上传同样落到挂载点；不设的话默认 ./ems_uploads/floorplans 写不了 → 上传 400
+      EMS_FLOORPLAN_BASE_DIR: /data/ems_uploads/floorplans
     volumes:
       - ./data/ems_uploads:/data/ems_uploads
       - ./logs/ems:/app/logs

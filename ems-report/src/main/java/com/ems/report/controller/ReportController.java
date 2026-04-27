@@ -7,6 +7,7 @@ import com.ems.report.dto.ReportRequest;
 import com.ems.report.service.ReportService;
 import com.ems.report.support.CsvReportWriter;
 import com.ems.timeseries.model.Granularity;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,7 +25,7 @@ import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBo
 
 import com.ems.report.dto.ReportRow;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -39,11 +40,14 @@ public class ReportController {
     private final ReportService service;
     private final AsyncReportRunner runner;
     private final FileTokenStore store;
+    private final ObjectMapper objectMapper;
 
-    public ReportController(ReportService service, AsyncReportRunner runner, FileTokenStore store) {
+    public ReportController(ReportService service, AsyncReportRunner runner,
+                            FileTokenStore store, ObjectMapper objectMapper) {
         this.service = service;
         this.runner = runner;
         this.store = store;
+        this.objectMapper = objectMapper;
     }
 
     /** 同步导出：CSV 直接流式返回。适合小到中规模查询（数千行级）。 */
@@ -80,30 +84,49 @@ public class ReportController {
         return ResponseEntity.accepted().body(toDto(entry));
     }
 
-    /** 下载异步导出文件：READY → 200 + 流；PENDING/RUNNING → 202；FAILED → 500；NotFound/expired → 410。 */
+    /** 下载异步导出文件：READY → 200 + 字节；PENDING/RUNNING → 202；FAILED → 500；NotFound/expired → 410。
+     *  返回类型固定 byte[]：避开 ResponseEntity&lt;?&gt; + StreamingResponseBody 触发的
+     *  HttpMessageNotWritableException(No converter for Lambda) 旧 bug，并显式设 Content-Length 避免
+     *  浏览器对 chunked encoding 偶发 ERR_INCOMPLETE_CHUNKED_ENCODING。 */
     @GetMapping("/file/{token}")
-    public ResponseEntity<?> download(@PathVariable("token") String token) {
+    public ResponseEntity<byte[]> download(@PathVariable("token") String token) throws IOException {
         FileTokenStore.Entry e = store.find(token).orElse(null);
         if (e == null) {
-            return ResponseEntity.status(HttpStatus.GONE).body("token expired or not found");
+            byte[] msg = "token expired or not found".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            return ResponseEntity.status(HttpStatus.GONE)
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .contentLength(msg.length)
+                    .body(msg);
         }
         return switch (e.status) {
-            case PENDING, RUNNING -> ResponseEntity.accepted().body(toDto(e));
-            case FAILED -> ResponseEntity.internalServerError().body(toDto(e));
+            case PENDING, RUNNING -> jsonResponse(HttpStatus.ACCEPTED, toDto(e));
+            case FAILED -> jsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, toDto(e));
             case READY, DONE -> {
-                StreamingResponseBody body = out -> {
-                    try (InputStream in = Files.newInputStream(e.file)) {
-                        in.transferTo(out);
-                    } finally {
-                        store.evict(token);
-                    }
-                };
+                byte[] data = Files.readAllBytes(e.file);
+                store.evict(token);
                 yield ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + e.filename + "\"")
                     .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                    .body(body);
+                    .contentLength(data.length)
+                    .body(data);
             }
         };
+    }
+
+    private ResponseEntity<byte[]> jsonResponse(HttpStatus status, Object payload) {
+        try {
+            byte[] data = objectMapper.writeValueAsBytes(payload);
+            return ResponseEntity.status(status)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentLength(data.length)
+                    .body(data);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            byte[] err = ("{\"error\":\"json failed: " + ex.getMessage() + "\"}").getBytes();
+            return ResponseEntity.status(status)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .contentLength(err.length)
+                    .body(err);
+        }
     }
 
     private static FileTokenDTO toDto(FileTokenStore.Entry e) {

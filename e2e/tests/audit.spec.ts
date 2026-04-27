@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 test('audit log shows login and user-creation events', async ({ page }) => {
   await page.goto('/login');
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 
   const uname = `audit_${Date.now()}`;
   await page.goto('/admin/users');

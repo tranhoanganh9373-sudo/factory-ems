@@ -8,10 +8,11 @@ test('admin can login and logout', async ({ page }) => {
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
 
-  await expect(page).toHaveURL('/');
-  await expect(page.getByText('欢迎')).toBeVisible();
+  await expect(page).not.toHaveURL(/\/login/);
+  // 登录后直跳 /dashboard?range=TODAY；"欢迎，..." 仅在 /home 显示。
+  await expect(page.locator('.ant-layout-header')).toBeVisible();
 
-  // 登出 — 头部 dropdown 触发器，避免与首页 "欢迎，系统管理员" 冲突
+  // 登出 — 头部 dropdown 触发器
   await page.locator('.ant-layout-header').getByText(/admin|系统管理员/).click();
   await page.getByText('退出登录').click();
   await expect(page).toHaveURL(/\/login/);

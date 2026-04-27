@@ -1,4 +1,4 @@
-/**
+﻿/**
  * K2 — dashboard-renders.spec.ts
  *
  * Prerequisites:
@@ -24,10 +24,11 @@ test('dashboard KPI, charts, and TopN render correctly', async ({ page }) => {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 
-  // ── Navigate to dashboard ──
-  await page.goto('/dashboard');
+  // ── Navigate to dashboard with a CUSTOM range mock-data covers (Feb-Mar 2026) ──
+  // 后端 from/to 期望 ISO Instant，date-only 会触发 500。
+  await page.goto('/dashboard?range=CUSTOM&from=2026-03-01T00:00:00Z&to=2026-03-31T23:59:59Z');
   await expect(page).toHaveURL(/\/dashboard/);
 
   // ── KPI cards: at least one Statistic value must be non-zero ──
@@ -75,12 +76,12 @@ test('dashboard KPI, charts, and TopN render correctly', async ({ page }) => {
   // ── Click first TopN row → MeterDetailDrawer opens ──
   await topNRows.first().click();
 
-  // Drawer should show a meter code (pattern: M-\d or alphanumeric) and name
-  const drawer = page.locator('.ant-drawer-content, .ant-drawer-body');
+  // Drawer body — strict mode 下 .ant-drawer-body 唯一
+  const drawer = page.locator('.ant-drawer-body');
   await expect(drawer).toBeVisible({ timeout: 10_000 });
 
-  // At least one of: meter code or name text visible in drawer
+  // 抽屉里至少能看到 测点 / MOCK 之类文本
   await expect(
-    drawer.getByText(/M-\d|测点|测点名称|meter/i).first()
+    drawer.getByText(/MOCK-M|测点|meter/i).first()
   ).toBeVisible({ timeout: 10_000 });
 });

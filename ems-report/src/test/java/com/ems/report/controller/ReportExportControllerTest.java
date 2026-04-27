@@ -6,15 +6,15 @@ import com.ems.report.dto.ExportFormat;
 import com.ems.report.dto.ExportPreset;
 import com.ems.report.dto.FileTokenDTO;
 import com.ems.report.dto.ReportExportRequest;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -32,13 +32,17 @@ class ReportExportControllerTest {
 
     AsyncExportRunner exportRunner;
     FileTokenStore store;
+    ObjectMapper objectMapper;
     ReportExportController controller;
 
     @BeforeEach
     void setup() {
         exportRunner = mock(AsyncExportRunner.class);
         store = new FileTokenStore();
-        controller = new ReportExportController(exportRunner, store, new com.fasterxml.jackson.databind.ObjectMapper());
+        // findAndRegisterModules picks up jackson-datatype-jsr310 (Instant) so
+        // FileTokenDTO round-trips in the JSON byte path.
+        objectMapper = new ObjectMapper().findAndRegisterModules();
+        controller = new ReportExportController(exportRunner, store, objectMapper);
     }
 
     private static ReportExportRequest dailyReq() {
@@ -85,7 +89,7 @@ class ReportExportControllerTest {
     }
 
     @Test
-    void downloadExport_pendingOrRunning_returnsAccepted() {
+    void downloadExport_pendingOrRunning_returnsAccepted() throws Exception {
         FileTokenStore.Entry e = store.create("x.csv");
         // PENDING
         var resp = controller.downloadExport(e.token);
@@ -104,33 +108,33 @@ class ReportExportControllerTest {
         e.file = file;
         e.bytes = Files.size(file);
 
-        ResponseEntity<?> resp = controller.downloadExport(e.token);
+        ResponseEntity<byte[]> resp = controller.downloadExport(e.token);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(resp.getHeaders().getFirst("Content-Disposition")).contains("out.csv");
-        StreamingResponseBody body = (StreamingResponseBody) resp.getBody();
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        body.writeTo(out);
-        assertThat(out.toString()).isEqualTo("hello");
+        assertThat(resp.getHeaders().getContentLength()).isEqualTo(5L);
+        assertThat(resp.getBody()).isNotNull();
+        assertThat(new String(resp.getBody(), StandardCharsets.UTF_8)).isEqualTo("hello");
         assertThat(store.find(e.token)).isEmpty();
     }
 
     @Test
-    void downloadExport_failed_returnsGoneWithError() {
+    void downloadExport_failed_returnsGoneWithError() throws Exception {
         FileTokenStore.Entry e = store.create("err.csv");
         e.status = FileTokenStore.Status.FAILED;
         e.error = "boom";
 
-        ResponseEntity<?> resp = controller.downloadExport(e.token);
+        ResponseEntity<byte[]> resp = controller.downloadExport(e.token);
 
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.GONE);
-        assertThat(resp.getBody()).isInstanceOf(FileTokenDTO.class);
-        assertThat(((FileTokenDTO) resp.getBody()).error()).isEqualTo("boom");
+        assertThat(resp.getBody()).isNotNull();
+        FileTokenDTO dto = objectMapper.readValue(resp.getBody(), FileTokenDTO.class);
+        assertThat(dto.error()).isEqualTo("boom");
     }
 
     @Test
-    void downloadExport_unknownToken_returnsGone() {
-        ResponseEntity<?> resp = controller.downloadExport("does-not-exist");
+    void downloadExport_unknownToken_returnsGone() throws Exception {
+        ResponseEntity<byte[]> resp = controller.downloadExport("does-not-exist");
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.GONE);
     }
 
@@ -142,7 +146,7 @@ class ReportExportControllerTest {
         e.status = FileTokenStore.Status.DONE;
         e.file = file;
 
-        ResponseEntity<?> resp = controller.downloadExport(e.token);
+        ResponseEntity<byte[]> resp = controller.downloadExport(e.token);
         assertThat(resp.getHeaders().getContentType().toString())
                 .startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     }

@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+﻿import { test, expect } from '@playwright/test';
 
 async function login(page: any, username: string, password: string) {
   await page.goto('/login');
   await page.getByPlaceholder('用户名').fill(username);
   await page.getByPlaceholder('密码').fill(password);
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 test('admin creates user, org tree, assigns permission; viewer sees only subtree', async ({ page, context }) => {

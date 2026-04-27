@@ -1,4 +1,4 @@
-/**
+﻿/**
  * K3 — report-csv-sync.spec.ts
  *
  * Prerequisites:
@@ -23,7 +23,7 @@ async function login(page: any) {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 // Helper: pick an AntD Select option (handles virtual list + Portal).
@@ -55,36 +55,29 @@ async function readFirstBytes(download: any, n: number): Promise<number[]> {
 test('sync CSV export downloads a valid UTF-8 BOM csv file', async ({ page }) => {
   await login(page);
   await page.goto('/report');
-  await expect(page.getByRole('main').getByText(/报表|导出|report/i)).toBeVisible({
+  await expect(page.locator('.ant-card-head-title').filter({ hasText: '报表' }).first()).toBeVisible({
     timeout: 10_000,
   });
 
-  // ── Pick today's date range ──
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  const todayStr = `${yyyy}-${mm}-${dd}`;
-
+  // ── Pick a date range mock-data covers (showTime → 必须点 panel OK 才能 commit）──
   const rangePicker = page.locator('.ant-picker-range').first();
-  if (await rangePicker.isVisible()) {
-    await rangePicker.locator('input').first().fill(todayStr);
-    await rangePicker.locator('input').last().fill(todayStr);
-    await page.keyboard.press('Escape');
-  }
+  await rangePicker.click();
+  const startInput = rangePicker.locator('input').nth(0);
+  const endInput = rangePicker.locator('input').nth(1);
+  await startInput.fill('2026-03-15 00:00:00');
+  await page.keyboard.press('Tab');
+  await endInput.fill('2026-03-15 23:59:59');
+  await page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-ok button').click();
 
   // ── Set granularity to HOUR ──
-  const granLabel = page.getByLabel(/粒度|时间粒度|granularity/i);
-  if (await granLabel.isVisible()) {
-    await granLabel.click();
+  const granInput = page.locator('#granularity');
+  if (await granInput.isVisible()) {
+    await granInput.click({ force: true });
     await pickSelectOption(page, /小时|HOUR|hour/i);
   }
 
-  // ── Set export mode to "同步导出" ──
-  const syncRadio = page.getByLabel('同步导出').or(page.getByText('同步导出').first());
-  if (await syncRadio.isVisible()) {
-    await syncRadio.click();
-  }
+  // ── Set export mode to "同步导出"（默认就是 sync，但显式 click 一次确保） ──
+  await page.locator('label.ant-radio-wrapper').filter({ hasText: '同步导出' }).click();
 
   // ── Click 导出 and capture download ──
   const [download] = await Promise.all([

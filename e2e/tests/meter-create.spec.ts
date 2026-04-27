@@ -1,4 +1,4 @@
-/**
+﻿/**
  * K1 — meter-create.spec.ts
  *
  * Prerequisites:
@@ -19,7 +19,7 @@ async function login(page: any) {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 // Helper: pick an option from an AntD Select dropdown (handles virtual list + Portal).
@@ -40,20 +40,28 @@ test('admin can create and delete a meter', async ({ page }) => {
   // Open create form
   await page.getByRole('button', { name: /新建测点/ }).click();
 
-  // Fill code
-  await page.getByLabel('测点编码').fill(meterCode);
-  // Fill name
-  await page.getByLabel('测点名称').fill(meterName);
+  // Fill code/name — Form.Item label 是"编码"/"名称"（modal 标题已有"新建测点"前缀）
+  await page.getByLabel('编码').fill(meterCode);
+  await page.getByLabel('名称').fill(meterName);
 
-  // Energy type — open select, pick ELEC
-  await page.getByLabel('能源类型').click();
+  // Energy type — 通过 Form.Item 包装找到 .ant-select-selector，点击它能稳定打开 dropdown。
+  await page
+    .locator('.ant-form-item')
+    .filter({ hasText: '能源类型' })
+    .locator('.ant-select-selector')
+    .click();
   await pickSelectOption(page, '电');
 
-  // Org node — open tree-select or select, pick 产线A
-  await page.getByLabel('组织节点').click();
-  // Tree-select: wait for the option in the dropdown
-  const orgOpt = page.locator('.ant-select-tree-title, .ant-select-item-option')
-    .filter({ hasText: '产线A' }).first();
+  // Org node
+  await page
+    .locator('.ant-form-item')
+    .filter({ hasText: '组织节点' })
+    .locator('.ant-select-selector')
+    .click();
+  const orgOpt = page
+    .locator('.ant-select-tree-title, .ant-select-item-option')
+    .filter({ hasText: /冲压车间|MOCK-WS-A/ })
+    .first();
   await orgOpt.waitFor({ state: 'visible' });
   await orgOpt.dispatchEvent('click');
 

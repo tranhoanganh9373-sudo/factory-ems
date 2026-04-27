@@ -30,19 +30,24 @@ test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) 
   const modal = page.locator('.ant-modal');
   await expect(modal).toBeVisible();
 
-  // 选时间区间 — 直接 fill 到两个 input
-  const rangeInputs = modal.locator('.ant-picker-input input');
-  await rangeInputs.nth(0).fill('2026-03-01 00:00:00');
-  await rangeInputs.nth(1).fill('2026-04-01 00:00:00');
-  await page.keyboard.press('Escape');
+  // 选时间区间 — AntD RangePicker (showTime) 必须 click 打开 panel + 填值 + 点 panel 内 OK 按钮才能 commit。
+  // 直接 .fill() 只更新 input visible value，不会写进 form state。
+  const rangePicker = modal.locator('.ant-picker').first();
+  await rangePicker.click();
+  const startInput = modal.locator('.ant-picker-input input').nth(0);
+  const endInput = modal.locator('.ant-picker-input input').nth(1);
+  await startInput.fill('2026-03-01 00:00:00');
+  await page.keyboard.press('Tab');
+  await endInput.fill('2026-04-01 00:00:00');
+  // showTime 的 OK 按钮在 picker dropdown 里
+  await page.locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden) .ant-picker-ok button').click();
 
-  // force click 避开 AntD 下拉关闭过渡期 .ant-modal-wrap intercept
-  await modal.getByRole('button', { name: /确\s*定/ }).click({ force: true });
+  // 提交批次
+  await modal.getByRole('button', { name: /确\s*定/ }).click();
 
-  // ---- 等 SUCCESS（最多 60s）----
-  // 第一行 ID 列点进去 → 等 status tag 变 SUCCESS
+  // ---- 等 SUCCESS（mock-data 16 meters × 30 days，并行其他 spec 时可能挤到 ~90s）----
   const successTag = page.locator('.ant-tag', { hasText: 'SUCCESS' }).first();
-  await expect(successTag).toBeVisible({ timeout: 60_000 });
+  await expect(successTag).toBeVisible({ timeout: 120_000 });
 
   // ---- 进入 detail ----
   const firstIdLink = page.locator('a[href^="/cost/runs/"]').first();

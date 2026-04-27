@@ -123,9 +123,11 @@ rawClient.interceptors.request.use((cfg) => {
  *  monthly 历史用 `month` 字段，后端 Params 用 `yearMonth` —— 一并 fold。
  */
 export async function submitExport(req: ExportRequest): Promise<ExportTokenDTO | null> {
+  // Backend ExportPreset enum 是 UPPER (DAILY/MONTHLY/YEARLY/SHIFT/COST_MONTHLY)；
+  // 历史前端代码混用 'monthly' / 'COST_MONTHLY' 两种大小写，统一上抛大写避免 500。
   const body = {
     format: req.format,
-    preset: req.preset,
+    preset: req.preset.toUpperCase(),
     params: {
       date: req.date,
       yearMonth: req.yearMonth ?? req.month,

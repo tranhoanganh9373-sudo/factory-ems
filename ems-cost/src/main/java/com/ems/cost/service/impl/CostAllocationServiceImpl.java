@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
@@ -125,13 +127,22 @@ public class CostAllocationServiceImpl implements CostAllocationService {
         run.setCreatedBy(createdBy);
         run = runRepository.save(run);
         Long id = run.getId();
-        executor.execute(() -> {
+        // 必须等当前事务 commit 后再 dispatch async：否则 worker 线程的事务里
+        // 看不到刚 save 的 run，触发 "Run vanished: id=N"。
+        Runnable dispatch = () -> executor.execute(() -> {
             try {
                 executeRun(id);
             } catch (Exception ex) {
                 log.error("cost-alloc run id={} failed in worker", id, ex);
             }
         });
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCommit() { dispatch.run(); }
+            });
+        } else {
+            dispatch.run();
+        }
         return id;
     }
 

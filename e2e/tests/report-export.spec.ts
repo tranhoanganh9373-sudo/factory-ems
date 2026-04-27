@@ -1,4 +1,4 @@
-/**
+﻿/**
  * T2 — report-export.spec.ts
  *
  * Plan 1.3 / Phase T 保命用例：月报 Excel 导出。
@@ -21,7 +21,7 @@ async function login(page: Page) {
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
   await page.getByRole('button', { name: /登\s*录/ }).click();
-  await expect(page).toHaveURL('/');
+  await expect(page).not.toHaveURL(/\/login/);
 }
 
 async function readFirstBytes(download: Download, n: number): Promise<number[]> {
@@ -45,21 +45,22 @@ async function readFirstBytes(download: Download, n: number): Promise<number[]> 
 }
 
 test('admin exports monthly Excel report and file is a valid xlsx (PK magic)', async ({ page }) => {
+  // 月报数据 + 异步导出轮询（最长 ~120s），默认 30s 不够。
+  test.setTimeout(180_000);
   await login(page);
 
   // ── Navigate to monthly report page ──
   await page.goto('/report/monthly');
   await expect(page.getByRole('main')).toBeVisible({ timeout: 10_000 });
 
-  // ── Pick month 2026-04 ──
-  // AntD MonthPicker. Type into the input directly.
+  // ── Pick month 2026-03（mock-data 覆盖到 03-31）──
   const monthPicker = page.locator('.ant-picker').first();
   await expect(monthPicker).toBeVisible({ timeout: 10_000 });
   const monthInput = monthPicker.locator('input').first();
   await monthInput.click();
-  await monthInput.fill('2026-04');
+  await monthInput.fill('2026-03');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
 
   // Some pages auto-load on date change; wait briefly.
   await page.waitForTimeout(1_000);
