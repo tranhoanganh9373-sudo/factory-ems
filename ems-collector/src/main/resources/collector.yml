@@ -1,0 +1,57 @@
+# ============================================================
+# ems-collector 默认配置（开发环境占位）
+# 部署时由 ems-app 通过 spring.config.import 加载，并被外部 collector.yml 覆盖。
+#
+# 整套 schema 见：
+#   ems-collector/src/main/java/com/ems/collector/config/CollectorProperties.java
+# 启动校验逻辑：
+#   - JSR-303 注解（@NotBlank/@Min...）由 Spring Boot 自动跑
+#   - 跨字段校验（protocol vs host、count vs dataType.wordCount...）见
+#     CollectorPropertiesValidator
+#   - meterCode 存在性见 MeterCodeValidator
+# ============================================================
+ems:
+  collector:
+    # 开发默认禁用——避免本地启动时需要可达的 Modbus 设备
+    enabled: false
+    devices: []
+#      - id: meter-A1
+#        meter-code: MOCK-M-ELEC-001
+#        protocol: TCP
+#        host: 192.168.10.21
+#        port: 502
+#        unit-id: 1
+#        polling-interval-ms: 5000
+#        timeout-ms: 1000
+#        retries: 3
+#        backoff-ms: 25000
+#        max-buffer-size: 10000
+#        registers:
+#          - name: voltage_a
+#            address: 0x2000
+#            count: 2
+#            function: HOLDING
+#            data-type: FLOAT32
+#            byte-order: ABCD
+#            scale: 1.0
+#            unit: V
+#            ts-field: voltage_a
+#          - name: power_active
+#            address: 0x2014
+#            count: 2
+#            function: HOLDING
+#            data-type: FLOAT32
+#            byte-order: ABCD
+#            scale: 0.001
+#            unit: kW
+#            ts-field: power_active
+#          - name: energy_total
+#            address: 0x4000
+#            count: 2
+#            function: HOLDING
+#            data-type: UINT32
+#            byte-order: ABCD
+#            scale: 0.01
+#            unit: kWh
+#            ts-field: energy_total
+#            kind: ACCUMULATOR
