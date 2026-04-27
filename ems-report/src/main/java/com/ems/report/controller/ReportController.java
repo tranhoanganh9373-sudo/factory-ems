@@ -87,9 +87,14 @@ public class ReportController {
     /** 下载异步导出文件：READY → 200 + 字节；PENDING/RUNNING → 202；FAILED → 500；NotFound/expired → 410。
      *  返回类型固定 byte[]：避开 ResponseEntity&lt;?&gt; + StreamingResponseBody 触发的
      *  HttpMessageNotWritableException(No converter for Lambda) 旧 bug，并显式设 Content-Length 避免
-     *  浏览器对 chunked encoding 偶发 ERR_INCOMPLETE_CHUNKED_ENCODING。 */
+     *  浏览器对 chunked encoding 偶发 ERR_INCOMPLETE_CHUNKED_ENCODING。
+     *
+     *  ?download=true 才返回二进制 + evict；默认返回 DTO（status=READY/PENDING/RUNNING/FAILED），
+     *  让前端能用 useQuery 轮询而不会在 READY 那一刻被 evict 掉。 */
     @GetMapping("/file/{token}")
-    public ResponseEntity<byte[]> download(@PathVariable("token") String token) throws IOException {
+    public ResponseEntity<byte[]> download(@PathVariable("token") String token,
+            @RequestParam(name = "download", defaultValue = "false") boolean download)
+            throws IOException {
         FileTokenStore.Entry e = store.find(token).orElse(null);
         if (e == null) {
             byte[] msg = "token expired or not found".getBytes(java.nio.charset.StandardCharsets.UTF_8);
@@ -102,6 +107,10 @@ public class ReportController {
             case PENDING, RUNNING -> jsonResponse(HttpStatus.ACCEPTED, toDto(e));
             case FAILED -> jsonResponse(HttpStatus.INTERNAL_SERVER_ERROR, toDto(e));
             case READY, DONE -> {
+                if (!download) {
+                    // 轮询请求：返回 DTO，让 UI 在表里看到 READY 状态。不 evict。
+                    yield jsonResponse(HttpStatus.OK, toDto(e));
+                }
                 byte[] data = Files.readAllBytes(e.file);
                 store.evict(token);
                 yield ResponseEntity.ok()

@@ -91,8 +91,13 @@ export async function submitAdHocAsync(req: ReportRequest): Promise<FileTokenDTO
  * Returns Blob when status is READY (Content-Type: text/csv).
  * Throws on 410 (expired/not-found).
  */
-export async function getFileToken(token: string): Promise<FileTokenDTO | Blob> {
-  const res = await rawClient.get<FileTokenDTO | Blob>(`/report/file/${token}`, {
+export async function getFileToken(
+  token: string,
+  download: boolean = false
+): Promise<FileTokenDTO | Blob> {
+  // Polling 默认返 DTO（status 含 READY 让 UI 表格能展示）；?download=true 才取 blob+evict。
+  const url = download ? `/report/file/${token}?download=true` : `/report/file/${token}`;
+  const res = await rawClient.get<FileTokenDTO | Blob>(url, {
     responseType: 'blob', // always receive as blob, then branch
   });
   const contentType = (res.headers['content-type'] as string) || '';

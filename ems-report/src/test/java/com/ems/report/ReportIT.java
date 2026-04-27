@@ -198,23 +198,21 @@ class ReportIT {
         assertThat(submitted).isNotNull();
         assertThat(submitted.token()).isNotBlank();
 
-        // 轮询直到 READY（最多 10s）
+        // 轮询（download=false）直到 READY DTO 出现（最多 10s）
         long deadline = System.currentTimeMillis() + 10_000;
-        ResponseEntity<?> getResp;
         while (true) {
-            getResp = controller.download(submitted.token());
-            if (getResp.getStatusCode() == HttpStatus.OK) break;
+            ResponseEntity<byte[]> poll = controller.download(submitted.token(), false);
+            if (poll.getStatusCode() == HttpStatus.OK) break; // READY 状态返 200 + DTO
             if (System.currentTimeMillis() > deadline)
-                throw new AssertionError("Async export did not complete within 10s, last status=" + getResp.getStatusCode());
+                throw new AssertionError("Async export did not complete within 10s, last status=" + poll.getStatusCode());
             Thread.sleep(100);
         }
 
-        // 下载内容
-        Object body = getResp.getBody();
-        assertThat(body).isInstanceOf(StreamingResponseBody.class);
-        var baos = new ByteArrayOutputStream();
-        ((StreamingResponseBody) body).writeTo(baos);
-        byte[] bytes = baos.toByteArray();
+        // 显式下载（download=true）拿 blob，并 evict
+        ResponseEntity<byte[]> dl = controller.download(submitted.token(), true);
+        assertThat(dl.getStatusCode()).isEqualTo(HttpStatus.OK);
+        byte[] bytes = dl.getBody();
+        assertThat(bytes).isNotNull();
         assertThat(bytes[0]).isEqualTo((byte) 0xEF); // BOM
         String csv = new String(bytes, 3, bytes.length - 3, StandardCharsets.UTF_8);
         assertThat(csv).startsWith("timestamp,");
@@ -226,7 +224,7 @@ class ReportIT {
 
     @Test @Order(4)
     void asyncExport_unknownToken_returnsGone() throws Exception {
-        var resp = controller.download("does-not-exist-" + System.nanoTime());
+        var resp = controller.download("does-not-exist-" + System.nanoTime(), false);
         assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.GONE);
     }
 

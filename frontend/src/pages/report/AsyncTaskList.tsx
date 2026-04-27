@@ -89,7 +89,8 @@ export default function AsyncTaskList() {
 
   async function handleDownload(task: ReportTask) {
     try {
-      const result = await getFileToken(task.token);
+      // 显式 download=true：让后端 evict + 返回 blob。轮询那条路保留 DTO 不动。
+      const result = await getFileToken(task.token, true);
       if (result instanceof Blob) {
         triggerDownload(result, task.filename);
         removeTask(task.token); // server evicts after one read

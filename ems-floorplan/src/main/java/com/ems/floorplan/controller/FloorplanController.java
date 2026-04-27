@@ -80,7 +80,8 @@ public class FloorplanController {
      * Sets Content-Type from stored content_type and Cache-Control for browser caching.
      */
     @GetMapping("/{id}/image")
-    @PreAuthorize("isAuthenticated()")
+    // 公开访问：原生 <img src> 与 CSS background-image url() 都不会带 bearer 头。
+    // SecurityConfig 已为该路径 permitAll；这里删 @PreAuthorize 否则方法级仍要求 auth。
     public ResponseEntity<Resource> loadImage(@PathVariable Long id) {
         // Resolve the floorplan to get metadata for headers
         FloorplanWithPointsDTO dto = service.getById(id);

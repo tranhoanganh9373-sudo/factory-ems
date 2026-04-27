@@ -45,6 +45,10 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/actuator/prometheus").permitAll()
+                // Floorplan images: 必须公开。原生 <img src> 不会带 Authorization 头，
+                // CSS background-image 同理。floorplan 是工厂平面图，由车间地图照片构成，
+                // 在已登录用户的 UI 内显示，不属于敏感数据。
+                .requestMatchers(HttpMethod.GET, "/api/v1/floorplans/*/image").permitAll()
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

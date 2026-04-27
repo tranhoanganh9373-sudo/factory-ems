@@ -78,12 +78,13 @@ public class UserServiceImpl implements UserService {
     @Transactional(readOnly = true)
     public PageDTO<UserDTO> list(int page, int size, String keyword) {
         Pageable p = PageRequest.of(page - 1, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<User> pg = users.findAll(p);
-        List<UserDTO> items = pg.stream()
-            .filter(u -> keyword == null || keyword.isBlank()
-                || u.getUsername().contains(keyword)
-                || (u.getDisplayName() != null && u.getDisplayName().contains(keyword)))
-            .map(this::toDTO).toList();
+        // Pre-filter in the query so pagination + total reflect the keyword. Old version
+        // ran findAll(p) then filtered the page in memory — keyword search was effectively
+        // limited to whatever happened to land on page 1, returning 0 hits when the user
+        // sat on a later page.
+        String q = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+        Page<User> pg = users.searchByKeyword(q, p);
+        List<UserDTO> items = pg.stream().map(this::toDTO).toList();
         return PageDTO.of(items, pg.getTotalElements(), page, size);
     }
 

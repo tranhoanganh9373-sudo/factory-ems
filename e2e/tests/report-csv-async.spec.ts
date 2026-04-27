@@ -35,6 +35,9 @@ async function pickSelectOption(page: any, text: string | RegExp) {
 test('async CSV export creates task, reaches READY, and downloads', async ({ page }) => {
   test.setTimeout(180_000);
   await login(page);
+  // 登录后已经在 /dashboard，本 origin 的 localStorage 可见。先清掉持久化的 stale tasks,
+  // 再 navigate 到 /report —— 避开 reload 让 in-memory access token 丢失再触发 silent refresh 的 race。
+  await page.evaluate(() => localStorage.removeItem('ems-report-tasks'));
   await page.goto('/report');
   // 用 card 标题精准匹配，避免 strict-mode 撞上 4 个含"导出"的元素
   await expect(page.locator('.ant-card-head-title').filter({ hasText: '报表' }).first()).toBeVisible({
@@ -62,15 +65,32 @@ test('async CSV export creates task, reaches READY, and downloads', async ({ pag
     await pickSelectOption(page, /小时|HOUR|hour/i);
   }
 
-  // ── Click 导出 + 等 auto-download（poller 拿到 200 blob 就自动 triggerDownload） ──
-  // 按钮 accessible name 是 "file-text 导出"（FileTextOutlined icon prefix），用 hasText 比 role-name 稳。
+  // ── Click 导出 → 行先 PENDING/RUNNING → 轮询到 READY (就绪) → 用户点 "下载" 触发 download ──
   const exportBtn = page.locator('button').filter({ hasText: /^导出$/ }).first();
+  await exportBtn.click();
+
+  // PENDING/RUNNING 行可见
+  await expect(
+    page.locator('.ant-table-row').filter({ hasText: /等待中|生成中/ }).first()
+  ).toBeVisible({ timeout: 15_000 });
+
+  // 轮询到 READY (前端把 status=READY 渲染成 "就绪")
+  await expect
+    .poll(
+      async () => page.locator('.ant-table-row').filter({ hasText: /就绪|READY/ }).count(),
+      { timeout: 60_000, intervals: [2_000] }
+    )
+    .toBeGreaterThan(0);
+
+  // 点 "下载" 按钮 → 真下载事件
+  // 用 page-level locator + role 过滤 + DownloadOutlined icon 区别于其他可能的 "下载" 文本
+  const downloadBtn = page.getByRole('button', { name: /^download\s*下载$/ }).first();
+  await expect(downloadBtn).toBeVisible({ timeout: 5_000 });
   const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 60_000 }),
-    exportBtn.click(),
+    page.waitForEvent('download', { timeout: 30_000 }),
+    downloadBtn.click(),
   ]);
 
-  // Assert csv filename
   const filename = download.suggestedFilename();
   expect(filename).toMatch(/^ad-hoc-/);
   expect(filename).toMatch(/\.csv$/);
