@@ -106,6 +106,7 @@ export default function AppLayout() {
           { key: '/admin/users', label: <Link to="/admin/users">用户</Link> },
           { key: '/admin/roles', label: <Link to="/admin/roles">角色</Link> },
           { key: '/admin/audit', label: <Link to="/admin/audit">审计日志</Link> },
+          { key: '/collector', label: <Link to="/collector">采集器状态</Link> },
         ],
       });
     }

@@ -67,7 +67,8 @@ class CollectorServiceTest {
                 readings::add,
                 factory,
                 Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
         svc.start();
 
@@ -93,7 +94,8 @@ class CollectorServiceTest {
                 readings::add,
                 factory,
                 Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
         svc.start();
 
@@ -114,7 +116,8 @@ class CollectorServiceTest {
                 readings::add,
                 factory,
                 Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
         svc.start();
         await().atMost(2, SECONDS).until(() -> reads.get() >= 2);
@@ -140,7 +143,8 @@ class CollectorServiceTest {
                         device("m-middle", 100)
                 )),
                 r -> {}, factory, Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
         svc.start();
         // immediate snapshot before any poll completes — ordering still preserved
@@ -159,7 +163,8 @@ class CollectorServiceTest {
         svc = new CollectorService(
                 new CollectorProperties(true, List.of(device("dead", 50), device("alive", 50))),
                 r -> {}, factory, Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
         svc.start();
         await().atMost(3, SECONDS).until(() -> d1Reads.get() >= 3);
@@ -180,7 +185,8 @@ class CollectorServiceTest {
                 r -> {},
                 dev -> new AlwaysSuccessMaster(new AtomicInteger()),
                 Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP
+                DevicePoller.StateTransitionListener.NOOP,
+                null
         );
     }
 

@@ -2,6 +2,7 @@ package com.ems.collector.service;
 
 import com.ems.collector.config.CollectorProperties;
 import com.ems.collector.config.DeviceConfig;
+import com.ems.collector.health.CollectorMetrics;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.DeviceSnapshot;
 import com.ems.collector.poller.ReadingSink;
@@ -56,6 +57,7 @@ public class CollectorService {
     private final ModbusMasterFactory masterFactory;
     private final Clock clock;
     private final DevicePoller.StateTransitionListener stateListener;
+    private final CollectorMetrics metrics;
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
@@ -65,12 +67,14 @@ public class CollectorService {
                             ReadingSink sink,
                             ModbusMasterFactory masterFactory,
                             Clock clock,
-                            DevicePoller.StateTransitionListener stateListener) {
+                            DevicePoller.StateTransitionListener stateListener,
+                            CollectorMetrics metrics) {
         this.props = props;
         this.sink = sink;
         this.masterFactory = masterFactory;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.stateListener = stateListener == null ? DevicePoller.StateTransitionListener.NOOP : stateListener;
+        this.metrics = metrics;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -112,11 +116,16 @@ public class CollectorService {
     private void scheduleAfter(DevicePoller poller, long delayMs) {
         if (!running || scheduler == null || scheduler.isShutdown()) return;
         scheduler.schedule(() -> {
+            long startNs = System.nanoTime();
+            boolean ok = false;
             try {
-                poller.pollOnce();
+                ok = poller.pollOnce();
             } catch (Throwable t) {
                 log.error("device {} poller raised unexpected: {}", poller.config().id(), t.toString(), t);
             } finally {
+                if (metrics != null) {
+                    metrics.record(poller.config().id(), ok, System.nanoTime() - startNs);
+                }
                 if (running) {
                     scheduleAfter(poller, poller.nextDelayMs());
                 }

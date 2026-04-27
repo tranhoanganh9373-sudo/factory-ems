@@ -31,6 +31,7 @@ import CostRunDetailPage from '@/pages/cost/run-detail';
 import BillsListPage from '@/pages/bills/list';
 import BillPeriodsPage from '@/pages/bills/periods';
 import BillDetailPage from '@/pages/bills/detail';
+import CollectorStatusPage from '@/pages/collector';
 
 export function AppRouter() {
   return (
@@ -100,6 +101,14 @@ export function AppRouter() {
           <Route path="roles" element={<RoleListPage />} />
           <Route path="audit" element={<AuditListPage />} />
         </Route>
+        <Route
+          path="collector"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <CollectorStatusPage />
+            </ProtectedRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

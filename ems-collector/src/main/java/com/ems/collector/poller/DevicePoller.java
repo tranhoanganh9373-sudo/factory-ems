@@ -4,6 +4,7 @@ import com.ems.collector.codec.RegisterDecoder;
 import com.ems.collector.config.DeviceConfig;
 import com.ems.collector.config.FunctionType;
 import com.ems.collector.config.RegisterConfig;
+import com.ems.collector.config.RegisterKind;
 import com.ems.collector.transport.ModbusIoException;
 import com.ems.collector.transport.ModbusMaster;
 import org.slf4j.Logger;
@@ -52,6 +53,7 @@ public class DevicePoller {
     private final ReadingSink sink;
     private final Clock clock;
     private final StateTransitionListener listener;
+    private final AccumulatorTracker accumulator = new AccumulatorTracker();
 
     /* ── runtime state ─────────────────────────────────────────────────── */
     private DeviceState state = DeviceState.HEALTHY;
@@ -171,6 +173,14 @@ public class DevicePoller {
                 : master.readInput(config.unitId(), reg.address(), reg.count());
         BigDecimal value = RegisterDecoder.decode(raw, reg.dataType(), reg.byteOrder(), reg.scale());
         numbers.put(reg.tsField(), value);
+
+        // ACCUMULATOR / COUNTER: 写伴随 _delta field（spec §5.2）
+        if (reg.kind() == RegisterKind.ACCUMULATOR || reg.kind() == RegisterKind.COUNTER) {
+            BigDecimal delta = accumulator.observe(reg.tsField(), value, reg.scale());
+            if (delta != null) {
+                numbers.put(reg.tsField() + "_delta", delta);
+            }
+        }
     }
 
     private void onCycleSuccess() {
