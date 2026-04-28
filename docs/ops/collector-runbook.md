@@ -283,3 +283,167 @@ docker logs factory-ems-factory-ems-1 --tail 200 | grep "device <id>"
 - 配置热加载 `POST /api/v1/collector/reload`（仅 ADMIN）
 - 持久化 buffer（SQLite）+ 断网恢复批量补传
 - 多 device 共享串口的并发控制
+
+---
+
+## 10. Plan 1.5.2 增量（v0.2.0）
+
+### 10.1 Modbus RTU
+
+YAML 增加 RTU 字段（详见 §2.1）。校验：
+- `serial-port` 必填（`/dev/ttyUSB0` 或 `COM3`）
+- `baud-rate` 必填，`1200..115200`
+- `data-bits` 默认 8（`5..8`），`stop-bits` 默认 1（`1` 或 `2`），`parity` 默认 NONE
+
+容器化部署 RTU：
+```bash
+# Linux：把 USB 串口设备透传到容器
+docker run --device=/dev/ttyUSB0 ...
+```
+
+### 10.2 多 device 共串口
+
+同 `/dev/ttyUSB0` 上挂多个 unit-id（典型 RS-485 总线挂多块仪表）：
+- `SerialPortLockRegistry` 按串口路径键控 ReentrantLock（标准化 trim+lowercase）
+- 同串口 device 的 `pollOnce()` 全局串行；不同串口并发不受影响
+- 顺序调度由 `CollectorService.scheduleAfter` 自然提供 fairness（ReentrantLock 内置 fair=true）
+
+### 10.3 持久化 buffer（SQLite）
+
+InfluxDB 抖动 / 断网时，写失败的 reading 落到 `./data/collector-buffer.db`：
+
+| 配置 | 默认 | 说明 |
+|---|---|---|
+| `ems.collector.buffer.path` | `./data/collector-buffer.db` | 必须可写（容器需挂载 volume） |
+| `max-rows-per-device` | 100000 | 超限 FIFO 丢最旧 |
+| `ttl-days` | 7 | vacuum 清理超期数据 |
+| `flush-interval-ms` | 30000 | 后台 task 周期 |
+
+`BufferFlushScheduler` 后台线程每 30s 取最早 1000 条尝试补传 InfluxDB；任一失败 break 等下轮。
+每 1 小时跑一次 `VACUUM` 清掉 `sent=1` 与超 TTL 的行。
+
+### 10.4 配置热加载
+
+```bash
+# 改 collector.yml 后，触发 reload（无需重启进程）
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+     http://factory-ems:8888/api/v1/collector/reload
+```
+
+返回示例：
+```json
+{
+  "code": 0,
+  "data": {
+    "added": ["meter-A1"],
+    "modified": [],
+    "removed": ["meter-X3"],
+    "unchanged": 12
+  }
+}
+```
+
+不变化的 device polling 不受影响。reload 写 audit_logs（`COLLECTOR_RELOAD` action）。
+失败语义：YAML 解析或校验失败 → 返 400 + 错误清单，**当前运行状态不变**。
+
+---
+
+## 11. Plan 1.5.3 增量（v0.3.0）
+
+### 11.1 TCP 连接池
+
+同物理仪表（`host:port`）挂多 unit-id 时共享一个 `ModbusTCPMaster` 连接：
+- `TcpConnectionPool` 按 `(host, port)` 键控 PoolEntry
+- 引用计数：device acquire +1，shutdown release -1，归零自动 close + 移除
+- 每个 PoolEntry 携带 ReentrantLock；多 unit-id read 通过 lock 串行化
+
+适合场景：一台多功能仪表通过一个 TCP socket 暴露 N 个测量回路。
+
+### 11.2 状态告警接入 audit_logs
+
+`AlarmTransitionListener` 实现 `DevicePoller.StateTransitionListener`，每次状态切换写一条
+audit：
+
+| 字段 | 值 |
+|---|---|
+| action | `COLLECTOR_STATE_CHANGE` |
+| resource_type | `COLLECTOR` |
+| resource_id | deviceId |
+| summary | `{from} → {to}: {reason}` |
+| actor_username | `system` |
+
+通过既有 `/admin/audit` 页面直接查（无需独立 alarm UI）。后续 Plan 1.6 再考虑独立 alarm 表。
+
+### 11.3 现场实施 SOP（实地装机 checklist）
+
+#### 装机前（远程）
+
+- [ ] 工厂 / 车间网络拓扑图：仪表 IP 段、collector 部署机所在网段、是否同 VLAN
+- [ ] 仪表型号 + 通信参数清单（每台一行）：协议（TCP/RTU）、IP/串口、unit-id、波特率、寄存器映射文档
+- [ ] 部署机硬件：CPU 4 核 + 8 GB + 100 GB SSD（mock-data CLI 实测够 50 device × 5s polling）
+- [ ] 部署机端口开放：8888（前端）、8086（InfluxDB 仅内网）、5432（PG 仅内网）
+- [ ] 部署机能 ping 通 InfluxDB / PG / 仪表 IP
+
+#### 装机当天（现场）
+
+- [ ] 拷贝 `docker-compose.yml` + `.env` + `collector.yml` 到部署机
+- [ ] `docker compose up -d` 启栈；`/actuator/health` 全 UP
+- [ ] 先用 `mbpoll` / `Modbus Poll` 等第三方工具直读 1 块仪表的关键寄存器，确认仪表可达 + 寄存器地址正确
+- [ ] 拷贝同款配置到 collector.yml；启 collector；`/api/v1/collector/status` 看到 HEALTHY
+- [ ] InfluxDB 内 query 该 measurement，确认每 polling 周期都有新数据
+- [ ] 看板曲线确认数据合理（电压在 220 ± 10V 范围、功率非负、电度递增）
+- [ ] 持续观察 1 小时，无 DEGRADED / UNREACHABLE 转移
+
+#### 装机后（远程跟踪）
+
+- [ ] 接入 Prometheus 抓取 `ems.collector.*` metrics，告警规则：
+      `failure_rate > 0.05 持续 10min` 或 `state=UNREACHABLE > 30min`
+- [ ] 24 小时内复查 `/admin/audit` 看是否有 `COLLECTOR_STATE_CHANGE` 异常
+- [ ] 1 周内做一次 buffer flush 复查：`SELECT count(*) FROM collector_buffer WHERE sent=0` < 100
+
+### 11.4 排查工具箱
+
+| 场景 | 工具 |
+|---|---|
+| Modbus TCP 端口能不能通 | `nc -zv 192.168.10.21 502` |
+| 能不能直读寄存器 | `mbpoll -m tcp -a 1 -r 0x2000 -c 2 192.168.10.21` |
+| Modbus RTU 串口活着不 | `screen /dev/ttyUSB0 9600` 看是否有数据流 |
+| j2mod 协议层 trace | `application.yml` 加 `logging.level.com.ghgande.j2mod: DEBUG` |
+| InfluxDB 看历史数据 | `influx query 'from(bucket:"factory_ems") |> range(start:-1h)'` |
+| Buffer 积压情况 | `sqlite3 ./data/collector-buffer.db 'SELECT device_id, count(*) FROM collector_buffer WHERE sent=0 GROUP BY 1'` |
+
+### 11.5 TLS 隧道封装（可选；OT 内网 vs 互联网）
+
+OT 内网通常受信，多数场景**不需要** TLS。如果 collector 经互联网 / 跨厂区访问仪表，
+可选两种方案：
+
+#### 方案 A：stunnel sidecar
+
+```
+[collector container] ── plain TCP ──▶ [stunnel]
+                                          │ TLS over WAN
+                                          ▼
+                                     [stunnel] ── plain TCP ──▶ [Modbus 仪表]
+```
+
+优点：collector 不改一行代码；stunnel 独立维护证书。
+缺点：双端都要部署 stunnel。
+
+#### 方案 B：Spring SSL Bundle + 自定义 SocketFactory
+
+j2mod 不原生支持 TLS。需要自实现 `AbstractSerialConnection` 替代 `TCPMasterConnection`
+让 socket 走 SSLSocketFactory。代码改动较大；后续 Plan 1.6 评估收益再做。
+
+**当前推荐**：保持 Modbus TCP 明文 + 部署在受信内网；网络层（防火墙 / VLAN / VPN）
+做隔离即可。
+
+---
+
+## 12. 已知不接 1.5.3（推 Plan 1.6 / 后续）
+
+- TLS over Modbus（仅 docs 提及，未实现）
+- 独立 alarm 表 + 通知通道（短信 / 邮件 / 企微 / 钉钉）
+- 边缘 gateway 双层架构（中心 collector → 边缘 collector → 仪表）
+- 配置 CRUD UI（前端编辑 collector.yml → DB → reload）
+- 仪表自动发现（Modbus 扫描、BACnet whois）
+- OPC-UA / IEC-104 / MQTT 协议（独立子项目 1.6 起步）
