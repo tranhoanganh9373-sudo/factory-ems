@@ -5,7 +5,6 @@ import com.ems.audit.event.AuditEvent;
 import com.ems.audit.repository.AuditLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,19 +23,16 @@ public class AsyncAuditListener {
         this.repo = repo;
     }
 
-    /** Fires only after the surrounding business transaction successfully commits. */
+    /**
+     * Fires after the surrounding business transaction commits — including auth methods,
+     * which run inside @Transactional (login uses noRollbackFor=UnauthorizedException so
+     * the LOGIN_FAIL audit still flushes). fallbackExecution=true keeps it firing if any
+     * caller ever invokes audit outside a transaction.
+     */
     @Async("auditExecutor")
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onAfterCommit(AuditEvent ev) {
-        writeLog(ev);
-    }
-
-    /** Auth events have no wrapping transaction; listen to them directly. */
-    @Async("auditExecutor")
-    @EventListener(condition = "#ev.action == 'LOGIN' or #ev.action == 'LOGOUT' or #ev.action == 'LOGIN_FAIL'")
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onAuthEvent(AuditEvent ev) {
         writeLog(ev);
     }
 

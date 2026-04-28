@@ -118,6 +118,15 @@ public class GlobalExceptionHandler {
             .body(Result.error(ErrorCode.PARAM_INVALID, ex.getMessage()));
     }
 
+    /** 状态机违例（已 LOCKED 不可写 / 缺前置 cost run 等）→ 409 CONFLICT。
+     *  原始异常消息直接回给客户端，方便排查；详情在 info 级。 */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Result<?>> illegalState(IllegalStateException ex) {
+        log.info("illegal_state: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Result.error(ErrorCode.CONFLICT, ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<?>> unknown(Exception ex) {
         log.error("unhandled_ex", ex);

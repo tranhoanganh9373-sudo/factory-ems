@@ -77,7 +77,8 @@ export default function CostRunsPage() {
     >
       {runIds.length === 0 ? (
         <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>
-          本会话尚无批次。点"新建批次"触发一次分摊；列表展示**当前会话**提交的最近 50 条 run。
+          本会话尚无批次。点"新建批次"触发一次分摊；列表展示<strong>当前会话</strong>提交的最近 50
+          条 run。
         </div>
       ) : (
         <Table<CostRunDTO>

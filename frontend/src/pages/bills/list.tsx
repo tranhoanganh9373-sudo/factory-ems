@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, Table, Select, TreeSelect, Space, Empty, Tag, Button, App } from 'antd';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DownloadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -44,10 +44,38 @@ function fmtNum(v: string | null): string {
 
 export default function BillsListPage() {
   const { message } = App.useApp();
-  const [periodId, setPeriodId] = useState<number | undefined>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialPeriodId = (() => {
+    const v = searchParams.get('periodId');
+    const n = v == null ? NaN : Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  })();
+  const [periodId, setPeriodIdState] = useState<number | undefined>(initialPeriodId);
   const [orgNodeId, setOrgNodeId] = useState<number | undefined>();
   const [energyType, setEnergyType] = useState<EnergyTypeCode | undefined>();
   const [exporting, setExporting] = useState(false);
+
+  // Keep URL ?periodId in sync so the page is shareable / back-button friendly.
+  const setPeriodId = (v: number | undefined) => {
+    setPeriodIdState(v);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (v == null) next.delete('periodId');
+        else next.set('periodId', String(v));
+        return next;
+      },
+      { replace: true }
+    );
+  };
+
+  // Pick up URL changes from the back/forward button.
+  useEffect(() => {
+    const v = searchParams.get('periodId');
+    const n = v == null ? NaN : Number(v);
+    const fromUrl = Number.isFinite(n) ? n : undefined;
+    if (fromUrl !== periodId) setPeriodIdState(fromUrl);
+  }, [searchParams, periodId]);
 
   const { data: periods = [] } = useQuery({
     queryKey: ['bill', 'periods'],
