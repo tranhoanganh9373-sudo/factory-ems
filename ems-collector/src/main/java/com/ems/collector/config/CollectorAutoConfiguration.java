@@ -1,8 +1,12 @@
 package com.ems.collector.config;
 
+import com.ems.collector.buffer.BufferStore;
+import com.ems.collector.buffer.SqliteBufferStore;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.ReadingSink;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,5 +39,14 @@ public class CollectorAutoConfiguration {
     @ConditionalOnMissingBean
     public DevicePoller.StateTransitionListener defaultStateTransitionListener() {
         return DevicePoller.StateTransitionListener.NOOP;
+    }
+
+    /** 默认 BufferStore = SQLite。仅在 collector enabled 时创建（cheap）。
+     *  测试可注入自定义 BufferStore（@Primary）替换。 */
+    @Bean(destroyMethod = "close")
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "ems.collector", name = "enabled", havingValue = "true")
+    public BufferStore defaultBufferStore(CollectorProperties props, ObjectMapper mapper) {
+        return new SqliteBufferStore(props.buffer(), mapper);
     }
 }

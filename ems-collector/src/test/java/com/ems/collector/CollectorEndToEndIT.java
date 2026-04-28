@@ -220,7 +220,8 @@ class CollectorEndToEndIT {
                 new DefaultModbusMasterFactory(),
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
-                metrics
+                metrics,
+                new com.ems.collector.transport.SerialPortLockRegistry()
         );
         svc.start();
     }

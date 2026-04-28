@@ -2,12 +2,14 @@ package com.ems.collector.service;
 
 import com.ems.collector.config.CollectorProperties;
 import com.ems.collector.config.DeviceConfig;
+import com.ems.collector.config.Protocol;
 import com.ems.collector.health.CollectorMetrics;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.DeviceSnapshot;
 import com.ems.collector.poller.ReadingSink;
 import com.ems.collector.transport.ModbusMaster;
 import com.ems.collector.transport.ModbusMasterFactory;
+import com.ems.collector.transport.SerialPortLockRegistry;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,7 @@ public class CollectorService {
     private final Clock clock;
     private final DevicePoller.StateTransitionListener stateListener;
     private final CollectorMetrics metrics;
+    private final SerialPortLockRegistry serialLocks;
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
@@ -68,13 +71,15 @@ public class CollectorService {
                             ModbusMasterFactory masterFactory,
                             Clock clock,
                             DevicePoller.StateTransitionListener stateListener,
-                            CollectorMetrics metrics) {
+                            CollectorMetrics metrics,
+                            SerialPortLockRegistry serialLocks) {
         this.props = props;
         this.sink = sink;
         this.masterFactory = masterFactory;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.stateListener = stateListener == null ? DevicePoller.StateTransitionListener.NOOP : stateListener;
         this.metrics = metrics;
+        this.serialLocks = serialLocks == null ? new SerialPortLockRegistry() : serialLocks;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -99,7 +104,11 @@ public class CollectorService {
 
         for (DeviceConfig dev : devs) {
             ModbusMaster master = masterFactory.create(dev);
-            DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener);
+            // RTU 设备共串口必须串行；TCP device = null
+            java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
+                    ? serialLocks.lockFor(dev.serialPort())
+                    : null;
+            DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
             pollers.put(dev.id(), poller);
         }
 
@@ -183,6 +192,73 @@ public class CollectorService {
     public synchronized Collection<DevicePoller> pollers() {
         return List.copyOf(pollers.values());
     }
+
+    /**
+     * 配置热加载：diff 新旧 device 列表 + 应用 add / remove / modify 三类变更。
+     * unchanged device 的 polling 不受影响（不重 schedule）。
+     *
+     * <p>调用前应已经做过 JSR-303 + CollectorPropertiesValidator + meter-code 校验
+     * （由 controller 层负责）。
+     */
+    public synchronized ReloadResult reload(CollectorProperties newProps) {
+        if (!running) {
+            throw new IllegalStateException("collector not running; cannot reload");
+        }
+        if (!newProps.enabled()) {
+            throw new IllegalStateException(
+                    "new config has enabled=false; reload cannot disable a running collector — restart instead");
+        }
+        Map<String, DeviceConfig> newDevs = new LinkedHashMap<>();
+        for (DeviceConfig d : newProps.devices()) newDevs.put(d.id(), d);
+        Map<String, DevicePoller> oldPollers = new LinkedHashMap<>(pollers);
+
+        List<String> added = new ArrayList<>();
+        List<String> removed = new ArrayList<>();
+        List<String> modified = new ArrayList<>();
+        int unchanged = 0;
+
+        for (Map.Entry<String, DevicePoller> e : oldPollers.entrySet()) {
+            String id = e.getKey();
+            DeviceConfig newDev = newDevs.get(id);
+            if (newDev == null) {
+                e.getValue().shutdown();
+                pollers.remove(id);
+                removed.add(id);
+            } else if (!newDev.equals(e.getValue().config())) {
+                e.getValue().shutdown();
+                pollers.remove(id);
+                installPoller(newDev);
+                modified.add(id);
+            } else {
+                unchanged++;
+            }
+        }
+        for (DeviceConfig d : newProps.devices()) {
+            if (!oldPollers.containsKey(d.id())) {
+                installPoller(d);
+                added.add(d.id());
+            }
+        }
+        long stagger = 0;
+        for (String id : added) scheduleAfter(pollers.get(id), stagger += 100);
+        for (String id : modified) scheduleAfter(pollers.get(id), stagger += 100);
+
+        log.info("collector reloaded: +{} ~{} -{} ={}",
+                added.size(), modified.size(), removed.size(), unchanged);
+        return new ReloadResult(added, removed, modified, unchanged);
+    }
+
+    private void installPoller(DeviceConfig dev) {
+        ModbusMaster master = masterFactory.create(dev);
+        java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
+                ? serialLocks.lockFor(dev.serialPort())
+                : null;
+        DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
+        pollers.put(dev.id(), poller);
+    }
+
+    public record ReloadResult(List<String> added, List<String> removed,
+                               List<String> modified, int unchanged) {}
 
     /** Named threads make jstack/Micrometer tags actionable. */
     private static final class NamedThreadFactory implements ThreadFactory {

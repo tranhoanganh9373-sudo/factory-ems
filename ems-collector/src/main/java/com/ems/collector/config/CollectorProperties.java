@@ -1,5 +1,6 @@
 package com.ems.collector.config;
 
+import com.ems.collector.buffer.BufferProperties;
 import jakarta.validation.Valid;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -27,9 +28,16 @@ import java.util.List;
 @Validated
 public record CollectorProperties(
         boolean enabled,
-        @Valid List<DeviceConfig> devices
+        @Valid List<DeviceConfig> devices,
+        BufferProperties buffer
 ) {
     public CollectorProperties {
         if (devices == null) devices = List.of();
+        if (buffer == null) buffer = new BufferProperties(null, null, null, null);
+    }
+
+    /** Convenience ctor — buffer 用默认值。测试与旧调用方用此签名。 */
+    public CollectorProperties(boolean enabled, List<DeviceConfig> devices) {
+        this(enabled, devices, null);
     }
 }

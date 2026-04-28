@@ -1,5 +1,6 @@
 package com.ems.collector.sink;
 
+import com.ems.collector.buffer.BufferStore;
 import com.ems.collector.poller.DeviceReading;
 import com.ems.collector.poller.ReadingSink;
 import com.ems.meter.entity.Meter;
@@ -43,12 +44,15 @@ public class InfluxReadingSink implements ReadingSink {
     private final InfluxProperties influxProps;
     private final MeterRepository meters;
     private final WriteApiBlocking writeApi;
+    private final BufferStore buffer;
 
     @Autowired
-    public InfluxReadingSink(InfluxDBClient client, InfluxProperties influxProps, MeterRepository meters) {
+    public InfluxReadingSink(InfluxDBClient client, InfluxProperties influxProps,
+                             MeterRepository meters, BufferStore buffer) {
         this.influxProps = influxProps;
         this.meters = meters;
         this.writeApi = client.getWriteApiBlocking();
+        this.buffer = buffer;
     }
 
     @Override
@@ -64,10 +68,34 @@ public class InfluxReadingSink implements ReadingSink {
         try {
             writeApi.writePoint(influxProps.getBucket(), influxProps.getOrg(), p);
         } catch (Exception e) {
-            log.error("Influx write failed for device {} ({} fields): {}",
+            log.warn("Influx write failed for device {} ({} fields): {} — buffering",
                     reading.deviceId(),
                     reading.numericFields().size() + reading.booleanFields().size(),
                     e.toString());
+            // 失败 → 落 buffer，由 BufferFlushScheduler 后台补传
+            if (buffer != null) {
+                try {
+                    buffer.enqueue(reading);
+                } catch (Exception bufEx) {
+                    log.error("buffer enqueue failed too — reading lost: {}", bufEx.toString());
+                }
+            }
+        }
+    }
+
+    /**
+     * Flush 路径：BufferFlushScheduler 调用，对一批 buffered reading 重试写 InfluxDB；
+     * 写成功返回 true 让 caller markSent；写失败返 false 保留在 buffer。
+     */
+    public boolean flushOne(DeviceReading reading) {
+        Meter meter = meters.findByCode(reading.meterCode()).orElse(null);
+        if (meter == null) return true; // 老 reading 的 meter 没了；直接 markSent 让 buffer 清掉
+        Point p = buildPoint(reading, meter);
+        try {
+            writeApi.writePoint(influxProps.getBucket(), influxProps.getOrg(), p);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

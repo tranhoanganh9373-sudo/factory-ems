@@ -7,6 +7,8 @@ import com.ems.collector.config.RegisterConfig;
 import com.ems.collector.config.RegisterKind;
 import com.ems.collector.transport.ModbusIoException;
 import com.ems.collector.transport.ModbusMaster;
+
+import java.util.concurrent.locks.Lock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,6 +56,8 @@ public class DevicePoller {
     private final Clock clock;
     private final StateTransitionListener listener;
     private final AccumulatorTracker accumulator = new AccumulatorTracker();
+    /** RTU device 的串口互斥锁（同 port 多 unit-id 共享同一 lock）；TCP device = null。 */
+    private final Lock serialLock;
 
     /* ── runtime state ─────────────────────────────────────────────────── */
     private DeviceState state = DeviceState.HEALTHY;
@@ -69,11 +73,21 @@ public class DevicePoller {
                         ReadingSink sink,
                         Clock clock,
                         StateTransitionListener listener) {
+        this(config, master, sink, clock, listener, null);
+    }
+
+    public DevicePoller(DeviceConfig config,
+                        ModbusMaster master,
+                        ReadingSink sink,
+                        Clock clock,
+                        StateTransitionListener listener,
+                        Lock serialLock) {
         this.config = config;
         this.master = master;
         this.sink = sink;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.listener = listener == null ? StateTransitionListener.NOOP : listener;
+        this.serialLock = serialLock;
         this.lastTransitionAt = this.clock.instant();
     }
 
@@ -87,6 +101,18 @@ public class DevicePoller {
      * @return true 当本轮成功
      */
     public synchronized boolean pollOnce() {
+        if (serialLock != null) {
+            serialLock.lock();
+            try {
+                return pollOnceInternal();
+            } finally {
+                serialLock.unlock();
+            }
+        }
+        return pollOnceInternal();
+    }
+
+    private boolean pollOnceInternal() {
         Throwable lastEx = null;
         int attempts = config.retries() + 1;
 

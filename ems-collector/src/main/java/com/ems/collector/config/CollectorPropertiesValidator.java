@@ -13,8 +13,7 @@ import java.util.Set;
  * <p>覆盖：
  * <ul>
  *   <li>device.id 在整个 devices 列表内唯一</li>
- *   <li>protocol == TCP 时 host + port 必填；RTU 时 serialPort + baudRate 必填</li>
- *   <li>RTU 在 Plan 1.5.1 不支持 → 直接拒绝（"RTU support deferred to Plan 1.5.2"）</li>
+ *   <li>protocol == TCP 时 host 必填；RTU 时 serialPort + baudRate 必填（baudRate 1200..115200）</li>
  *   <li>register.count == dataType.wordCount() （COIL/DISCRETE_INPUT 走 BIT 例外）</li>
  *   <li>register.tsField 在同一 device 内唯一</li>
  *   <li>backoffMs ≥ pollingIntervalMs；timeoutMs ≤ pollingIntervalMs</li>
@@ -46,8 +45,19 @@ public final class CollectorPropertiesValidator {
             if (dev.protocol() == Protocol.TCP) {
                 if (isBlank(dev.host())) errors.add(prefix + ": protocol=TCP requires host");
             } else if (dev.protocol() == Protocol.RTU) {
-                errors.add(prefix
-                        + ": protocol=RTU support deferred to Plan 1.5.2; only TCP allowed in 1.5.1");
+                if (isBlank(dev.serialPort())) errors.add(prefix + ": protocol=RTU requires serialPort");
+                if (dev.baudRate() == null) {
+                    errors.add(prefix + ": protocol=RTU requires baudRate");
+                } else if (dev.baudRate() < 1200 || dev.baudRate() > 115200) {
+                    errors.add(prefix + ": protocol=RTU baudRate must be 1200..115200, got "
+                            + dev.baudRate());
+                }
+                if (dev.dataBits() != null && (dev.dataBits() < 5 || dev.dataBits() > 8)) {
+                    errors.add(prefix + ": protocol=RTU dataBits must be 5..8, got " + dev.dataBits());
+                }
+                if (dev.stopBits() != null && dev.stopBits() != 1 && dev.stopBits() != 2) {
+                    errors.add(prefix + ": protocol=RTU stopBits must be 1 or 2, got " + dev.stopBits());
+                }
             }
 
             // 3. backoffMs ≥ pollingIntervalMs

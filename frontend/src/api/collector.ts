@@ -21,7 +21,16 @@ export interface RunningInfo {
   deviceCount: number;
 }
 
+/** Plan 1.5.2 — POST /collector/reload 返回的 diff 摘要。 */
+export interface ReloadResult {
+  added: string[];
+  removed: string[];
+  modified: string[];
+  unchanged: number;
+}
+
 export const collectorApi = {
   status: () => apiClient.get<DeviceStatusDTO[]>('/collector/status').then((r) => r.data),
   running: () => apiClient.get<RunningInfo>('/collector/running').then((r) => r.data),
+  reload: () => apiClient.post<ReloadResult>('/collector/reload').then((r) => r.data),
 };

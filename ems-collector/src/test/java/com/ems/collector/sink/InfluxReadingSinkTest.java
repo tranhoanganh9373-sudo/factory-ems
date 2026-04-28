@@ -1,5 +1,6 @@
 package com.ems.collector.sink;
 
+import com.ems.collector.buffer.BufferStore;
 import com.ems.collector.poller.DeviceReading;
 import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.MeterRepository;
@@ -30,6 +31,7 @@ class InfluxReadingSinkTest {
     private WriteApiBlocking writeApi;
     private InfluxProperties props;
     private MeterRepository meters;
+    private BufferStore buffer;
     private InfluxReadingSink sink;
 
     @BeforeEach
@@ -41,7 +43,8 @@ class InfluxReadingSinkTest {
         props.setBucket("factory_ems");
         props.setOrg("factory");
         meters = mock(MeterRepository.class);
-        sink = new InfluxReadingSink(client, props, meters);
+        buffer = mock(BufferStore.class);
+        sink = new InfluxReadingSink(client, props, meters, buffer);
     }
 
     @Test
@@ -110,18 +113,62 @@ class InfluxReadingSinkTest {
     }
 
     @Test
-    void accept_writeApiThrows_doesNotPropagate() {
+    void accept_writeApiThrows_buffersToBufferStore() {
         Meter m = newMeter("M1", "energy_reading", "meter_code", "M1");
         when(meters.findByCode("M1")).thenReturn(Optional.of(m));
         org.mockito.Mockito.doThrow(new RuntimeException("influx down"))
                 .when(writeApi).writePoint(any(), any(), any(Point.class));
 
-        // must NOT throw — sink swallows write errors so they don't blow up the poller cycle
-        sink.accept(new DeviceReading(
+        DeviceReading r = new DeviceReading(
                 "dev-1", "M1", Instant.parse("2026-04-27T10:00:00Z"),
                 Map.of("v_a", new BigDecimal("220.0")),
                 Map.of()
+        );
+        // 不应抛 — sink 必须接住错误防止 poller cycle 误判
+        sink.accept(r);
+        verify(buffer).enqueue(r);
+    }
+
+    @Test
+    void flushOne_meterFound_returnsTrue() {
+        Meter m = newMeter("M1", "energy_reading", "meter_code", "M1");
+        when(meters.findByCode("M1")).thenReturn(Optional.of(m));
+
+        boolean ok = sink.flushOne(new DeviceReading(
+                "dev", "M1", Instant.parse("2026-04-27T10:00:00Z"),
+                Map.of("v", new BigDecimal("1")),
+                Map.of()
         ));
+        assertThat(ok).isTrue();
+        verify(writeApi).writePoint(any(), any(), any(Point.class));
+    }
+
+    @Test
+    void flushOne_writeFails_returnsFalse() {
+        Meter m = newMeter("M1", "energy_reading", "meter_code", "M1");
+        when(meters.findByCode("M1")).thenReturn(Optional.of(m));
+        org.mockito.Mockito.doThrow(new RuntimeException("influx down"))
+                .when(writeApi).writePoint(any(), any(), any(Point.class));
+
+        boolean ok = sink.flushOne(new DeviceReading(
+                "dev", "M1", Instant.parse("2026-04-27T10:00:00Z"),
+                Map.of("v", new BigDecimal("1")),
+                Map.of()
+        ));
+        assertThat(ok).isFalse();
+    }
+
+    @Test
+    void flushOne_meterMissing_returnsTrueToDropFromBuffer() {
+        when(meters.findByCode("orphan")).thenReturn(Optional.empty());
+
+        boolean ok = sink.flushOne(new DeviceReading(
+                "dev", "orphan", Instant.parse("2026-04-27T10:00:00Z"),
+                Map.of("v", new BigDecimal("1")),
+                Map.of()
+        ));
+        assertThat(ok).isTrue();   // 让 buffer 标 sent，丢掉无主 reading
+        verify(writeApi, never()).writePoint(any(), any(), any(Point.class));
     }
 
     private static Meter newMeter(String code, String measurement, String tagKey, String tagValue) {

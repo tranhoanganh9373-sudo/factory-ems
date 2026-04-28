@@ -1,5 +1,6 @@
-import { Card, Empty, Space, Table, Tag, Tooltip, Typography } from 'antd';
-import { useQuery } from '@tanstack/react-query';
+import { App, Button, Card, Empty, Modal, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { collectorApi, type DeviceState, type DeviceStatusDTO } from '@/api/collector';
@@ -29,6 +30,8 @@ function fmtAbsolute(iso: string | null): string {
 }
 
 export default function CollectorStatusPage() {
+  const { message } = App.useApp();
+  const qc = useQueryClient();
   const { data: running } = useQuery({
     queryKey: ['collector', 'running'],
     queryFn: collectorApi.running,
@@ -39,6 +42,31 @@ export default function CollectorStatusPage() {
     queryFn: collectorApi.status,
     refetchInterval: 5_000,
     refetchIntervalInBackground: false,
+  });
+
+  const reloadMu = useMutation({
+    mutationFn: collectorApi.reload,
+    onSuccess: (r) => {
+      const summary =
+        `+${r.added.length} ~${r.modified.length} -${r.removed.length} ` +
+        `(unchanged ${r.unchanged})`;
+      Modal.success({
+        title: '重新加载完成',
+        content: (
+          <div>
+            <p style={{ marginBottom: 8 }}>{summary}</p>
+            {r.added.length > 0 && <p>新增：{r.added.join(', ')}</p>}
+            {r.modified.length > 0 && <p>修改：{r.modified.join(', ')}</p>}
+            {r.removed.length > 0 && <p>移除：{r.removed.join(', ')}</p>}
+          </div>
+        ),
+      });
+      qc.invalidateQueries({ queryKey: ['collector'] });
+    },
+    onError: (e: unknown) => {
+      const msg = e instanceof Error ? e.message : 'reload 失败';
+      message.error(msg);
+    },
   });
 
   return (
@@ -52,6 +80,18 @@ export default function CollectorStatusPage() {
             </Tag>
           )}
         </Space>
+      }
+      extra={
+        <Popconfirm
+          title="重新加载 collector.yml"
+          description="服务端会从磁盘重读配置；不变的 device 不受影响。"
+          onConfirm={() => reloadMu.mutate()}
+          okText="确认"
+        >
+          <Button icon={<ReloadOutlined />} loading={reloadMu.isPending} type="primary">
+            重新加载
+          </Button>
+        </Popconfirm>
       }
     >
       {data.length === 0 && !isLoading ? (

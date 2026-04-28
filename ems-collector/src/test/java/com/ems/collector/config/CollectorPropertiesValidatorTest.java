@@ -47,17 +47,50 @@ class CollectorPropertiesValidatorTest {
     }
 
     @Test
-    void validate_rtuRejectedInPlan151() {
-        var device = new DeviceConfig(
-                "d1", "MOCK-M-ELEC-001", Protocol.RTU,
-                null, null,
-                "/dev/ttyUSB0", 9600, 8, 1, Parity.NONE,
-                1, 5000, 1000, 3, 25000, 10000,
-                List.of(holdingFloat32Register("voltage_a", 0x2000))
-        );
+    void validate_rtuWithRequiredFields_isOk() {
+        var device = rtuDevice("/dev/ttyUSB0", 9600, 8, 1, Parity.NONE);
+        var props = new CollectorProperties(true, List.of(device));
+        assertThat(CollectorPropertiesValidator.validate(props)).isEmpty();
+    }
+
+    @Test
+    void validate_rtuMissingSerialPort_isFlagged() {
+        var device = rtuDevice(null, 9600, 8, 1, Parity.NONE);
         var props = new CollectorProperties(true, List.of(device));
         assertThat(CollectorPropertiesValidator.validate(props))
-                .anyMatch(s -> s.contains("RTU support deferred to Plan 1.5.2"));
+                .anyMatch(s -> s.contains("RTU requires serialPort"));
+    }
+
+    @Test
+    void validate_rtuMissingBaudRate_isFlagged() {
+        var device = rtuDevice("/dev/ttyUSB0", null, 8, 1, Parity.NONE);
+        var props = new CollectorProperties(true, List.of(device));
+        assertThat(CollectorPropertiesValidator.validate(props))
+                .anyMatch(s -> s.contains("RTU requires baudRate"));
+    }
+
+    @Test
+    void validate_rtuBaudRateOutOfRange_isFlagged() {
+        var device = rtuDevice("/dev/ttyUSB0", 300, 8, 1, Parity.NONE);
+        var props = new CollectorProperties(true, List.of(device));
+        assertThat(CollectorPropertiesValidator.validate(props))
+                .anyMatch(s -> s.contains("baudRate must be 1200..115200"));
+    }
+
+    @Test
+    void validate_rtuStopBits3_isFlagged() {
+        var device = rtuDevice("/dev/ttyUSB0", 9600, 8, 3, Parity.NONE);
+        var props = new CollectorProperties(true, List.of(device));
+        assertThat(CollectorPropertiesValidator.validate(props))
+                .anyMatch(s -> s.contains("stopBits must be 1 or 2"));
+    }
+
+    @Test
+    void validate_rtuDataBits9_isFlagged() {
+        var device = rtuDevice("/dev/ttyUSB0", 9600, 9, 1, Parity.NONE);
+        var props = new CollectorProperties(true, List.of(device));
+        assertThat(CollectorPropertiesValidator.validate(props))
+                .anyMatch(s -> s.contains("dataBits must be 5..8"));
     }
 
     @Test
@@ -143,6 +176,17 @@ class CollectorPropertiesValidatorTest {
 
     private static DeviceBuilder tcpDeviceBuilder(String id, String meterCode) {
         return new DeviceBuilder(id, meterCode);
+    }
+
+    private static DeviceConfig rtuDevice(String port, Integer baud, Integer dataBits, Integer stopBits,
+                                          Parity parity) {
+        return new DeviceConfig(
+                "rtu-1", "MOCK-M-ELEC-002", Protocol.RTU,
+                null, null,
+                port, baud, dataBits, stopBits, parity,
+                1, 5000, 1000, 3, 25000, 10000,
+                List.of(holdingFloat32Register("voltage_a", 0x2000))
+        );
     }
 
     private static RegisterConfig holdingFloat32Register(String tsField, int address) {

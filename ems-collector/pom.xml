@@ -22,12 +22,19 @@
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-security</artifactId></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
 
-        <!-- Modbus: j2mod (Apache 2.0) — TCP + RTU master/slave; jSerialComm 是它默认依赖（RTU 串口 IO）。
-             1.5.1 只用 TCP，但 RTU 依赖 1.5.2 会用，pom 里先声明避免后续版本冲突。 -->
+        <!-- Modbus: j2mod (Apache 2.0) — TCP + RTU master/slave; jSerialComm 是它默认依赖（RTU 串口 IO）。 -->
         <dependency>
             <groupId>com.ghgande</groupId>
             <artifactId>j2mod</artifactId>
             <version>3.2.1</version>
+        </dependency>
+
+        <!-- SQLite buffer (Plan 1.5.2 Phase D) — 嵌入式 file DB，断网时持久化未发的 reading。
+             Apache 2.0；零运维（不依赖外部 DB）。 -->
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.46.1.0</version>
         </dependency>
 
         <!-- Test -->
