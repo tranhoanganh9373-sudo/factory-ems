@@ -28,12 +28,16 @@ public class AuditLogController {
             @RequestParam(required = false) OffsetDateTime to,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Pageable p = PageRequest.of(page - 1, size);
+        // 防御：page 1-based；任何 ≤ 0 当 1 处理（旧客户端笔误也照样能拿到第一页）。
+        // size 限 1..200 避免极端值打挂数据库。
+        int safePage = Math.max(1, page);
+        int safeSize = Math.max(1, Math.min(200, size));
+        Pageable p = PageRequest.of(safePage - 1, safeSize);
         Page<AuditLog> pg = repo.search(actorUserId, resourceType, action, from, to, p);
         var items = pg.map(a -> new AuditLogDTO(a.getId(), a.getActorUserId(), a.getActorUsername(),
             a.getAction(), a.getResourceType(), a.getResourceId(),
             a.getSummary(), a.getDetail(), a.getIp(), a.getUserAgent(), a.getOccurredAt())
         ).toList();
-        return Result.ok(PageDTO.of(items, pg.getTotalElements(), page, size));
+        return Result.ok(PageDTO.of(items, pg.getTotalElements(), safePage, safeSize));
     }
 }

@@ -18,4 +18,4 @@ docker compose -f docker-compose.dev.yml up -d
 cd frontend && pnpm install && pnpm dev
 ```
 
-访问 http://localhost:5173，用 admin / admin123! 登录。
+访问 http://localhost:5173（dev）或 http://localhost:8888（compose），用 admin / admin123 登录。
