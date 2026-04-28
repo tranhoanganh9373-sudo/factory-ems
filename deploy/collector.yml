@@ -1,0 +1,22 @@
+# =====================================================================
+# 现场部署默认 stub — collector 默认不启用，避免空配置上线打仪表。
+#
+# 现场启用步骤：
+#   1) cat deploy/collector.yml.example > deploy/collector.yml   （或参考它逐条加）
+#   2) 按客户仪表清单填 devices: 列表
+#   3) .env 里 EMS_COLLECTOR_ENABLED=true
+#   4) docker compose up -d   → /actuator/health/collector 应 UP
+#
+# 上线后改配置不重启进程：
+#   curl -X POST -H "Authorization: Bearer $TOKEN" \
+#        http://localhost:8888/api/v1/collector/reload
+# =====================================================================
+ems:
+  collector:
+    enabled: ${EMS_COLLECTOR_ENABLED:false}
+    buffer:
+      path: ${EMS_COLLECTOR_BUFFER_PATH:./data/collector/buffer.db}
+      max-rows-per-device: 100000
+      ttl-days: 7
+      flush-interval-ms: 30000
+    devices: []   # 现场填；保持 enabled=false 时这里可以空着

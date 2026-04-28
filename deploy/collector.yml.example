@@ -1,0 +1,124 @@
+# =====================================================================
+# 现场部署模板 — copy 到 deploy/collector.yml 后按客户仪表清单填
+# 启用：把 .env 里 EMS_COLLECTOR_ENABLED 改成 true，然后 docker compose up -d
+# 改完不重启进程：curl -X POST -H "Authorization: Bearer $TOKEN" \
+#                     http://localhost:8888/api/v1/collector/reload
+# =====================================================================
+ems:
+  collector:
+    enabled: ${EMS_COLLECTOR_ENABLED:false}
+
+    # ---- 持久化 buffer：InfluxDB 抖动 / 断网时落盘后台续传 ----
+    buffer:
+      path: ${EMS_COLLECTOR_BUFFER_PATH:./data/collector/buffer.db}
+      max-rows-per-device: 100000      # 单设备超限 FIFO 丢最旧
+      ttl-days: 7                      # 超期 vacuum
+      flush-interval-ms: 30000         # 后台补传周期
+
+    # ---- 设备清单：每台仪表一条 ----
+    # 删掉所有 example 设备，按客户仪表清单逐条填。
+    devices:
+
+      # ───────────────────────── TCP 示例（Modbus 网关 + 单仪表） ────────────
+      - id: meter-A1                   # 自由命名；只用于日志/metrics tag
+        meter-code: MOCK-M-ELEC-001    # 必须能在 meters 表查到（启动时校验）
+        protocol: TCP
+        host: 192.168.10.21            # 仪表 IP（或网关 IP）
+        port: 502
+        unit-id: 1                     # Modbus slave id (1..247)
+        polling-interval-ms: 5000
+        timeout-ms: 1000
+        retries: 3
+        backoff-ms: 25000              # DEGRADED 状态下用
+        registers:
+          - name: voltage_a
+            address: 0x2000
+            count: 2
+            function: HOLDING
+            data-type: FLOAT32
+            byte-order: ABCD
+            scale: 1.0
+            unit: V
+            ts-field: voltage_a
+          - name: power_active
+            address: 0x2014
+            count: 2
+            function: HOLDING
+            data-type: FLOAT32
+            scale: 0.001              # 仪表 W → 系统 kW
+            unit: kW
+            ts-field: power_active
+          - name: energy_total
+            address: 0x4000
+            count: 2
+            function: HOLDING
+            data-type: UINT32
+            scale: 0.01               # 仪表 0.01 kWh 单位
+            unit: kWh
+            ts-field: energy_total
+            kind: ACCUMULATOR         # 自动写 energy_total_delta
+
+      # ───────────────────────── TCP 网关 + 多 unit-id ───────────────────
+      # 同 host:port 多 device → 自动通过 TcpConnectionPool 共享连接
+      - id: meter-B1
+        meter-code: MOCK-M-ELEC-002
+        protocol: TCP
+        host: 192.168.10.30            # 同一台 Modbus 网关
+        port: 502
+        unit-id: 1
+        polling-interval-ms: 5000
+        timeout-ms: 1000
+        retries: 3
+        backoff-ms: 25000
+        registers:
+          - name: power_active
+            address: 0x2014
+            count: 2
+            function: HOLDING
+            data-type: FLOAT32
+            scale: 0.001
+            ts-field: power_active
+
+      - id: meter-B2
+        meter-code: MOCK-M-ELEC-003
+        protocol: TCP
+        host: 192.168.10.30            # 同 host:port → 共享连接
+        port: 502
+        unit-id: 2                     # 不同 slave
+        polling-interval-ms: 5000
+        timeout-ms: 1000
+        retries: 3
+        backoff-ms: 25000
+        registers:
+          - name: power_active
+            address: 0x2014
+            count: 2
+            function: HOLDING
+            data-type: FLOAT32
+            scale: 0.001
+            ts-field: power_active
+
+      # ───────────────────────── RTU 示例（RS-485 总线） ──────────────────
+      # Linux 容器：docker compose run --device=/dev/ttyUSB0
+      # 同 serial-port 多 unit-id → 自动通过 SerialPortLockRegistry 串行化
+      - id: meter-C1
+        meter-code: MOCK-M-ELEC-004
+        protocol: RTU
+        serial-port: /dev/ttyUSB0
+        baud-rate: 9600
+        data-bits: 8
+        stop-bits: 1
+        parity: NONE                  # NONE / EVEN / ODD
+        unit-id: 1
+        polling-interval-ms: 5000
+        timeout-ms: 1500              # RTU 比 TCP 略长
+        retries: 3
+        backoff-ms: 30000
+        registers:
+          - name: power_active
+            address: 0x2014
+            count: 2
+            function: HOLDING
+            data-type: FLOAT32
+            scale: 0.001
+            ts-field: power_active

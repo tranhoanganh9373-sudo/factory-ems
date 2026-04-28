@@ -41,6 +41,7 @@
         <module>ems-collector</module>
         <module>ems-app</module>
         <module>tools/mock-data-generator</module>
+        <module>tools/modbus-simulator</module>
     </modules>
 
     <dependencyManagement>

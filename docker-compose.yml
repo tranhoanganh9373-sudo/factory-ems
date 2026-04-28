@@ -32,8 +32,15 @@ services:
       EMS_REPORT_EXPORT_BASE_DIR: /data/ems_uploads
       # 平面图上传同样落到挂载点；不设的话默认 ./ems_uploads/floorplans 写不了 → 上传 400
       EMS_FLOORPLAN_BASE_DIR: /data/ems_uploads/floorplans
+      # Plan 1.5.x: collector 配置外挂 + buffer 持久化
+      # 留空 / 默认 false → 不启 collector；现场部署时改 .env 的 EMS_COLLECTOR_ENABLED=true
+      EMS_COLLECTOR_BUFFER_PATH: /data/collector/buffer.db
+      # 用 additional-location 覆盖类路径默认值；文件不存在会启动失败（fail-fast）
+      SPRING_CONFIG_ADDITIONAL_LOCATION: ${EMS_COLLECTOR_CONFIG:-optional:file:/etc/ems/collector.yml}
     volumes:
       - ./data/ems_uploads:/data/ems_uploads
+      - ./data/collector:/data/collector                # SQLite buffer 持久化
+      - ./deploy/collector.yml:/etc/ems/collector.yml:ro # 现场配置外挂；改完 reload
       - ./logs/ems:/app/logs
     depends_on:
       postgres:
