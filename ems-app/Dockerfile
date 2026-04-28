@@ -18,7 +18,9 @@ COPY ems-billing/pom.xml    ems-billing/
 COPY ems-collector/pom.xml  ems-collector/
 COPY ems-app/pom.xml        ems-app/
 COPY tools/mock-data-generator/pom.xml tools/mock-data-generator/
-# `-pl ems-app -am` 沿 ems-app 的依赖树跳过 tools/mock-data-generator（不是 ems-app 的依赖）。
+COPY tools/modbus-simulator/pom.xml    tools/modbus-simulator/
+# `-pl ems-app -am` 沿 ems-app 的依赖树跳过 tools/* 子模块（都不是 ems-app 的依赖），
+# 但根 POM 的 <modules> 校验仍要求每个声明过的子模块目录至少要有 pom.xml。
 RUN mvn -B -q -T 4 -pl ems-app -am dependency:go-offline -DskipTests
 
 COPY ems-core       ems-core

@@ -3,6 +3,7 @@ package com.ems.collector.config;
 import com.ems.collector.buffer.BufferProperties;
 import jakarta.validation.Valid;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.ConstructorBinding;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
@@ -31,6 +32,10 @@ public record CollectorProperties(
         @Valid List<DeviceConfig> devices,
         BufferProperties buffer
 ) {
+    // Record 有多个构造器（canonical + convenience），Spring Boot 不会自动选；这里把
+    // canonical 标为 @ConstructorBinding，让 ConfigurationProperties binder 走 record
+    // 构造器路径而不是回退到 JavaBean (会因没 default ctor 失败)。
+    @ConstructorBinding
     public CollectorProperties {
         if (devices == null) devices = List.of();
         if (buffer == null) buffer = new BufferProperties(null, null, null, null);

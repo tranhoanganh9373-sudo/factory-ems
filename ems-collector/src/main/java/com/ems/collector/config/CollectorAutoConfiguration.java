@@ -41,11 +41,11 @@ public class CollectorAutoConfiguration {
         return DevicePoller.StateTransitionListener.NOOP;
     }
 
-    /** 默认 BufferStore = SQLite。仅在 collector enabled 时创建（cheap）。
+    /** 默认 BufferStore = SQLite。无条件创建：collector enabled=false 时也持有一个空 SQLite，
+     *  让 InfluxReadingSink 等下游组件能稳定 wire（cheap：只开个文件不写）。
      *  测试可注入自定义 BufferStore（@Primary）替换。 */
     @Bean(destroyMethod = "close")
     @ConditionalOnMissingBean
-    @ConditionalOnProperty(prefix = "ems.collector", name = "enabled", havingValue = "true")
     public BufferStore defaultBufferStore(CollectorProperties props, ObjectMapper mapper) {
         return new SqliteBufferStore(props.buffer(), mapper);
     }
