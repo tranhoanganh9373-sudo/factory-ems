@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp",
+        "--isolated",
+        "--headless"
+      ],
+      "description": "Browser automation via bundled Chromium (no extension required)"
+    }
+  }
+}
