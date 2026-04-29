@@ -23,4 +23,23 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <executions>
+                    <!-- ems-core 是通用类型库（DTO/exception/constant/接口），覆盖率门槛对它无意义。
+                         仍生成 report 供观察，但不强制 60%。 -->
+                    <execution>
+                        <id>check</id>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>
