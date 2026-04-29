@@ -16,6 +16,7 @@ import { ArrowLeftOutlined, SaveOutlined, DeleteOutlined } from '@ant-design/ico
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stage, Layer, Image as KonvaImage, Circle, Text, Group } from 'react-konva';
+import type { KonvaEventObject } from 'konva/lib/Node';
 import {
   floorplanApi,
   floorplanImageUrl,
@@ -109,7 +110,7 @@ export default function FloorplanEditorPage() {
     },
   });
 
-  function handleStageClick(e: { evt: MouseEvent; target: { getStage: () => any } }) {
+  function handleStageClick(e: KonvaEventObject<MouseEvent>) {
     if (!pickMeter) {
       message.warning('请先选择测点再点击画布');
       return;
@@ -176,7 +177,9 @@ export default function FloorplanEditorPage() {
               .filter((m) => !points.find((p) => p.meterId === m.id))
               .map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
             filterOption={(input, option) =>
-              String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              String(option?.label ?? '')
+                .toLowerCase()
+                .includes(input.toLowerCase())
             }
           />
           <Button
@@ -289,9 +292,7 @@ export default function FloorplanEditorPage() {
               render: (_, p) => (
                 <Popconfirm
                   title="移除该测点？"
-                  onConfirm={() =>
-                    setPoints((prev) => prev.filter((_, i) => i !== p.idx))
-                  }
+                  onConfirm={() => setPoints((prev) => prev.filter((_, i) => i !== p.idx))}
                 >
                   <Button size="small" danger icon={<DeleteOutlined />}>
                     移除
