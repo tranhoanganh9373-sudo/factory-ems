@@ -10,6 +10,8 @@ import com.ems.floorplan.entity.FloorplanPoint;
 import com.ems.floorplan.repository.FloorplanPointRepository;
 import com.ems.floorplan.repository.FloorplanRepository;
 import com.ems.floorplan.service.FloorplanService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -33,6 +35,8 @@ import java.util.UUID;
 
 @Service
 public class FloorplanServiceImpl implements FloorplanService {
+
+    private static final Logger log = LoggerFactory.getLogger(FloorplanServiceImpl.class);
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/png", "image/jpeg");
 
@@ -151,9 +155,19 @@ public class FloorplanServiceImpl implements FloorplanService {
     public void delete(Long id) {
         Floorplan fp = floorplans.findById(id)
                 .orElseThrow(() -> new NotFoundException("Floorplan", id));
-        // TODO: orphan file cleanup deferred — file at baseDir/fp.getFilePath() is NOT deleted here
+        String relativePath = fp.getFilePath();
         points.deleteByFloorplanId(id);
         floorplans.delete(fp);
+
+        if (relativePath != null && !relativePath.isBlank()) {
+            Path filePath = Paths.get(baseDir).resolve(relativePath);
+            try {
+                Files.deleteIfExists(filePath);
+            } catch (IOException e) {
+                // DB row already removed; log and continue rather than rolling back to a stale state
+                log.warn("Failed to delete floorplan file: {}", filePath, e);
+            }
+        }
     }
 
     @Override

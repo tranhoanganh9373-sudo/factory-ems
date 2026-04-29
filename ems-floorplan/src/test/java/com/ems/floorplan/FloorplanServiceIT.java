@@ -217,10 +217,10 @@ class FloorplanServiceIT {
                 .hasMessageContaining("重复的 meterId");
     }
 
-    // ---- Test 6: delete cascades points ----
+    // ---- Test 6: delete cascades points and removes orphan file ----
 
     @Test
-    void delete_cascadesPoints() {
+    void delete_cascadesPointsAndRemovesFile() {
         FloorplanServiceImpl impl = (FloorplanServiceImpl) svc;
         setField(impl, "maxBytes", 10_485_760L);
 
@@ -233,10 +233,15 @@ class FloorplanServiceIT {
         ));
         svc.setPoints(fp.id(), req);
 
+        String relativePath = floorplanRepo.findById(fp.id()).orElseThrow().getFilePath();
+        Path uploadedFile = tempDir.resolve(relativePath);
+        assertThat(uploadedFile).exists();
+
         svc.delete(fp.id());
 
         assertThat(floorplanRepo.findById(fp.id())).isEmpty();
         assertThat(pointRepo.findByFloorplanIdOrderByIdAsc(fp.id())).isEmpty();
+        assertThat(uploadedFile).doesNotExist();
     }
 
     // ---- Test 7: loadImage returns resource matching written bytes ----
