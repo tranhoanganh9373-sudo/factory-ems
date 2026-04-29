@@ -39,3 +39,8 @@ e2e/playwright-report/
 # Tooling state
 .omc/
 e2e/.omc/
+.claude/
+.playwright-mcp/
+
+# QA / debug screenshots
+qa-*.png
