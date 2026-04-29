@@ -1,0 +1,16 @@
+spring:
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jpa:
+    hibernate:
+      ddl-auto: none
+ems:
+  alarm:
+    default-silent-timeout-seconds: 600
+    default-consecutive-fail-count: 3
+    poll-interval-seconds: 60
+    suppression-window-seconds: 300
+    webhook-retry-max: 3
+    webhook-retry-backoff-seconds: [10, 60, 300]
+    webhook-timeout-default-ms: 5000
