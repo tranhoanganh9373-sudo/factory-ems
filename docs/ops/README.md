@@ -1,3 +1,22 @@
+# docs/ — 文档总索引
+
+> **本文件**：运维 / 验收 / 上线 documents（`docs/ops/`）
+> **同级目录**：
+> - 📘 [`docs/product/`](../product/README.md) —— 产品说明书（功能、配置、用户指南，给最终用户/销售/实施）
+> - 🔌 [`docs/api/`](../api/README.md) —— API 规约（开发对接，给第三方集成）
+> - 📐 [`docs/superpowers/`](../superpowers/) —— spec / plan（设计规格 + 实施计划，给开发团队）
+>
+> **文档分工原则**
+>
+> | 想知道 | 看哪里 |
+> |--------|--------|
+> | 这个功能能做什么 / 怎么用 | `docs/product/` |
+> | 怎么集成 API | `docs/api/` |
+> | 怎么部署 / 排障 / 备份 | `docs/ops/`（本目录） |
+> | 设计是怎么决定的 / 实施怎么排期 | `docs/superpowers/` |
+
+---
+
 # docs/ops — 运维与验收文档索引
 
 ## Verification Reports
@@ -36,3 +55,32 @@
 - [dry-run-procedure.md](./dry-run-procedure.md) — Dry-run 流程
 - [onboarding-checklist.md](./onboarding-checklist.md) — 上线 checklist
 - [perf-2026-04-25.md](./perf-2026-04-25.md) — 性能基线
+
+> **采集中断告警 (ems-alarm)** runbook 由 **Plan H** 落地：`alarm-runbook.md`（占位）
+
+## Cross-Reference: 产品 / API / Spec / Plan
+
+### 产品说明书（[docs/product/](../product/README.md)）
+
+| 文档 | 状态 | 范围 |
+|------|------|------|
+| `alarm-feature-overview.md` | 占位 → Phase H 填 | 销售/客户视角的功能概览 |
+| `alarm-config-reference.md` | 占位 → Phase A 填 | 配置参数详解 + 调优 |
+| `alarm-data-model.md` | 占位 → Phase B 填 | 5 张表字段词典 + 业务 SQL |
+| `alarm-business-rules.md` | 占位 → Phase C 填 | 状态机 + 抑制窗 + 维护模式 |
+| `alarm-detection-rules.md` | 占位 → Phase D 填 | 检测口径 + 不触发场景 + 排障决策树 |
+| `alarm-webhook-integration.md` | 占位 → Phase E 填 | 钉钉/企微/自定义对接 + 多语言验签 |
+| `alarm-user-guide.md` | 占位 → Phase G 填 | 管理员/操作员使用手册 + FAQ |
+
+### API 规约（[docs/api/](../api/README.md)）
+
+| 文档 | 状态 | 范围 |
+|------|------|------|
+| `alarm-api.md` | 占位 → Phase F 填 | 16 端点完整规约 + curl 示例 |
+
+### Spec / Plan（[docs/superpowers/](../superpowers/)）
+
+| 文档 | 内容 |
+|------|------|
+| `specs/2026-04-29-acquisition-alarm-design.md` | 完整设计规格（含 §11-§16 用户/配置/对接/状态机/错误码/部署六章） |
+| `plans/2026-04-29-acquisition-alarm-plan.md` | 实施计划（A1-H3 共 ~34 任务，每 Phase 末附文档落实任务） |

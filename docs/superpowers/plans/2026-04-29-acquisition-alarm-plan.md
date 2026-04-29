@@ -164,15 +164,29 @@ frontend/src/
 | Phase | 范围 | Tasks | 估时 |
 |---|---|---|---|
 | A | 模块骨架：pom + 父模块注册 + ems-app 接入 + AlarmProperties + Flyway migration | A1–A4 | 0.5 d |
+| **A末** | **文档落实：alarm-config-reference.md（Phase A 文档任务）** | **A5** | **0.25 d** |
 | B | 实体 + Repository（5 张表 × Entity + Repo）| B1–B2 | 0.5 d |
+| **B末** | **文档落实：alarm-data-model.md** | **B3** | **0.25 d** |
 | C | 异常类 + ThresholdResolver + AlarmStateMachine（含单测）| C1–C3 | 0.5 d |
+| **C末** | **文档落实：alarm-business-rules.md** | **C4** | **0.25 d** |
 | D | AlarmDetector：检测逻辑 + @Scheduled + 集成测试 | D1–D3 | 1 d |
+| **D末** | **文档落实：alarm-detection-rules.md** | **D4** | **0.25 d** |
 | E | 派发器：Dispatcher + InAppChannel + WebhookChannel + Adapter + 重试 + IT | E1–E5 | 1 d |
+| **E末** | **文档落实：alarm-webhook-integration.md** | **E6** | **0.5 d**（含多语言验签代码 + 至少 3 个对接示例） |
 | F | REST API：AlarmController / RuleController / WebhookController + ApiIT | F1–F4 | 1 d |
+| **F末** | **文档落实：docs/api/alarm-api.md（16 端点完整规约）** | **F5** | **0.5 d** |
 | G | 前端：API client + Bell + 4 个页面 + 设备列表/详情/dashboard 改动 | G1–G7 | 1.5 d |
+| **G末** | **文档落实：alarm-user-guide.md（含截图占位 + FAQ）** | **G8** | **0.25 d** |
 | H | E2E 冒烟 + 文档 + 验收报告 + tag | H1–H2 | 0.5 d |
+| **H末** | **文档总收尾：alarm-feature-overview.md + alarm-runbook.md + 索引联动** | **H3** | **0.5 d** |
 
-**合计估算：~26 tasks，约 6.5 工作日。**
+**合计估算：~34 tasks（含 8 个文档任务），约 8 工作日。**
+
+> **每 Phase 末文档任务的执行原则**：
+> 1. **必须在该 Phase 全部技术任务完成后立刻做**，避免实现细节淡化导致文档与代码脱节
+> 2. 占位骨架文件已在 `docs/product/*.md` 与 `docs/api/*.md` 中创建，每个文件末尾有"Phase 任务清单"明示要填什么
+> 3. 文档完成时必须**删除文件末尾的"Phase 任务清单"和"占位骨架"注脚**
+> 4. 每个文档任务独立 commit，commit message 格式：`docs(alarm): 完成 alarm-xxx.md 第 N 章`
 
 ---
 
@@ -3119,3 +3133,464 @@ git tag v1.6.0-alarm
 ## 启动建议
 
 第一会话：**Phase A + B 一气呵成**（模块骨架 + 实体 + Repo + Migration），完成后整个数据层稳定，剩下 Phase 都是业务逻辑。Phase D 是关键 spike — `CollectorService.snapshots()` 是否能从 ems-alarm 顺利注入（跨模块依赖），这一步过了风险就排除了。
+
+---
+
+## 附录：每 Phase 末文档任务详情
+
+> **统一原则**：每个文档任务在对应 Phase 全部技术任务完成后立刻执行，不允许跨 Phase 累积。
+
+### Task A5: 完成 docs/product/alarm-config-reference.md
+
+**Files:**
+- Modify: `docs/product/alarm-config-reference.md`（占位骨架已存在）
+
+- [ ] **Step 1: 把 spec §12 的参数表完整复制到 §1**
+  - 7 个全局参数全部列出，每行加 1 句调优建议
+  - 标注哪些参数修改后需重启 ems-app
+
+- [ ] **Step 2: §2 设备级覆盖**
+  - 字段含义（沿用 spec §12.1）
+  - 通过 UI（系统健康 → 阈值规则页）/ API（PUT `/alarm-rules/overrides/{deviceId}`）两种方式
+  - 留空（NULL）= 沿用全局默认的行为
+
+- [ ] **Step 3: §3 三个完整 YAML 场景**（直接 copy spec §12.3 的高可靠工控 / 一般工厂 / 低频采集 三段）
+
+- [ ] **Step 4: §4 修改后的生效方式**
+  - 全局 `application.yml` 改动 → 重启
+  - 设备覆盖 → 立即生效（下一轮 scan 即应用，最长 60s 等待）
+  - 维护模式开关 → 立即生效
+
+- [ ] **Step 5: §5 校验失败处理**（搬 spec §15.3 的启动校验失败表）
+
+- [ ] **Step 6: 删除文档末尾的"Phase A 任务清单"段**
+
+- [ ] **Step 7: 提交**
+
+```bash
+git add docs/product/alarm-config-reference.md
+git commit -m "docs(alarm): Phase A — 完成配置参数参考"
+```
+
+### Task B3: 完成 docs/product/alarm-data-model.md
+
+**Files:**
+- Modify: `docs/product/alarm-data-model.md`
+
+- [ ] **Step 1: §1 表关系图**
+
+```
+                    ┌─────────────┐
+                    │  meters     │  (既有)
+                    └─────┬───────┘
+                          │ id  ←──── alarms.device_id (软关联，无 FK)
+                          │     ←──── alarm_rules_override.device_id
+                          │
+        ┌─────────────────┼─────────────────────────────┐
+        │                 │                             │
+   ┌────┴─────┐    ┌──────┴────────────┐         ┌─────┴──────┐
+   │ alarms   │ ←──│ webhook_delivery_ │         │ alarm_inbox│
+   └──────────┘    │       log         │         └─────┬──────┘
+                   └───────────────────┘               │
+                                                       │ user_id ──→ users (既有)
+                   ┌──────────────────┐
+                   │ webhook_config   │  (单行系统级)
+                   └──────────────────┘
+```
+
+- [ ] **Step 2: §2-§6 五张表的完整字段词典**
+  - 每张表逐字段说明（搬 spec §2.1）
+  - 加业务含义列：每字段在业务流程中扮演什么角色
+  - `webhook_config.secret` 必须明确标注为敏感数据
+
+- [ ] **Step 3: §7 数据生命周期**
+  - 各表保留策略：alarms 永久 / inbox 永久 / delivery_log 建议 90 天 / config 永久
+  - 何时该归档（首版无归档机制，写到 ops backlog）
+
+- [ ] **Step 4: §8 业务 SQL 5-10 条示例**
+  - 当前所有 ACTIVE 告警按设备分组：`SELECT device_id, COUNT(*) FROM alarms WHERE status='ACTIVE' GROUP BY device_id;`
+  - 最近 7 天告警 Top 10 设备
+  - 某设备最近一次告警的完整生命周期
+  - 24 小时内 Webhook 失败统计
+  - 用户未读告警数
+  - 维护模式中的设备列表
+  - …
+
+- [ ] **Step 5: 删除骨架文件末尾的"Phase B 任务清单"段**
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add docs/product/alarm-data-model.md
+git commit -m "docs(alarm): Phase B — 完成数据模型说明"
+```
+
+### Task C4: 完成 docs/product/alarm-business-rules.md
+
+**Files:**
+- Modify: `docs/product/alarm-business-rules.md`
+
+- [ ] **Step 1: §1-§2 状态机图 + 三状态详解**（搬 spec §14）
+
+- [ ] **Step 2: §3 阈值解析规则**
+  - 设备覆盖优先 → 全局默认回落
+  - 部分覆盖示例（仅设了 silent_timeout 没设 fail_count，结果是什么）
+  - 维护模式怎么算：`maintenanceMode=true` 即跳过
+
+- [ ] **Step 3: §4 抑制窗口**
+  - **双重作用**清楚解释：
+    - (a) RESOLVED 后 5min 内不再触发同类型 → 防"上报一条又断"抖动
+    - (b) ACTIVE 触发后 5min 内不允许 AUTO 恢复 → 防瞬时恢复造成 RESOLVED→再 ACTIVE 抖动
+  - 时间线图示
+
+- [ ] **Step 4: §5 维护模式完整流程**
+  - 何时开（计划停机 / 设备搬迁 / 保养）
+  - 何时关（计划结束）
+  - 备注字段建议（写"原因 + 计划恢复时间 + 联系人"）
+  - 期间错过的告警**不会补发**（明确告知）
+
+- [ ] **Step 5: §6 边界场景表**（搬 spec §14.4）
+
+- [ ] **Step 6: §7 用户应对场景手册**
+  - 至少 5 个场景（设备真坏 / 网络抖动 / 计划停机 / 误开维护 / 重复触发）
+  - 每场景：系统行为 + 用户应做什么
+
+- [ ] **Step 7: 删除骨架"Phase C 任务清单"段**
+
+- [ ] **Step 8: 提交**
+
+```bash
+git add docs/product/alarm-business-rules.md
+git commit -m "docs(alarm): Phase C — 完成业务规则说明"
+```
+
+### Task D4: 完成 docs/product/alarm-detection-rules.md
+
+**Files:**
+- Modify: `docs/product/alarm-detection-rules.md`
+
+- [ ] **Step 1: §1 触发条件总览**
+  - 两种触发条件 OR 关系
+  - 流程图（ASCII / Mermaid）
+
+- [ ] **Step 2: §2 静默超时（SILENT_TIMEOUT）完整定义**
+  - 判定逻辑：`NOW() - lastReadAt > threshold` 即触发
+  - `lastReadAt IS NULL` 不触发
+  - 阈值默认 600s，可全局/设备级覆盖
+  - 调优建议：阈值 = 采集周期的 5-10 倍
+
+- [ ] **Step 3: §3 连续失败（CONSECUTIVE_FAIL）**
+  - 数据来源：collector `DevicePoller.consecutiveCycleErrors`（per-device 内存）
+  - 清零时机：每次成功 read 即清零
+  - 阈值默认 3 次，达到即触发
+  - **collector 重启后清零**（影响章节 §6 详述）
+
+- [ ] **Step 4: §4 检测节奏**
+  - 默认 60 秒一轮
+  - 单实例运行（多实例需 ShedLock，首版不引入）
+  - 单设备耗时 < 5ms，1000 设备一轮 < 5s
+
+- [ ] **Step 5: §5 不会触发告警的 5-7 个场景**
+  - 设备从未上报：lastReadAt IS NULL
+  - 维护模式 ON
+  - 同设备同类型已 ACTIVE / ACKED
+  - 抑制窗口内（RESOLVED 不到 5min）
+  - 抑制窗口内（刚 ACTIVE 不到 5min，不会立即 AUTO 恢复）
+  - 设备未在 collector 配置中（无 snapshot）
+  - 阈值设置过大
+
+- [ ] **Step 6: §6 collector 重启的检测行为**
+  - SILENT_TIMEOUT 不受影响（依赖 lastReadAt，重启后仍能读到旧值）
+  - CONSECUTIVE_FAIL 影响：内存计数清零，需重新积累 N 个失败周期才会触发
+
+- [ ] **Step 7: §7 监控覆盖范围**
+  - 首版仅监控 `CollectorService.snapshots()` 返回的设备
+  - 通过 mock-data CLI / 直接 API 写入的设备**不**监控
+  - 理由：alarm 模块不查 InfluxDB，只读 collector 内存
+
+- [ ] **Step 8: §8 故障排查决策树**
+  - 至少 3 个常见客户问题 + 排查步骤：
+    - "设备掉线了但没收到告警？"
+    - "告警刚自动恢复又重新触发？"
+    - "维护模式期间还在产生告警？"
+
+- [ ] **Step 9: 删除骨架"Phase D 任务清单"段**
+
+- [ ] **Step 10: 提交**
+
+```bash
+git add docs/product/alarm-detection-rules.md
+git commit -m "docs(alarm): Phase D — 完成检测规则说明"
+```
+
+### Task E6: 完成 docs/product/alarm-webhook-integration.md
+
+**Files:**
+- Modify: `docs/product/alarm-webhook-integration.md`
+
+- [ ] **Step 1: §1 适用场景**
+  - 何时需要 webhook（IM 推送 / 工单系统 / 告警平台）
+  - 替代方案（仅站内通知）
+
+- [ ] **Step 2: §2 配置 Webhook UI 流程**
+  - 截图占位 5 张：webhook 配置页 / 字段表单 / 测试按钮 / 成功响应 / 启用开关
+  - 字段说明（搬 spec §16）
+
+- [ ] **Step 3: §3 Payload 完整字段词典**（搬 spec §13.1）
+
+- [ ] **Step 4: §4 HTTP Headers**（搬 spec §13.2）
+
+- [ ] **Step 5: §5 接收方实现要点**
+  - 验签（必须）
+  - 幂等去重（按 alarm_id + event）
+  - 路由（按 alarm_type 分流）
+  - 状态码（2xx 表示已接受；5xx 触发 EMS 重试）
+
+- [ ] **Step 6: §6 对接示例（3 个完整）**
+
+  **6.1 钉钉机器人**：转换 → 中间适配层架构图（Mermaid）+ 适配层 Python 脚本完整代码
+
+  **6.2 企微机器人**：类似钉钉
+
+  **6.3 自定义后端 Python 完整代码**
+
+```python
+# Flask 接收器示例
+import hmac, hashlib
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+SECRET = "your-secret-here"
+processed = set()  # 简化幂等：生产用 Redis/DB
+
+@app.post('/ems-webhook')
+def receive():
+    body = request.get_data()
+    sig_header = request.headers.get('X-EMS-Signature', '')
+    expected = "sha256=" + hmac.new(SECRET.encode(), body, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, sig_header):
+        return jsonify(error="bad signature"), 403
+
+    payload = request.json
+    key = (payload['alarm_id'], payload['event'])
+    if key in processed:
+        return jsonify(status="duplicate"), 200
+    processed.add(key)
+
+    # 业务处理 ...
+    return jsonify(status="ok"), 200
+```
+
+- [ ] **Step 7: §7 重试与失败处理**
+  - 3 次重试 + 指数退避 [10s, 60s, 300s]
+  - 失败后 delivery_log 记录
+  - UI 手动重放
+
+- [ ] **Step 8: §8 测试 Webhook**
+  - UI"发送测试"按钮行为
+  - 用 webhook.site / ngrok 验证步骤
+
+- [ ] **Step 9: §9 安全建议**
+  - secret 强度（≥ 32 字符随机）
+  - HTTPS 推荐
+  - IP 白名单（接收方）
+  - 接收方鉴权
+
+- [ ] **Step 10: §10 故障排查**（搬 spec §15.2）
+
+- [ ] **Step 11: §11 新增 Adapter 步骤**（搬 spec §13.4）
+
+- [ ] **Step 12: 多语言验签代码**
+
+```python
+# Python: hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+```
+```javascript
+// Node.js
+const crypto = require('crypto');
+const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');
+```
+```java
+// Java
+Mac mac = Mac.getInstance("HmacSHA256");
+mac.init(new SecretKeySpec(secret.getBytes(), "HmacSHA256"));
+String sig = "sha256=" + HexFormat.of().formatHex(mac.doFinal(body));
+```
+
+- [ ] **Step 13: 删除骨架"Phase E 任务清单"段**
+
+- [ ] **Step 14: 提交**
+
+```bash
+git add docs/product/alarm-webhook-integration.md
+git commit -m "docs(alarm): Phase E — 完成 Webhook 接入指南（含 3 对接示例 + 多语言验签）"
+```
+
+### Task F5: 完成 docs/api/alarm-api.md
+
+**Files:**
+- Modify: `docs/api/alarm-api.md`
+
+- [ ] **Step 1: §1.1-§1.6 告警操作类 6 端点**
+
+每个端点完整写出：
+- HTTP method + path
+- 鉴权角色（搬 spec §11.1）
+- Query 参数表（每个参数：名称 / 类型 / 必填 / 默认 / 说明）
+- 请求体（如有）
+- 响应 Schema
+- curl 完整示例
+- 常见错误响应（404 / 409 / 403）
+
+示例（GET `/alarms`）：
+
+```bash
+curl -X GET 'http://localhost:8080/api/v1/alarms?status=ACTIVE&page=1&size=20' \
+  -H 'Authorization: Bearer <TOKEN>'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": 12345,
+        "deviceId": 88,
+        "deviceCode": "M-A01-001",
+        "deviceName": "一号车间总表",
+        "alarmType": "SILENT_TIMEOUT",
+        "severity": "WARNING",
+        "status": "ACTIVE",
+        "triggeredAt": "2026-04-29T08:15:30+08:00",
+        "lastSeenAt": "2026-04-29T08:00:12+08:00",
+        "ackedAt": null
+      }
+    ],
+    "total": 3,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+- [ ] **Step 2: §2.1-§2.5 阈值规则类 5 端点**（同样风格）
+
+- [ ] **Step 3: §3.1-§3.5 Webhook 配置类 5 端点**
+  - 注意 §3.1 的响应中 `secret` 字段 mask 为 `"***"`
+  - §3.2 的 400 错误示例（invalid scheme / timeout out of range）
+
+- [ ] **Step 4: §4 错误码完整表**（搬 spec §15.1）
+
+- [ ] **Step 5: §5 DTO Schema**（OpenAPI 3.0 风格 YAML 块）
+
+- [ ] **Step 6: §6 客户端集成提示**
+  - axios 拦截器统一处理 errorMsg
+  - 错误码 → Toast 模式
+
+- [ ] **Step 7: 删除骨架"Phase F 任务清单"段**
+
+- [ ] **Step 8: 提交**
+
+```bash
+git add docs/api/alarm-api.md
+git commit -m "docs(alarm): Phase F — 完成 alarm-api.md 16 端点完整规约"
+```
+
+### Task G8: 完成 docs/product/alarm-user-guide.md
+
+**Files:**
+- Modify: `docs/product/alarm-user-guide.md`
+
+- [ ] **Step 1: §1 角色对照表**（搬 spec §11.1，简化为用户友好）
+
+- [ ] **Step 2: §2 操作员视角 3 个场景**
+  - 看到铃铛 +1 该怎么办（5 步流程 + 4 张截图占位）
+  - 看告警历史（筛选 / 排序 / 详情）
+  - 看设备实时状态（设备列表的状态色 / 设备详情的最近告警时间线）
+
+- [ ] **Step 3: §3 管理员视角 5 个场景**
+  - 处理一条新告警（铃铛 → 抽屉 → 确认 → 自动恢复）
+  - 给某台设备单独配置阈值（含截图占位）
+  - 维护期开维护模式（含备注示例）
+  - 配置 Webhook（链接到 alarm-webhook-integration.md）
+  - 看健康总览（4 卡 + Top10 + 何时该警觉）
+
+- [ ] **Step 4: §4 FAQ 至少 8 条**
+  - 为什么我没收到告警？
+  - 告警自动恢复了，我之前确认是不是白做了？
+  - 维护模式期间错过的告警还会补发吗？
+  - 可以批量确认告警吗？
+  - 同一设备同时段多个告警？
+  - 我离职了，账号删除后我处理过的告警还能查到吗？
+  - 改了阈值多久生效？
+  - Webhook 接收方是钉钉，要怎么接？
+
+- [ ] **Step 5: §5 快捷操作**
+  - 直达 URL：`/alarms/history?id=123` 直接打开某告警详情
+  - （键盘快捷键首版无）
+
+- [ ] **Step 6: §6 术语词汇表**
+  - 告警 / 静默超时 / 连续失败 / 抑制窗口 / 维护模式 / 站内通知 / Webhook / HMAC 签名
+
+- [ ] **Step 7: 删除骨架"Phase G 任务清单"段**
+
+- [ ] **Step 8: 提交**
+
+```bash
+git add docs/product/alarm-user-guide.md
+git commit -m "docs(alarm): Phase G — 完成用户使用手册（管理员/操作员视角 + FAQ）"
+```
+
+### Task H3: 文档总收尾 + alarm-runbook + 索引联动
+
+**Files:**
+- Modify: `docs/product/alarm-feature-overview.md`
+- Create: `docs/ops/alarm-runbook.md`（已在 H2 计划中，此处明确列出）
+- Modify: `docs/ops/README.md`
+- Modify: `docs/product/README.md`（更新链接状态：占位 → 已完成）
+- Modify: `docs/api/README.md`（同上）
+
+- [ ] **Step 1: 完成 alarm-feature-overview.md**
+  - §1 一句话价值：从销售视角写
+  - §2 解决什么问题：3-5 个客户痛点
+  - §3 核心功能：3-5 bullet
+  - §4 适用场景：3 个典型场景
+  - §5 不在范围：搬 spec §8.2
+  - §6 与其他模块的关系：和 ems-collector / ems-meter 协作图
+  - 删除骨架"Phase H 任务清单"段
+
+- [ ] **Step 2: 完成 docs/ops/alarm-runbook.md**（已在 Task H2 中定义内容大纲，此处合并执行）
+
+- [ ] **Step 3: 更新 docs/ops/README.md 索引**
+  - "Verification Reports" 段加 `verification-2026-04-29-alarm.md` 一行
+  - "Runbooks" 段加 `alarm-runbook.md` 一行
+  - 在合适位置加新段「Product Docs」指向 `docs/product/`
+  - 加新段「API Docs」指向 `docs/api/`
+
+- [ ] **Step 4: 更新 docs/product/README.md**
+  - 把每行的 "Phase 负责人" 列改为 "✅ 已完成"
+  - 加版本与日期信息（v1.6.0 / 2026-XX-XX）
+
+- [ ] **Step 5: 更新 docs/api/README.md**
+  - 同上：alarm-api.md 状态改 ✅
+
+- [ ] **Step 6: 提交**
+
+```bash
+git add docs/product/alarm-feature-overview.md docs/product/README.md \
+        docs/api/README.md docs/ops/README.md docs/ops/alarm-runbook.md
+git commit -m "docs(alarm): Phase H — 文档总收尾（功能概览 + runbook + 全索引联动）"
+```
+
+---
+
+## 文档完整性检查清单（Phase H 最后做）
+
+每个文件末尾不应再含"占位骨架"或"Phase X 任务清单"段。
+
+```bash
+# 检查残留占位符
+grep -rn "占位骨架\|Phase.*任务清单\|（待 Phase" docs/product/ docs/api/
+# 期望：无输出
+```
