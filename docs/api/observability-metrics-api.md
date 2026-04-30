@@ -161,24 +161,42 @@ location /metrics {
     - targets: ['nginx.example.com:443']
 ```
 
-### §2.3 可选：Spring Security on `/actuator/**`
+### §2.3 可选：在应用内用 Spring Security 限制 `/actuator/**`
 
-若不便于反代加鉴权，可以在 ems-app 内启用 Spring Security 限制 `/actuator/**`（v1 默认未启用）。在 `application-prod.yml` 增量：
+若不便于反代加鉴权，可以在 ems-app 内启用 Spring Security 限制 `/actuator/**`（v1 默认未启用）。
+
+> **注意**：Spring Boot 3.x 已**移除** `management.security.enabled` 属性（旧 Boot 1.x 用法），仅靠 yaml 是无法启用的；必须显式定义 `SecurityFilterChain` Bean。Spring Security 6 起也不再支持 `WebSecurityConfigurerAdapter`。下例为 Spring Boot 3.3 / Spring Security 6 的最小骨架，未在 ems-app 中实际启用，集成方需自行验证。
+
+```java
+// 新增类（仅 prod profile）：ems-app/src/main/java/.../security/ActuatorSecurityConfig.java
+@Configuration
+@Profile("prod")
+public class ActuatorSecurityConfig {
+
+    @Bean
+    SecurityFilterChain actuatorChain(HttpSecurity http) throws Exception {
+        http.securityMatcher("/actuator/**")
+            .authorizeHttpRequests(a -> a
+                .requestMatchers("/actuator/health").permitAll()
+                .anyRequest().authenticated())
+            .httpBasic(Customizer.withDefaults())
+            .csrf(c -> c.disable());
+        return http.build();
+    }
+}
+```
 
 ```yaml
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,prometheus,info,metrics
-  security:
-    enabled: true     # v1 default: false
+# application-prod.yml 增量 — 配套上面 SecurityFilterChain
 spring:
   security:
     user:
       name: scraper
-      password: ${METRICS_BASIC_AUTH_PASSWORD}
+      password: ${METRICS_BASIC_AUTH_PASSWORD}     # 来自 .env，不要硬编码
+      roles: ACTUATOR
 ```
+
+> 推荐做法仍是 §2.2 nginx 反代 + Basic Auth：与产品栈现有 nginx 同栈，不需要改动应用代码、不影响 jar 体积、运维交接更直观。Spring Security 内置鉴权适合无反代场景或公网直连场景。
 
 > **不要**：把生产 metrics 端点完全开放在公网而不带任何鉴权。
 
