@@ -1,0 +1,59 @@
+# factory-ems Alertmanager — multi-channel routing
+# - critical: email + dingtalk + wechat + generic webhook
+# - warning: email only
+# - Empty env vars → receiver becomes empty url which AM silently skips
+
+global:
+  resolve_timeout: 5m
+  smtp_smarthost: '${OBS_SMTP_HOST}'
+  smtp_from: '${OBS_SMTP_USER}'
+  smtp_auth_username: '${OBS_SMTP_USER}'
+  smtp_auth_password: '${OBS_SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+route:
+  receiver: default-email
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: multi-channel
+      continue: false
+    - matchers:
+        - severity="warning"
+      receiver: default-email
+      continue: false
+
+receivers:
+  - name: default-email
+    email_configs:
+      - to: '${OBS_ALERT_RECEIVER_EMAIL}'
+        send_resolved: true
+
+  - name: multi-channel
+    email_configs:
+      - to: '${OBS_ALERT_RECEIVER_EMAIL}'
+        send_resolved: true
+    webhook_configs:
+      # 钉钉 — 经 webhook-bridge 适配格式 + 加签
+      - url: 'http://obs-webhook-bridge:9094/dingtalk'
+        send_resolved: true
+        max_alerts: 0
+      # 企微 — 同上
+      - url: 'http://obs-webhook-bridge:9094/wechat'
+        send_resolved: true
+        max_alerts: 0
+      # 通用 webhook（接客户内部 IT 工单等）
+      - url: '${OBS_GENERIC_WEBHOOK}'
+        send_resolved: true
+        max_alerts: 0
+
+inhibit_rules:
+  - source_matchers:
+      - alertname="EmsAppDown"
+    target_matchers:
+      - alertname=~"Ems.*"
+    equal: [instance]
