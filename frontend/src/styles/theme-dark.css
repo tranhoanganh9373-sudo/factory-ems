@@ -1,0 +1,22 @@
+:root[data-theme='dark'] {
+  --ems-color-brand-primary: #00C2CC;
+  --ems-color-brand-accent: #FFD732;
+  --ems-color-bg-page: #0A1018;
+  --ems-color-bg-container: #141C28;
+  --ems-color-bg-elevated: #1A2536;
+  --ems-color-bg-header: #06090F;
+  --ems-color-bg-sider: #0F1722;
+  --ems-color-text-primary: #E8ECF1;
+  --ems-color-text-secondary: #A8B2BD;
+  --ems-color-text-tertiary: #6B7682;
+  --ems-color-text-on-header: #FFFFFF;
+  --ems-color-border: #252F3E;
+  --ems-color-border-strong: #3A4658;
+  --ems-color-success: #3DCB6E;
+  --ems-color-warning: #FFA940;
+  --ems-color-error: #FF6464;
+  --ems-color-info: #4FA8FF;
+  --ems-shadow-1: 0 1px 2px rgba(0,0,0,0.4);
+  --ems-shadow-2: 0 4px 12px rgba(0,0,0,0.5);
+  --ems-shadow-popup: 0 8px 24px rgba(0,0,0,0.6);
+}
