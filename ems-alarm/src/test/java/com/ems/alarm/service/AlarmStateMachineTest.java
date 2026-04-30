@@ -30,6 +30,17 @@ class AlarmStateMachineTest {
     }
 
     @Test
+    void ack_fromAcked_throws() {
+        Alarm a = newAlarm(AlarmStatus.ACKED);
+        a.setAckedBy(7L);
+        a.setAckedAt(OffsetDateTime.now());
+        assertThatThrownBy(() -> sm.ack(a, 42L))
+                .isInstanceOf(AlarmStateException.class)
+                .hasMessageContaining("ACKED");
+        assertThat(a.getAckedBy()).isEqualTo(7L);
+    }
+
+    @Test
     void resolve_fromActive_setsResolvedFields() {
         Alarm a = newAlarm(AlarmStatus.ACTIVE);
         sm.resolve(a, ResolvedReason.MANUAL);
