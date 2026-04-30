@@ -36,6 +36,7 @@
 | [observability-metrics-dictionary.md](./observability-metrics-dictionary.md) | 数据/集成工程师 | 17 个业务指标字典 + cardinality + PromQL 模板 | Phase B ✅ |
 | [observability-slo-rules.md](./observability-slo-rules.md) | 客户管理/运维 | 4 SLO + 16 告警 + 路由 + 客户视角 | Phase D ✅ |
 | [observability-dashboards-guide.md](./observability-dashboards-guide.md) | 客户/工程值班/运维 | 7 dashboard 使用指南 + 下钻路径 | Phase E ✅ |
+| [observability-user-guide.md](./observability-user-guide.md) | 客户运维 | Grafana 操作手册 + SLO 解读 + 告警响应 + 维护模式 + FAQ | Phase G ✅ |
 
 ## 与 docs/ops 的边界
 
