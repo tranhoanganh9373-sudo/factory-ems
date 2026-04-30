@@ -31,6 +31,7 @@
 
 | 文档 | 受众 | 范围 | Phase 负责人 |
 |------|------|------|-------------|
+| [observability-feature-overview.md](./observability-feature-overview.md) | 销售/客户 | 功能概览 + 价值主张 + 适用场景 + 与 ems-alarm 协同 | Phase G ✅ |
 | [observability-config-reference.md](./observability-config-reference.md) | 实施工程师 | 配置参考（env / yml / 启停 / 升级 / 预算 / FAQ） | Phase A ✅ |
 | [observability-metrics-dictionary.md](./observability-metrics-dictionary.md) | 数据/集成工程师 | 17 个业务指标字典 + cardinality + PromQL 模板 | Phase B ✅ |
 | [observability-slo-rules.md](./observability-slo-rules.md) | 客户管理/运维 | 4 SLO + 16 告警 + 路由 + 客户视角 | Phase D ✅ |
