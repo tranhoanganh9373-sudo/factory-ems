@@ -4,19 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { collectorApi, type DeviceState, type DeviceStatusDTO } from '@/api/collector';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag } from '@/components/StatusTag';
 
 dayjs.extend(relativeTime);
 
-const STATE_COLOR: Record<DeviceState, string> = {
-  HEALTHY: 'success',
-  DEGRADED: 'warning',
-  UNREACHABLE: 'error',
-};
-
-const STATE_LABEL: Record<DeviceState, string> = {
-  HEALTHY: '正常',
-  DEGRADED: '降级',
-  UNREACHABLE: '不可达',
+const STATE_MAP: Record<DeviceState, { tone: 'success' | 'warning' | 'error'; label: string }> = {
+  HEALTHY: { tone: 'success', label: '正常' },
+  DEGRADED: { tone: 'warning', label: '降级' },
+  UNREACHABLE: { tone: 'error', label: '不可达' },
 };
 
 function fmtRelative(iso: string | null): string {
@@ -30,6 +27,7 @@ function fmtAbsolute(iso: string | null): string {
 }
 
 export default function CollectorStatusPage() {
+  useDocumentTitle('数据采集');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { data: running } = useQuery({
@@ -70,6 +68,8 @@ export default function CollectorStatusPage() {
   });
 
   return (
+    <>
+      <PageHeader title="数据采集" />
     <Card
       title={
         <Space>
@@ -109,7 +109,10 @@ export default function CollectorStatusPage() {
               title: '状态',
               dataIndex: 'state',
               width: 100,
-              render: (s: DeviceState) => <Tag color={STATE_COLOR[s]}>{STATE_LABEL[s]}</Tag>,
+              render: (s: DeviceState) => {
+                const c = STATE_MAP[s] ?? { tone: 'default' as const, label: s };
+                return <StatusTag tone={c.tone}>{c.label}</StatusTag>;
+              },
             },
             {
               title: '上次读取',
@@ -154,5 +157,6 @@ export default function CollectorStatusPage() {
         />
       )}
     </Card>
+    </>
   );
 }
