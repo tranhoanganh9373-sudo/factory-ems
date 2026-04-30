@@ -3,8 +3,10 @@ package com.ems.collector.poller;
 import com.ems.collector.codec.RegisterDecoder;
 import com.ems.collector.config.DeviceConfig;
 import com.ems.collector.config.FunctionType;
+import com.ems.collector.config.Protocol;
 import com.ems.collector.config.RegisterConfig;
 import com.ems.collector.config.RegisterKind;
+import com.ems.collector.observability.CollectorMetrics;
 import com.ems.collector.transport.ModbusIoException;
 import com.ems.collector.transport.ModbusMaster;
 
@@ -13,7 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.net.SocketTimeoutException;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,6 +62,8 @@ public class DevicePoller {
     private final AccumulatorTracker accumulator = new AccumulatorTracker();
     /** RTU device 的串口互斥锁（同 port 多 unit-id 共享同一 lock）；TCP device = null。 */
     private final Lock serialLock;
+    /** Spec §8.2 业务 metrics 注入；测试场景使用 {@link CollectorMetrics#NOOP}。 */
+    private final CollectorMetrics metrics;
 
     /* ── runtime state ─────────────────────────────────────────────────── */
     private DeviceState state = DeviceState.HEALTHY;
@@ -73,7 +79,7 @@ public class DevicePoller {
                         ReadingSink sink,
                         Clock clock,
                         StateTransitionListener listener) {
-        this(config, master, sink, clock, listener, null);
+        this(config, master, sink, clock, listener, null, CollectorMetrics.NOOP);
     }
 
     public DevicePoller(DeviceConfig config,
@@ -82,12 +88,23 @@ public class DevicePoller {
                         Clock clock,
                         StateTransitionListener listener,
                         Lock serialLock) {
+        this(config, master, sink, clock, listener, serialLock, CollectorMetrics.NOOP);
+    }
+
+    public DevicePoller(DeviceConfig config,
+                        ModbusMaster master,
+                        ReadingSink sink,
+                        Clock clock,
+                        StateTransitionListener listener,
+                        Lock serialLock,
+                        CollectorMetrics metrics) {
         this.config = config;
         this.master = master;
         this.sink = sink;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.listener = listener == null ? StateTransitionListener.NOOP : listener;
         this.serialLock = serialLock;
+        this.metrics = metrics == null ? CollectorMetrics.NOOP : metrics;
         this.lastTransitionAt = this.clock.instant();
     }
 
@@ -113,42 +130,77 @@ public class DevicePoller {
     }
 
     private boolean pollOnceInternal() {
+        long startNanos = System.nanoTime();
         Throwable lastEx = null;
         int attempts = config.retries() + 1;
-
-        for (int i = 0; i < attempts; i++) {
-            try {
-                ensureOpen();
-                Map<String, BigDecimal> numbers = new HashMap<>();
-                Map<String, Boolean> bits = new HashMap<>();
-                for (RegisterConfig reg : config.registers()) {
-                    readRegister(reg, numbers, bits);
-                }
-                Instant now = clock.instant();
-                lastReadAt = now;
-                successCount++;
-                sink.accept(new DeviceReading(
-                        config.id(), config.meterCode(), now,
-                        Map.copyOf(numbers), Map.copyOf(bits)));
-                onCycleSuccess();
-                return true;
-            } catch (Throwable t) {
-                lastEx = t;
-                lastError = t.getMessage();
-                // Transient connection error → drop connection so next attempt re-opens.
-                if (t instanceof ModbusIoException me && me.isTransient()) {
-                    master.close();
-                }
-                if (i < attempts - 1) {
-                    log.debug("device {} attempt {}/{} failed: {}", config.id(), i + 1, attempts, t.toString());
+        try {
+            for (int i = 0; i < attempts; i++) {
+                try {
+                    ensureOpen();
+                    Map<String, BigDecimal> numbers = new HashMap<>();
+                    Map<String, Boolean> bits = new HashMap<>();
+                    for (RegisterConfig reg : config.registers()) {
+                        readRegister(reg, numbers, bits);
+                    }
+                    Instant now = clock.instant();
+                    lastReadAt = now;
+                    successCount++;
+                    sink.accept(new DeviceReading(
+                            config.id(), config.meterCode(), now,
+                            Map.copyOf(numbers), Map.copyOf(bits)));
+                    onCycleSuccess();
+                    metrics.recordReadSuccess(config.id());
+                    return true;
+                } catch (Throwable t) {
+                    lastEx = t;
+                    lastError = t.getMessage();
+                    // Transient connection error → drop connection so next attempt re-opens.
+                    if (t instanceof ModbusIoException me && me.isTransient()) {
+                        master.close();
+                    }
+                    if (i < attempts - 1) {
+                        log.debug("device {} attempt {}/{} failed: {}", config.id(), i + 1, attempts, t.toString());
+                    }
                 }
             }
+            failureCount++;
+            log.warn("device {} cycle failed after {} attempts: {}", config.id(), attempts,
+                    lastEx == null ? "<unknown>" : lastEx.toString());
+            onCycleFailure();
+            metrics.recordReadFailure(config.id(), classifyReason(lastEx));
+            return false;
+        } finally {
+            metrics.recordPoll(adapterLabel(config.protocol()),
+                    Duration.ofNanos(System.nanoTime() - startNanos));
         }
-        failureCount++;
-        log.warn("device {} cycle failed after {} attempts: {}", config.id(), attempts,
-                lastEx == null ? "<unknown>" : lastEx.toString());
-        onCycleFailure();
-        return false;
+    }
+
+    /** {@code TCP} → {@code modbus-tcp}, {@code RTU} → {@code modbus-rtu}. */
+    private static String adapterLabel(Protocol protocol) {
+        return "modbus-" + protocol.name().toLowerCase();
+    }
+
+    /**
+     * 把异常分类成 spec §8.2 规定的 reason 枚举：
+     * {@code timeout / crc / format / disconnected / other}。
+     */
+    static String classifyReason(Throwable ex) {
+        if (ex == null) return "other";
+        if (ex instanceof SocketTimeoutException) return "timeout";
+        Throwable cause = ex.getCause();
+        if (cause instanceof SocketTimeoutException) return "timeout";
+        String msg = ex.getMessage() == null ? "" : ex.getMessage().toLowerCase();
+        if (msg.contains("timeout") || msg.contains("timed out")) return "timeout";
+        if (msg.contains("crc")) return "crc";
+        if (msg.contains("disconnected") || msg.contains("connection")
+                || msg.contains("connect")) return "disconnected";
+        if (msg.contains("format") || msg.contains("decode")
+                || msg.contains("invalid")) return "format";
+        String simpleName = ex.getClass().getSimpleName().toLowerCase();
+        if (simpleName.contains("timeout")) return "timeout";
+        if (simpleName.contains("format") || simpleName.contains("decode")) return "format";
+        if (simpleName.contains("connect")) return "disconnected";
+        return "other";
     }
 
     /** 给 scheduler 用：下一周期延迟。 */

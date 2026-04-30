@@ -6,6 +6,7 @@ import com.ems.collector.config.Protocol;
 import com.ems.collector.health.CollectorMetrics;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.DeviceSnapshot;
+import com.ems.collector.poller.DeviceState;
 import com.ems.collector.poller.ReadingSink;
 import com.ems.collector.transport.ModbusMaster;
 import com.ems.collector.transport.ModbusMasterFactory;
@@ -52,6 +53,9 @@ public class CollectorService {
     /** 优雅关闭时给 in-flight read 留多少秒。 */
     static final int SHUTDOWN_TIMEOUT_SECONDS = 5;
 
+    /** Spec §8.2 设备在/离线 gauge 周期刷新间隔。 */
+    static final long DEVICE_STATE_REFRESH_MS = 30_000L;
+
     private static final Logger log = LoggerFactory.getLogger(CollectorService.class);
 
     private final CollectorProperties props;
@@ -60,6 +64,7 @@ public class CollectorService {
     private final Clock clock;
     private final DevicePoller.StateTransitionListener stateListener;
     private final CollectorMetrics metrics;
+    private final com.ems.collector.observability.CollectorMetrics businessMetrics;
     private final SerialPortLockRegistry serialLocks;
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
@@ -73,12 +78,26 @@ public class CollectorService {
                             DevicePoller.StateTransitionListener stateListener,
                             CollectorMetrics metrics,
                             SerialPortLockRegistry serialLocks) {
+        this(props, sink, masterFactory, clock, stateListener, metrics, serialLocks,
+                com.ems.collector.observability.CollectorMetrics.NOOP);
+    }
+
+    public CollectorService(CollectorProperties props,
+                            ReadingSink sink,
+                            ModbusMasterFactory masterFactory,
+                            Clock clock,
+                            DevicePoller.StateTransitionListener stateListener,
+                            CollectorMetrics metrics,
+                            SerialPortLockRegistry serialLocks,
+                            com.ems.collector.observability.CollectorMetrics businessMetrics) {
         this.props = props;
         this.sink = sink;
         this.masterFactory = masterFactory;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.stateListener = stateListener == null ? DevicePoller.StateTransitionListener.NOOP : stateListener;
         this.metrics = metrics;
+        this.businessMetrics = businessMetrics == null
+                ? com.ems.collector.observability.CollectorMetrics.NOOP : businessMetrics;
         this.serialLocks = serialLocks == null ? new SerialPortLockRegistry() : serialLocks;
     }
 
@@ -108,7 +127,8 @@ public class CollectorService {
             java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
                     ? serialLocks.lockFor(dev.serialPort())
                     : null;
-            DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
+            DevicePoller poller = new DevicePoller(
+                    dev, master, sink, clock, stateListener, lock, businessMetrics);
             pollers.put(dev.id(), poller);
         }
 
@@ -119,7 +139,32 @@ public class CollectorService {
             scheduleAfter(p, stagger);
             stagger += 100;
         }
+        // Spec §8.2: ems.collector.devices.online/offline gauge 周期刷新（30s）
+        // 立即跑一次（initialDelay=0）让启动时 gauge 有值；后续每 30s 一次
+        scheduler.scheduleAtFixedRate(this::refreshDeviceGauges,
+                0, DEVICE_STATE_REFRESH_MS, TimeUnit.MILLISECONDS);
         log.info("collector started: {} device(s)", pollers.size());
+    }
+
+    /** 计数 HEALTHY+DEGRADED → online，UNREACHABLE → offline；写入 gauge。 */
+    private void refreshDeviceGauges() {
+        try {
+            long online = 0;
+            long offline = 0;
+            for (DevicePoller p : pollers.values()) {
+                DeviceState s = p.state();
+                if (s == DeviceState.UNREACHABLE) {
+                    offline++;
+                } else {
+                    online++;
+                }
+            }
+            businessMetrics.setOnline(online);
+            businessMetrics.setOffline(offline);
+        } catch (Throwable t) {
+            // 不能影响 polling
+            log.warn("device gauge refresh failed: {}", t.toString());
+        }
     }
 
     private void scheduleAfter(DevicePoller poller, long delayMs) {
@@ -253,7 +298,8 @@ public class CollectorService {
         java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
                 ? serialLocks.lockFor(dev.serialPort())
                 : null;
-        DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
+        DevicePoller poller = new DevicePoller(
+                dev, master, sink, clock, stateListener, lock, businessMetrics);
         pollers.put(dev.id(), poller);
     }
 
