@@ -123,9 +123,12 @@ class CollectorEndToEndIT {
                 readings.stream().anyMatch(rd -> rd.numericFields().containsKey("energy_delta")
                         && rd.numericFields().get("energy_delta").signum() > 0));
 
-        // 找到第一个有 delta 的 reading；其 delta 应该是 (250-100) = 150 (scale=1)
+        // 找到第一个**真有非零 delta** 的 reading；其 delta 应该是 (250-100) = 150 (scale=1)。
+        // follow-up #6: cycle 1 在 batch 跑同 JVM 时偶发 emit energy_delta=0（findFirst 抢先命中），
+        // 导致 expected:150 / actual:0 batch-only 失败。signum>0 filter 显式跳过 cycle 1 的 0-delta。
         DeviceReading withDelta = readings.stream()
-                .filter(rd -> rd.numericFields().containsKey("energy_delta"))
+                .filter(rd -> rd.numericFields().containsKey("energy_delta")
+                        && rd.numericFields().get("energy_delta").signum() > 0)
                 .findFirst().orElseThrow();
         assertThat(withDelta.numericFields().get("energy_delta")).isEqualByComparingTo("150");
     }

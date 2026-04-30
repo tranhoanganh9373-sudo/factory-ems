@@ -290,8 +290,12 @@ public class DevicePoller {
         log.info("device {} state {} → {} ({})", config.id(), old, newState, reason);
         try {
             listener.onTransition(config.id(), old, newState, reason, lastTransitionAt);
-        } catch (Exception ignore) {
-            // listener 错误不能影响 poller
+        } catch (Exception e) {
+            // follow-up #2: listener 错误不能影响 poller，但必须落 log；否则 audit 链
+            // 中断（生产里 AlarmTransitionListener 失败）会零信号——oncall 没有任何
+            // 排障入口。
+            log.warn("device {} transition listener failed: {} → {} ({}): {}",
+                config.id(), old, newState, reason, e.toString());
         }
     }
 

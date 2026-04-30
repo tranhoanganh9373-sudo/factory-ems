@@ -163,8 +163,15 @@ public class WebhookChannelImpl implements WebhookChannel {
 
     @Override
     public void retryDelivery(Long deliveryLogId) {
-        WebhookDeliveryLog old = deliveryRepo.findById(deliveryLogId).orElseThrow();
-        Alarm a = alarmRepo.findById(old.getAlarmId()).orElseThrow();
+        // follow-up #3: orElseThrow() 必须带 ID 信息——entity 在调度间隙被删时
+        // 抛裸 NoSuchElementException("No value present") 会让 oncall 完全无法定位。
+        WebhookDeliveryLog old = deliveryRepo.findById(deliveryLogId)
+            .orElseThrow(() -> new IllegalStateException(
+                "DeliveryLog not found: id=" + deliveryLogId));
+        Alarm a = alarmRepo.findById(old.getAlarmId())
+            .orElseThrow(() -> new IllegalStateException(
+                "Alarm not found: deliveryLogId=" + deliveryLogId
+                    + " alarmId=" + old.getAlarmId()));
         cfgRepo.findFirstByOrderByIdAsc().ifPresent(cfg -> attemptDelivery(a, cfg, 1));
     }
 }

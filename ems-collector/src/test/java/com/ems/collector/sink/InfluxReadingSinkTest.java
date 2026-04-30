@@ -163,6 +163,38 @@ class InfluxReadingSinkTest {
         assertThat(ok).isFalse();
     }
 
+    /** follow-up #1: 写失败必须落 log（device + meter + 异常 message），buffer 才能被运维察觉。 */
+    @Test
+    void flushOne_writeFails_logsWarning() {
+        ch.qos.logback.classic.Logger logger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(InfluxReadingSink.class);
+        ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent> appender =
+                new ch.qos.logback.core.read.ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            Meter m = newMeter("M1", "energy_reading", "meter_code", "M1");
+            when(meters.findByCode("M1")).thenReturn(Optional.of(m));
+            org.mockito.Mockito.doThrow(new RuntimeException("influx auth denied"))
+                    .when(writeApi).writePoint(any(), any(), any(Point.class));
+
+            sink.flushOne(new DeviceReading(
+                    "dev-77", "M1", Instant.parse("2026-04-27T10:00:00Z"),
+                    Map.of("v", new BigDecimal("1")),
+                    Map.of()
+            ));
+
+            assertThat(appender.list)
+                    .anyMatch(ev -> "WARN".equals(ev.getLevel().toString())
+                            && ev.getFormattedMessage().contains("flush retry failed")
+                            && ev.getFormattedMessage().contains("dev-77")
+                            && ev.getFormattedMessage().contains("M1")
+                            && ev.getFormattedMessage().contains("influx auth denied"));
+        } finally {
+            logger.detachAppender(appender);
+        }
+    }
+
     @Test
     void flushOne_meterMissing_returnsTrueToDropFromBuffer() {
         when(meters.findByCode("orphan")).thenReturn(Optional.empty());

@@ -110,6 +110,9 @@ public class InfluxReadingSink implements ReadingSink {
             meterMetrics.incrementInsert(resolveEnergyTypeCode(meter));
             return true;
         } catch (Exception e) {
+            // follow-up #1: 写失败必须落 log，否则 buffer 持续积累 / 磁盘满 / 数据丢失全程零信号
+            log.warn("flush retry failed device={} meter={}: {}",
+                reading.deviceId(), reading.meterCode(), e.toString());
             return false;
         }
     }
