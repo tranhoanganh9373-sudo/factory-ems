@@ -15,6 +15,8 @@ import {
   Table,
   TimePicker,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -78,6 +80,7 @@ function wireToPeriods(ps: TariffPeriodDTO[]): PeriodFormValue[] {
 }
 
 export default function TariffPage() {
+  useDocumentTitle('电价方案');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<TariffPlanDTO | null>(null);
@@ -184,14 +187,15 @@ export default function TariffPage() {
   const open = creating || editing != null;
 
   return (
-    <Card
-      title="尖峰平谷电价"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新建电价方案
-        </Button>
-      }
-    >
+    <>
+      <PageHeader title="电价方案" />
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新建电价方案
+          </Button>
+        }
+      >
       <Table<TariffPlanDTO>
         rowKey="id"
         loading={isLoading}
@@ -359,5 +363,6 @@ export default function TariffPage() {
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }
