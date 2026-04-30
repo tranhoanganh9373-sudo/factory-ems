@@ -2,7 +2,10 @@ package com.ems.collector.sink;
 
 import com.ems.collector.buffer.BufferStore;
 import com.ems.collector.poller.DeviceReading;
+import com.ems.meter.entity.EnergyType;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.observability.MeterMetrics;
+import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterRepository;
 import com.ems.timeseries.config.InfluxProperties;
 import com.influxdb.client.InfluxDBClient;
@@ -32,6 +35,7 @@ class InfluxReadingSinkTest {
     private InfluxProperties props;
     private MeterRepository meters;
     private BufferStore buffer;
+    private EnergyTypeRepository energyTypes;
     private InfluxReadingSink sink;
 
     @BeforeEach
@@ -44,7 +48,8 @@ class InfluxReadingSinkTest {
         props.setOrg("factory");
         meters = mock(MeterRepository.class);
         buffer = mock(BufferStore.class);
-        sink = new InfluxReadingSink(client, props, meters, buffer);
+        energyTypes = mock(EnergyTypeRepository.class);
+        sink = new InfluxReadingSink(client, props, meters, buffer, energyTypes, MeterMetrics.NOOP);
     }
 
     @Test

@@ -3,7 +3,10 @@ package com.ems.collector.sink;
 import com.ems.collector.buffer.BufferStore;
 import com.ems.collector.poller.DeviceReading;
 import com.ems.collector.poller.ReadingSink;
+import com.ems.meter.entity.EnergyType;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.observability.MeterMetrics;
+import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterRepository;
 import com.ems.timeseries.config.InfluxProperties;
 import com.influxdb.client.InfluxDBClient;
@@ -45,14 +48,19 @@ public class InfluxReadingSink implements ReadingSink {
     private final MeterRepository meters;
     private final WriteApiBlocking writeApi;
     private final BufferStore buffer;
+    private final EnergyTypeRepository energyTypes;
+    private final MeterMetrics meterMetrics;
 
     @Autowired
     public InfluxReadingSink(InfluxDBClient client, InfluxProperties influxProps,
-                             MeterRepository meters, BufferStore buffer) {
+                             MeterRepository meters, BufferStore buffer,
+                             EnergyTypeRepository energyTypes, MeterMetrics meterMetrics) {
         this.influxProps = influxProps;
         this.meters = meters;
         this.writeApi = client.getWriteApiBlocking();
         this.buffer = buffer;
+        this.energyTypes = energyTypes;
+        this.meterMetrics = meterMetrics == null ? MeterMetrics.NOOP : meterMetrics;
     }
 
     @Override
@@ -62,11 +70,13 @@ public class InfluxReadingSink implements ReadingSink {
             // 启动时已校验过 meter-code 存在；这里走到说明运行中被人删了
             log.warn("meter '{}' not found at write time (was deleted at runtime?); dropping reading from device {}",
                     reading.meterCode(), reading.deviceId());
+            meterMetrics.incrementDropped("other");
             return;
         }
         Point p = buildPoint(reading, meter);
         try {
             writeApi.writePoint(influxProps.getBucket(), influxProps.getOrg(), p);
+            meterMetrics.incrementInsert(resolveEnergyTypeCode(meter));
         } catch (Exception e) {
             log.warn("Influx write failed for device {} ({} fields): {} — buffering",
                     reading.deviceId(),
@@ -89,14 +99,31 @@ public class InfluxReadingSink implements ReadingSink {
      */
     public boolean flushOne(DeviceReading reading) {
         Meter meter = meters.findByCode(reading.meterCode()).orElse(null);
-        if (meter == null) return true; // 老 reading 的 meter 没了；直接 markSent 让 buffer 清掉
+        if (meter == null) {
+            // 老 reading 的 meter 没了；直接 markSent 让 buffer 清掉
+            meterMetrics.incrementDropped("other");
+            return true;
+        }
         Point p = buildPoint(reading, meter);
         try {
             writeApi.writePoint(influxProps.getBucket(), influxProps.getOrg(), p);
+            meterMetrics.incrementInsert(resolveEnergyTypeCode(meter));
             return true;
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * Meter.energyTypeId → EnergyType.code 解析。
+     * <p>v1 不缓存：energy_types 表只有几行，repository 调用 ~1ms 量级，影响可以忽略；
+     * 真正成为热点时再加 {@code @Cacheable("energyTypeCodes")} 即可。
+     */
+    private String resolveEnergyTypeCode(Meter meter) {
+        if (meter == null || meter.getEnergyTypeId() == null) return "other";
+        return energyTypes.findById(meter.getEnergyTypeId())
+                .map(EnergyType::getCode)
+                .orElse("other");
     }
 
     /** package-visible for unit tests. */

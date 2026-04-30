@@ -11,6 +11,7 @@ import com.ems.collector.poller.ReadingSink;
 import com.ems.collector.transport.ModbusMaster;
 import com.ems.collector.transport.ModbusMasterFactory;
 import com.ems.collector.transport.SerialPortLockRegistry;
+import com.ems.meter.observability.MeterMetrics;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,6 +66,7 @@ public class CollectorService {
     private final DevicePoller.StateTransitionListener stateListener;
     private final CollectorMetrics metrics;
     private final com.ems.collector.observability.CollectorMetrics businessMetrics;
+    private final MeterMetrics meterMetrics;
     private final SerialPortLockRegistry serialLocks;
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
@@ -79,7 +81,7 @@ public class CollectorService {
                             CollectorMetrics metrics,
                             SerialPortLockRegistry serialLocks) {
         this(props, sink, masterFactory, clock, stateListener, metrics, serialLocks,
-                com.ems.collector.observability.CollectorMetrics.NOOP);
+                com.ems.collector.observability.CollectorMetrics.NOOP, MeterMetrics.NOOP);
     }
 
     public CollectorService(CollectorProperties props,
@@ -90,6 +92,19 @@ public class CollectorService {
                             CollectorMetrics metrics,
                             SerialPortLockRegistry serialLocks,
                             com.ems.collector.observability.CollectorMetrics businessMetrics) {
+        this(props, sink, masterFactory, clock, stateListener, metrics, serialLocks,
+                businessMetrics, MeterMetrics.NOOP);
+    }
+
+    public CollectorService(CollectorProperties props,
+                            ReadingSink sink,
+                            ModbusMasterFactory masterFactory,
+                            Clock clock,
+                            DevicePoller.StateTransitionListener stateListener,
+                            CollectorMetrics metrics,
+                            SerialPortLockRegistry serialLocks,
+                            com.ems.collector.observability.CollectorMetrics businessMetrics,
+                            MeterMetrics meterMetrics) {
         this.props = props;
         this.sink = sink;
         this.masterFactory = masterFactory;
@@ -98,6 +113,7 @@ public class CollectorService {
         this.metrics = metrics;
         this.businessMetrics = businessMetrics == null
                 ? com.ems.collector.observability.CollectorMetrics.NOOP : businessMetrics;
+        this.meterMetrics = meterMetrics == null ? MeterMetrics.NOOP : meterMetrics;
         this.serialLocks = serialLocks == null ? new SerialPortLockRegistry() : serialLocks;
     }
 
@@ -146,7 +162,11 @@ public class CollectorService {
         log.info("collector started: {} device(s)", pollers.size());
     }
 
-    /** 计数 HEALTHY+DEGRADED → online，UNREACHABLE → offline；写入 gauge。 */
+    /**
+     * 计数 HEALTHY+DEGRADED → online，UNREACHABLE → offline；写入 collector gauge。
+     * <p>同时刷新 meter reading lag gauge（spec §8.4）：跨所有 poller 取
+     * {@code max(now - snapshot.lastReadAt)}。从未读过的 poller 跳过；空集合 → 0。
+     */
     private void refreshDeviceGauges() {
         try {
             long online = 0;
@@ -161,6 +181,15 @@ public class CollectorService {
             }
             businessMetrics.setOnline(online);
             businessMetrics.setOffline(offline);
+
+            long now = clock.instant().getEpochSecond();
+            long maxLag = pollers.values().stream()
+                    .map(DevicePoller::snapshot)
+                    .filter(s -> s.lastReadAt() != null)
+                    .mapToLong(s -> Math.max(0L, now - s.lastReadAt().getEpochSecond()))
+                    .max()
+                    .orElse(0L);
+            meterMetrics.setMaxLagSeconds(maxLag);
         } catch (Throwable t) {
             // 不能影响 polling
             log.warn("device gauge refresh failed: {}", t.toString());
