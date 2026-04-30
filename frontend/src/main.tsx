@@ -11,6 +11,9 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { useThemeStore } from './stores/themeStore';
 import { buildAntdTheme } from './styles/tokens';
+import { ensureEchartsThemes } from './styles/echarts';
+
+ensureEchartsThemes();
 
 document.documentElement.setAttribute('data-theme', useThemeStore.getState().mode);
 useThemeStore.subscribe((state) =>
