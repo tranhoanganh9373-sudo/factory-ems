@@ -75,11 +75,19 @@ public class AlarmDetectorImpl implements AlarmDetector {
         }
     }
 
-    /** 把 ACTIVE+ACKED 计数同步到 {@code ems.alarm.active.count{type}} gauge。 */
+    /**
+     * 把 ACTIVE+ACKED 计数同步到 {@code ems.alarm.active.count{type}} gauge。
+     * <p>本方法在 {@link #scan()} 的 finally 块中调用——必须保证不抛出，
+     * 否则会吞掉 scan 主体的原异常（Java finally 抛出会覆盖 try 块的异常）。
+     */
     private void refreshActiveGauges() {
-        for (AlarmType t : AlarmType.values()) {
-            long count = alarms.countActiveByType(t);
-            metrics.setActive(t.name().toLowerCase(Locale.ROOT), count);
+        try {
+            for (AlarmType t : AlarmType.values()) {
+                long count = alarms.countActiveByType(t);
+                metrics.setActive(t.name().toLowerCase(Locale.ROOT), count);
+            }
+        } catch (Throwable t) {
+            log.warn("refresh active alarm gauges failed: {}", t.toString());
         }
     }
 

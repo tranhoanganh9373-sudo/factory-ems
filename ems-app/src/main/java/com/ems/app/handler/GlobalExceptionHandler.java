@@ -136,8 +136,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<?>> unknown(Exception ex) {
-        appMetrics.incrementException(ex.getClass().getSimpleName());
+        // 必须先记日志再埋点：metrics 失败不能吞掉原异常的 stack trace（Key Invariant #2）。
         log.error("unhandled_ex", ex);
+        try {
+            appMetrics.incrementException(ex.getClass().getSimpleName());
+        } catch (Throwable metricsEx) {
+            log.warn("metrics increment failed (non-fatal): {}", metricsEx.toString());
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(Result.error(ErrorCode.INTERNAL_ERROR, "服务器错误，请联系管理员"));
     }
