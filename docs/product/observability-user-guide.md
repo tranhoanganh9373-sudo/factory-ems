@@ -195,7 +195,15 @@
 
 计划停机、版本升级、网络改造等期间，应**提前**为对应实例创建告警静默（Silence），避免误报洪泛。
 
-### 4.1 方法 A：amtool 命令行（推荐）
+> **角色边界**：按 §5 权限矩阵，VIEWER 角色（默认客户运维账号）**不能创建 / 解除 silence**。客户运维侧的标准动作是：
+>
+> 1. 提前**通知工程团队**（邮件 / 工单 / 钉钉群），写明维护窗口、影响实例、原因；
+> 2. 维护涉及**电表 / 采集器停机**的，**在 EMS 应用内自助开启设备维护模式**（参见 [alarm-user-guide.md §3.3](./alarm-user-guide.md)）——这是客户运维直接拥有的权限；
+> 3. 工程团队按以下 §4.1 / §4.2 流程在 Alertmanager 创建 silence。
+>
+> 下两小节是工程团队执行清单，客户运维仅作了解；如客户 IT 已被授予 Editor/Admin 角色（不推荐），同样适用。
+
+### 4.1 方法 A：amtool 命令行（推荐，工程团队执行）
 
 amtool 是 Alertmanager 官方 CLI，部署在观测栈服务器上。
 
@@ -221,7 +229,7 @@ amtool silence query --alertmanager.url=http://localhost:9093
 amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 ```
 
-### 4.2 方法 B：Grafana UI（可视化）
+### 4.2 方法 B：Grafana UI（可视化，工程团队执行）
 
 1. 左侧菜单 → **Alerting**（告警） → **Silences**（静默）。
 2. 点击右上角 **New silence**（新建静默）。
