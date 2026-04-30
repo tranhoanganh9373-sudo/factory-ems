@@ -1,0 +1,222 @@
+{
+  "title": "factory-ems · Collector",
+  "uid": "ems-collector",
+  "schemaVersion": 39,
+  "editable": false,
+  "tags": ["factory-ems", "observability", "collector"],
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(up{job=\"factory-ems\"}, instance)",
+        "current": { "text": "All", "value": "$__all" },
+        "includeAll": true,
+        "multi": true,
+        "refresh": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "在线设备数",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(ems_collector_devices_online{job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "green", "value": 1 }
+            ]
+          }
+        }
+      },
+      "options": { "graphMode": "area", "colorMode": "value", "textMode": "auto" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "离线设备数",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(ems_collector_devices_offline{job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": { "graphMode": "area", "colorMode": "value", "textMode": "auto" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "离线占比",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(ems_collector_devices_offline{job=\"factory-ems\", instance=~\"$instance\"}) / clamp_min(sum(ems_collector_devices_online{job=\"factory-ems\", instance=~\"$instance\"}) + sum(ems_collector_devices_offline{job=\"factory-ems\", instance=~\"$instance\"}), 1)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.2 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "失败率 by adapter",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (adapter) (rate(ems_collector_read_failure_total{job=\"factory-ems\", instance=~\"$instance\"}[5m])) / clamp_min(sum by (adapter) (rate(ems_collector_read_success_total{job=\"factory-ems\", instance=~\"$instance\"}[5m])) + sum by (adapter) (rate(ems_collector_read_failure_total{job=\"factory-ems\", instance=~\"$instance\"}[5m])), 0.0001)",
+          "refId": "A",
+          "legendFormat": "{{adapter}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Poll 耗时 p95 by adapter",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, adapter) (rate(ems_collector_poll_duration_seconds_bucket{job=\"factory-ems\", instance=~\"$instance\"}[5m])))",
+          "refId": "A",
+          "legendFormat": "{{adapter}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "失败原因分布",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 13, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (reason) (rate(ems_collector_read_failure_total{job=\"factory-ems\", instance=~\"$instance\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": { "stacking": { "mode": "normal" } }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "在线/离线 30 天趋势",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(ems_collector_devices_online{job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A",
+          "legendFormat": "online"
+        },
+        {
+          "expr": "sum(ems_collector_devices_offline{job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "B",
+          "legendFormat": "offline"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Top 10 失败设备",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (device_id) (rate(ems_collector_read_failure_total{job=\"factory-ems\", instance=~\"$instance\"}[5m])))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "indexByName": { "device_id": 0, "Value": 1 },
+            "renameByName": { "Value": "fail_rate (per s)" }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "links": [
+            {
+              "title": "查看 device 日志 (Loki)",
+              "url": "/explore?left=%7B%22datasource%22:%22loki%22,%22queries%22:%5B%7B%22expr%22:%22%7Bcompose_service%3D%5C%22factory-ems%5C%22%7D%20%7C%3D%20%5C%22device_id%3D${__data.fields.device_id}%5C%22%22%7D%5D%7D",
+              "targetBlank": true
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
