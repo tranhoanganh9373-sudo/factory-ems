@@ -2,6 +2,7 @@ package com.ems.alarm.service;
 
 import com.ems.alarm.config.AlarmProperties;
 import com.ems.alarm.entity.*;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import com.ems.alarm.service.impl.AlarmDetectorImpl;
 import com.ems.collector.poller.DeviceSnapshot;
@@ -33,7 +34,8 @@ class AlarmDetectorTest {
     private final Clock clock = Clock.fixed(Instant.parse("2026-04-29T10:00:00Z"), ZoneId.of("UTC"));
 
     private final AlarmDetectorImpl detector = new AlarmDetectorImpl(
-            collector, meters, alarms, thresholds, sm, dispatcher, props, clock);
+            collector, meters, alarms, thresholds, sm, dispatcher, props, clock,
+            AlarmMetrics.NOOP);
 
     @Test
     void silentTimeout_triggersAlarm() {

@@ -5,6 +5,7 @@ import com.ems.alarm.entity.Alarm;
 import com.ems.alarm.entity.DeliveryStatus;
 import com.ems.alarm.entity.WebhookConfig;
 import com.ems.alarm.entity.WebhookDeliveryLog;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import com.ems.alarm.repository.WebhookConfigRepository;
 import com.ems.alarm.repository.WebhookDeliveryLogRepository;
@@ -41,6 +42,7 @@ public class WebhookChannelImpl implements WebhookChannel {
     private final AlarmProperties props;
     private final ScheduledExecutorService retryScheduler;
     private final HttpClient http;
+    private final AlarmMetrics metrics;
 
     public WebhookChannelImpl(WebhookConfigRepository cfgRepo,
                               WebhookDeliveryLogRepository deliveryRepo,
@@ -49,7 +51,8 @@ public class WebhookChannelImpl implements WebhookChannel {
                               List<WebhookAdapter> adapters,
                               AlarmProperties props,
                               ScheduledExecutorService webhookRetryScheduler,
-                              HttpClient webhookHttpClient) {
+                              HttpClient webhookHttpClient,
+                              AlarmMetrics metrics) {
         this.cfgRepo = cfgRepo;
         this.deliveryRepo = deliveryRepo;
         this.alarmRepo = alarmRepo;
@@ -59,6 +62,7 @@ public class WebhookChannelImpl implements WebhookChannel {
         this.props = props;
         this.retryScheduler = webhookRetryScheduler;
         this.http = webhookHttpClient;
+        this.metrics = metrics == null ? AlarmMetrics.NOOP : metrics;
     }
 
     @Override
@@ -89,7 +93,10 @@ public class WebhookChannelImpl implements WebhookChannel {
                     .build();
             HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
             long dur = System.currentTimeMillis() - start;
-            if (res.statusCode() / 100 == 2) {
+            boolean success = res.statusCode() / 100 == 2;
+            metrics.recordWebhookDelivery(success ? "success" : "failure", attempt,
+                    Duration.ofMillis(dur));
+            if (success) {
                 writeDeliveryLog(a, attempt, DeliveryStatus.SUCCESS, null,
                         res.statusCode(), (int) dur, body);
             } else {
@@ -98,6 +105,7 @@ public class WebhookChannelImpl implements WebhookChannel {
             }
         } catch (Exception e) {
             long dur = System.currentTimeMillis() - start;
+            metrics.recordWebhookDelivery("failure", attempt, Duration.ofMillis(dur));
             scheduleRetry(a, cfg, attempt,
                     e.getClass().getSimpleName() + ": " + e.getMessage(),
                     null, (int) dur, body);

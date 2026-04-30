@@ -8,6 +8,7 @@ import com.ems.alarm.entity.AlarmStatus;
 import com.ems.alarm.entity.AlarmType;
 import com.ems.alarm.entity.ResolvedReason;
 import com.ems.alarm.exception.AlarmNotFoundException;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import com.ems.alarm.service.AlarmService;
 import com.ems.alarm.service.AlarmStateMachine;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -36,17 +38,20 @@ public class AlarmServiceImpl implements AlarmService {
     private final MeterRepository meterRepo;
     private final CollectorService collectorService;
     private final ThresholdResolver thresholds;
+    private final AlarmMetrics metrics;
 
     public AlarmServiceImpl(AlarmRepository alarmRepo,
                             AlarmStateMachine stateMachine,
                             MeterRepository meterRepo,
                             CollectorService collectorService,
-                            ThresholdResolver thresholds) {
+                            ThresholdResolver thresholds,
+                            AlarmMetrics metrics) {
         this.alarmRepo = alarmRepo;
         this.stateMachine = stateMachine;
         this.meterRepo = meterRepo;
         this.collectorService = collectorService;
         this.thresholds = thresholds;
+        this.metrics = metrics == null ? AlarmMetrics.NOOP : metrics;
     }
 
     @Override
@@ -82,12 +87,23 @@ public class AlarmServiceImpl implements AlarmService {
         alarmRepo.save(a);
     }
 
+    /**
+     * 手动解除告警。除业务流程外，刷新 {@code ems.alarm.resolved.total{reason="manual"}} counter
+     * 以及 {@code ems.alarm.active.count{type}} gauge（同步刷新该 type 的最新计数；其他 type 等
+     * 下一轮 detector scan 触发的 refresh）。
+     */
     @Override
     @Transactional
     public void resolve(Long id) {
         Alarm a = alarmRepo.findById(id).orElseThrow(() -> new AlarmNotFoundException(id));
         stateMachine.resolve(a, ResolvedReason.MANUAL);
         alarmRepo.save(a);
+        metrics.incrementResolved("manual");
+        AlarmType type = a.getAlarmType();
+        if (type != null) {
+            metrics.setActive(type.name().toLowerCase(Locale.ROOT),
+                    alarmRepo.countActiveByType(type));
+        }
     }
 
     @Override

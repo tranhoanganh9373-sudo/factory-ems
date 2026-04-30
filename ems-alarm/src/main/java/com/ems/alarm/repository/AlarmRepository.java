@@ -26,6 +26,15 @@ public interface AlarmRepository extends JpaRepository<Alarm, Long> {
 
     long countByStatus(AlarmStatus status);
 
+    /** ACTIVE + ACKED 计数（按 type 分），用于 {@code ems.alarm.active.count{type}} gauge。 */
+    @Query("""
+        SELECT COUNT(a) FROM Alarm a
+        WHERE a.alarmType = :type
+          AND a.status IN (com.ems.alarm.entity.AlarmStatus.ACTIVE,
+                           com.ems.alarm.entity.AlarmStatus.ACKED)
+        """)
+    long countActiveByType(@Param("type") AlarmType type);
+
     @Query("""
         SELECT a FROM Alarm a
         WHERE (:status IS NULL OR a.status = :status)

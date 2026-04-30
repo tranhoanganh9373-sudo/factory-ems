@@ -7,6 +7,7 @@ import com.ems.alarm.entity.AlarmStatus;
 import com.ems.alarm.entity.AlarmType;
 import com.ems.alarm.entity.ResolvedReason;
 import com.ems.alarm.exception.AlarmNotFoundException;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import com.ems.alarm.service.impl.AlarmServiceImpl;
 import com.ems.collector.service.CollectorService;
@@ -38,7 +39,8 @@ class AlarmServiceImplTest {
     private final ThresholdResolver thresholds = mock(ThresholdResolver.class);
 
     private final AlarmServiceImpl service = new AlarmServiceImpl(
-            alarmRepo, stateMachine, meterRepo, collectorService, thresholds);
+            alarmRepo, stateMachine, meterRepo, collectorService, thresholds,
+            AlarmMetrics.NOOP);
 
     // ── getById ──────────────────────────────────────────────────────────────
 
