@@ -1,11 +1,16 @@
 import { Card, Table, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { roleApi, RoleDTO } from '@/api/role';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function RoleListPage() {
+  useDocumentTitle('系统管理 - 角色');
   const { data = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.list });
   return (
-    <Card title="角色管理 (只读)">
+    <>
+      <PageHeader title="角色管理" />
+      <Card>
       <Table<RoleDTO>
         rowKey="id"
         loading={isLoading}
@@ -22,5 +27,6 @@ export default function RoleListPage() {
         ]}
       />
     </Card>
+    </>
   );
 }

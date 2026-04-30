@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Card, Table, Space, Input, Select, DatePicker, Button, Tag } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { auditApi, AuditLogDTO, AuditQuery } from '@/api/audit';
@@ -19,6 +21,7 @@ const ACTIONS = [
 const RES_TYPES = ['AUTH', 'USER', 'ORG_NODE', 'NODE_PERMISSION'];
 
 export default function AuditListPage() {
+  useDocumentTitle('系统管理 - 审计日志');
   const [q, setQ] = useState<AuditQuery>({ page: 1, size: 20 });
   const [detail, setDetail] = useState<AuditLogDTO | null>(null);
   const { data, isLoading } = useQuery({
@@ -28,7 +31,9 @@ export default function AuditListPage() {
   });
 
   return (
-    <Card title="审计日志">
+    <>
+      <PageHeader title="审计日志" />
+      <Card>
       <Space style={{ marginBottom: 16 }} wrap>
         <Select
           placeholder="动作"
@@ -107,5 +112,6 @@ export default function AuditListPage() {
       />
       <DetailModal log={detail} onClose={() => setDetail(null)} />
     </Card>
+    </>
   );
 }

@@ -1,11 +1,14 @@
 import { Card, Form, Input, Switch, Select, Button, message, Spin } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '@/api/user';
 import { roleApi } from '@/api/role';
 import { useEffect } from 'react';
 
 export default function UserEditPage() {
+  useDocumentTitle('系统管理 - 编辑用户');
   const { id } = useParams();
   const userId = Number(id);
   const [form] = Form.useForm();
@@ -42,7 +45,9 @@ export default function UserEditPage() {
   if (!user) return null;
 
   return (
-    <Card title={`编辑用户 ${user.username}`} extra={<Button onClick={() => nav(-1)}>返回</Button>}>
+    <>
+      <PageHeader title="编辑用户" />
+      <Card extra={<Button onClick={() => nav(-1)}>返回</Button>}>
       <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
         <Form.Item label="用户名">
           <Input disabled value={user.username} />
@@ -77,5 +82,6 @@ export default function UserEditPage() {
         </Form.Item>
       </Card>
     </Card>
+    </>
   );
 }

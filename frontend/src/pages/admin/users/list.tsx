@@ -12,6 +12,8 @@ import {
   Form,
   Select,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { PlusOutlined, KeyOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi, UserDTO } from '@/api/user';
@@ -19,6 +21,7 @@ import { roleApi } from '@/api/role';
 import { Link } from 'react-router-dom';
 
 export default function UserListPage() {
+  useDocumentTitle('系统管理 - 用户');
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
   const [createOpen, setCreateOpen] = useState(false);
@@ -57,25 +60,26 @@ export default function UserListPage() {
   });
 
   return (
-    <Card
-      title="用户管理"
-      extra={
-        <Space>
-          <Input.Search
-            placeholder="搜索用户名/姓名"
-            allowClear
-            onSearch={(v) => {
-              setKeyword(v);
-              setPage(1);
-            }}
-            style={{ width: 240 }}
-          />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-            新建
-          </Button>
-        </Space>
-      }
-    >
+    <>
+      <PageHeader title="用户管理" />
+      <Card
+        extra={
+          <Space>
+            <Input.Search
+              placeholder="搜索用户名/姓名"
+              allowClear
+              onSearch={(v) => {
+                setKeyword(v);
+                setPage(1);
+              }}
+              style={{ width: 240 }}
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              新建
+            </Button>
+          </Space>
+        }
+      >
       <Table<UserDTO>
         rowKey="id"
         loading={isLoading}
@@ -177,5 +181,6 @@ export default function UserListPage() {
         <Input.Password id="reset-new-pwd" placeholder="新密码" />
       </Modal>
     </Card>
+    </>
   );
 }
