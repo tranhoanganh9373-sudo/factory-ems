@@ -2,10 +2,18 @@
 
 > **日期**：2026-04-29
 > **来源**：可观测性栈 v1.7.0-obs post-tag 代码审查（java-reviewer + silent-failure-hunter）
-> **状态**：未修复（不在 observability 子项目 surgical 范围内）
+> **状态**：✅ 已全部修复（2026-04-30）
 > **责任团队**：collector / alarm / app 各模块原作者
 
-观测性栈 review 中扫到 6 条与本次 sub-project 不相关的 pre-existing 问题。每条均**已经在生产代码中存在**，但因 surgical changes 原则未在 v1.7.0-obs 中修。本文档作为单独 follow-up 跟踪。
+观测性栈 review 中扫到 6 条与本次 sub-project 不相关的 pre-existing 问题。每条均**已经在生产代码中存在**，但因 surgical changes 原则未在 v1.7.0-obs 中修。
+
+**2026-04-30 更新**：经评估改为直接修复，6 条全部 commit 上 `feat/ems-observability`：
+- #1 → `2cb1f10`（InfluxReadingSink.flushOne 落 log + ListAppender 测试）
+- #2 → `2cb1f10`（DevicePoller transition listener catch 落 log）
+- #3 → `2cb1f10`（WebhookChannelImpl.retryDelivery orElseThrow 带 ID）
+- #4 → `3c68369`（CollectorMetrics → CollectorBusinessMetrics 重命名 + 单 ctor + @Autowired）
+- #5 → `ebf1882`（refreshDeviceGauges 移到独立 single-thread scheduler）
+- #6 → `2cb1f10`（CollectorEndToEndIT energy_delta assertion 加 signum>0 filter）
 
 ---
 
