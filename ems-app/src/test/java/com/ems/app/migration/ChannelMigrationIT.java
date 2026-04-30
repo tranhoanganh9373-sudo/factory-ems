@@ -1,7 +1,9 @@
 package com.ems.app.migration;
 
 import com.ems.app.FactoryEmsApplication;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -28,19 +30,13 @@ class ChannelMigrationIT {
     @Autowired
     JdbcTemplate jdbc;
 
-    @Test
-    void channelTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT count(*) FROM information_schema.tables WHERE table_name = 'channel'",
-                Integer.class);
-        assertThat(count).isEqualTo(1);
-    }
-
-    @Test
-    void collectorMetricsTableExists() {
-        Integer count = jdbc.queryForObject(
-                "SELECT count(*) FROM information_schema.tables WHERE table_name = 'collector_metrics'",
-                Integer.class);
+    @ParameterizedTest
+    @ValueSource(strings = { "channel", "collector_metrics" })
+    @DisplayName("V2.3.0 迁移后表存在")
+    void tableExists_afterV230Migration_returnsOne(String tableName) {
+        var count = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.tables WHERE table_name = ?",
+                Integer.class, tableName);
         assertThat(count).isEqualTo(1);
     }
 }

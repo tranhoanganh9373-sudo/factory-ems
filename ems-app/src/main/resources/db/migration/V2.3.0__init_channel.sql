@@ -19,7 +19,10 @@ CREATE TABLE channel (
 CREATE INDEX idx_channel_protocol ON channel(protocol);
 CREATE INDEX idx_channel_enabled  ON channel(enabled) WHERE enabled = TRUE;
 
-ALTER TABLE meters ADD COLUMN IF NOT EXISTS channel_id BIGINT REFERENCES channel(id);
+ALTER TABLE meters ADD COLUMN IF NOT EXISTS channel_id BIGINT
+    REFERENCES channel(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_meters_channel
+    ON meters(channel_id) WHERE channel_id IS NOT NULL;
 
 CREATE TABLE collector_metrics (
     channel_id     BIGINT      NOT NULL REFERENCES channel(id) ON DELETE CASCADE,
