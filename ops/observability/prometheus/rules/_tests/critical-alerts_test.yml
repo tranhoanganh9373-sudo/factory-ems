@@ -1,0 +1,154 @@
+# promtool tests for critical-alerts.yml — 5 alerts × 2 cases (positive + negative).
+#
+# Strategy (Path B per task spec):
+#   - Validate labels (alertname + severity + team + matcher labels) on every case.
+#   - Omit exp_annotations because description templates render Go template values
+#     (humanizePercentage / humanizeDuration / humanize) whose exact string output
+#     is brittle and adds no signal beyond what label assertions already provide.
+#   - Verifying alert fires (positive) and silences (negative) is the load-bearing
+#     contract — annotation rendering is exercised by F2 smoke / Alertmanager UI.
+
+rule_files:
+  - ../critical-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # --- EmsAppDown ---------------------------------------------------------
+  - interval: 1m
+    name: EmsAppDown_fires_when_down_for_2m
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        values: '0 0 0 0'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: EmsAppDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: ops
+              instance: prod-01
+              job: factory-ems
+
+  - interval: 1m
+    name: EmsAppDown_silent_when_up
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        values: '1 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: EmsAppDown
+        exp_alerts: []
+
+  # --- EmsAppHighErrorRate ------------------------------------------------
+  # rate(...[5m]) > 1: counter rises by 90/min = 1.5/s sustained over the window.
+  - interval: 1m
+    name: EmsAppHighErrorRate_fires_at_high_rate
+    input_series:
+      - series: 'ems_app_exception_total{type="RuntimeException",instance="prod-01"}'
+        values: '0 90 180 270 360 450 540 630 720 810 900 990'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: EmsAppHighErrorRate
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: backend
+              type: RuntimeException
+              instance: prod-01
+
+  - interval: 1m
+    name: EmsAppHighErrorRate_silent_at_low_rate
+    input_series:
+      - series: 'ems_app_exception_total{type="RuntimeException",instance="prod-01"}'
+        values: '0 1 2 3 4 5 6 7 8 9 10 11'  # ~0.017/s, well below 1/s
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: EmsAppHighErrorRate
+        exp_alerts: []
+
+  # --- EmsDataFreshnessCritical -------------------------------------------
+  # max(ems_meter_reading_lag_seconds) > 600 for 2m. Use 700.
+  - interval: 1m
+    name: EmsDataFreshnessCritical_fires_when_lag_high
+    input_series:
+      - series: 'ems_meter_reading_lag_seconds{tenant="t1"}'
+        values: '700 700 700 700'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: EmsDataFreshnessCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: data
+
+  - interval: 1m
+    name: EmsDataFreshnessCritical_silent_when_lag_ok
+    input_series:
+      - series: 'ems_meter_reading_lag_seconds{tenant="t1"}'
+        values: '60 90 120 150'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: EmsDataFreshnessCritical
+        exp_alerts: []
+
+  # --- EmsDbConnectionPoolExhausted ---------------------------------------
+  # active/max > 0.95 for 3m. Use 29/30 = 0.9667.
+  - interval: 1m
+    name: EmsDbConnectionPoolExhausted_fires_at_high_usage
+    input_series:
+      - series: 'hikaricp_connections_active{pool="HikariPool-1"}'
+        values: '29 29 29 29 29'
+      - series: 'hikaricp_connections_max{pool="HikariPool-1"}'
+        values: '30 30 30 30 30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: EmsDbConnectionPoolExhausted
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: backend
+              pool: HikariPool-1
+
+  - interval: 1m
+    name: EmsDbConnectionPoolExhausted_silent_at_low_usage
+    input_series:
+      - series: 'hikaricp_connections_active{pool="HikariPool-1"}'
+        values: '5 6 7 8 9'
+      - series: 'hikaricp_connections_max{pool="HikariPool-1"}'
+        values: '30 30 30 30 30'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: EmsDbConnectionPoolExhausted
+        exp_alerts: []
+
+  # --- EmsDiskSpaceCritical -----------------------------------------------
+  # avail/size < 0.10 for 5m. Use 5GB / 100GB = 5%.
+  - interval: 1m
+    name: EmsDiskSpaceCritical_fires_at_low_avail
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/var/lib/postgres"}'
+        values: '5000000000x6'
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/var/lib/postgres"}'
+        values: '100000000000x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: EmsDiskSpaceCritical
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: ops
+              fstype: ext4
+              mountpoint: /var/lib/postgres
+
+  - interval: 1m
+    name: EmsDiskSpaceCritical_silent_at_high_avail
+    input_series:
+      - series: 'node_filesystem_avail_bytes{fstype="ext4",mountpoint="/"}'
+        values: '50000000000x6'
+      - series: 'node_filesystem_size_bytes{fstype="ext4",mountpoint="/"}'
+        values: '100000000000x6'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: EmsDiskSpaceCritical
+        exp_alerts: []

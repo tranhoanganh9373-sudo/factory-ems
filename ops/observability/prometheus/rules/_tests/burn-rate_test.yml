@@ -1,0 +1,72 @@
+# promtool tests for burn-rate-alerts.yml — 2 alerts × 2 cases (positive + negative).
+#
+# Strategy:
+#   - Inject `up` series spanning the lookback window, with enough zero samples
+#     to push (1 - avg_over_time(up[w])) above the threshold.
+#   - Fast (1h × 14.4): threshold = 14.4 × 0.005 = 0.072. Need ≥ 8/60 = 0.133 down.
+#   - Slow (6h × 6):    threshold = 6 × 0.005 = 0.03.  Need ≥ 12/360 = 0.033 down.
+#   - eval_time exceeds the lookback by `for:` window so the alert fully transitions
+#     pending → firing.
+
+rule_files:
+  - ../burn-rate-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # --- EmsBudgetBurnFastAvailability -------------------------------------
+  # Fast burn: 1h window + 5m for. 8 minutes down out of 60 → 1 - 52/60 = 0.133 > 0.072.
+  - interval: 1m
+    name: EmsBudgetBurnFastAvailability_fires_when_8min_down_in_1h
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        # 8 min down, then 60+ min up (extra samples beyond eval_time)
+        values: '0 0 0 0 0 0 0 0 1+0x60'
+    alert_rule_test:
+      - eval_time: 1h6m
+        alertname: EmsBudgetBurnFastAvailability
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              team: ops
+              slo: availability
+              instance: prod-01
+              job: factory-ems
+
+  - interval: 1m
+    name: EmsBudgetBurnFastAvailability_silent_when_all_up
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        values: '1+0x70'  # 71 minutes all up
+    alert_rule_test:
+      - eval_time: 1h6m
+        alertname: EmsBudgetBurnFastAvailability
+        exp_alerts: []
+
+  # --- EmsBudgetBurnSlowAvailability -------------------------------------
+  # Slow burn: 6h window + 30m for. 12 min down out of 360 → 1 - 348/360 = 0.0333 > 0.03.
+  - interval: 1m
+    name: EmsBudgetBurnSlowAvailability_fires_when_long_outage
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        values: '0 0 0 0 0 0 0 0 0 0 0 0 1+0x400'
+    alert_rule_test:
+      - eval_time: 6h31m
+        alertname: EmsBudgetBurnSlowAvailability
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: ops
+              slo: availability
+              instance: prod-01
+              job: factory-ems
+
+  - interval: 1m
+    name: EmsBudgetBurnSlowAvailability_silent_when_all_up
+    input_series:
+      - series: 'up{job="factory-ems",instance="prod-01"}'
+        values: '1+0x400'
+    alert_rule_test:
+      - eval_time: 6h31m
+        alertname: EmsBudgetBurnSlowAvailability
+        exp_alerts: []
