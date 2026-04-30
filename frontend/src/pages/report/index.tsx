@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { App, Button, Card, Col, DatePicker, Divider, Form, Radio, Row, Select, Space } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { meterApi } from '@/api/meter';
@@ -41,6 +43,7 @@ function flattenOrgTree(
 
 // Note: /report endpoints are NOT ADMIN-gated — all authenticated roles may access.
 export default function ReportPage() {
+  useDocumentTitle('报表 - 即席查询');
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -132,13 +135,9 @@ export default function ReportPage() {
   }
 
   return (
-    <Card
-      title={
-        <>
-          <FileTextOutlined /> 报表导出
-        </>
-      }
-    >
+    <>
+      <PageHeader title="即席查询" />
+      <Card>
       <Form<FormValues>
         form={form}
         layout="vertical"
@@ -242,5 +241,6 @@ export default function ReportPage() {
 
       <AsyncTaskList />
     </Card>
+    </>
   );
 }

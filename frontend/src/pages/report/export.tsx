@@ -11,6 +11,8 @@ import {
   Space,
   TreeSelect,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -51,6 +53,7 @@ const POLL_MS = 1500;
 const MAX_POLLS = 80;
 
 export default function ExportReportPage() {
+  useDocumentTitle('报表 - 异步导出');
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -118,7 +121,9 @@ export default function ExportReportPage() {
   }
 
   return (
-    <Card title="报表导出（异步）">
+    <>
+      <PageHeader title="异步导出" />
+      <Card>
       <Alert
         type="info"
         showIcon
@@ -205,5 +210,6 @@ export default function ExportReportPage() {
         </Form.Item>
       </Form>
     </Card>
+    </>
   );
 }
