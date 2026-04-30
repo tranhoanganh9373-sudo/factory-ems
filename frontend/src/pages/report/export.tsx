@@ -1,16 +1,5 @@
 import { useState } from 'react';
-import {
-  Alert,
-  App,
-  Button,
-  Card,
-  DatePicker,
-  Form,
-  Radio,
-  Select,
-  Space,
-  TreeSelect,
-} from 'antd';
+import { Alert, App, Button, Card, DatePicker, Form, Radio, Select, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import type { Dayjs } from 'dayjs';
@@ -59,8 +48,14 @@ export default function ExportReportPage() {
   const [submitting, setSubmitting] = useState(false);
   const preset = Form.useWatch('preset', form);
 
-  const { data: tree = [] } = useQuery({ queryKey: ['orgtree'], queryFn: () => orgTreeApi.getTree() });
-  const { data: ets = [] } = useQuery({ queryKey: ['energyTypes'], queryFn: meterApi.listEnergyTypes });
+  const { data: tree = [] } = useQuery({
+    queryKey: ['orgtree'],
+    queryFn: () => orgTreeApi.getTree(),
+  });
+  const { data: ets = [] } = useQuery({
+    queryKey: ['energyTypes'],
+    queryFn: meterApi.listEnergyTypes,
+  });
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', 'enabled'],
     queryFn: () => shiftApi.list(true),
@@ -124,92 +119,92 @@ export default function ExportReportPage() {
     <>
       <PageHeader title="异步导出" />
       <Card>
-      <Alert
-        type="info"
-        showIcon
-        style={{ marginBottom: 16 }}
-        message="该页面调用 POST /api/v1/reports/export 异步任务接口，自动轮询直到返回二进制文件。Phase M 上线前会显示『端点尚未上线』。"
-      />
-      <Form<FormValues>
-        form={form}
-        layout="vertical"
-        initialValues={{ preset: 'daily', format: 'EXCEL' }}
-      >
-        <Space wrap>
-          <Form.Item name="preset" label="报表类型" rules={[{ required: true }]}>
-            <Radio.Group>
-              <Radio.Button value="daily">日报</Radio.Button>
-              <Radio.Button value="monthly">月报</Radio.Button>
-              <Radio.Button value="yearly">年报</Radio.Button>
-              <Radio.Button value="shift">班次</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item name="format" label="格式" rules={[{ required: true }]}>
-            <Radio.Group>
-              <Radio.Button value="EXCEL">Excel</Radio.Button>
-              <Radio.Button value="PDF">PDF</Radio.Button>
-              <Radio.Button value="CSV">CSV</Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-        </Space>
+        <Alert
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="该页面调用 POST /api/v1/reports/export 异步任务接口，自动轮询直到返回二进制文件。Phase M 上线前会显示『端点尚未上线』。"
+        />
+        <Form<FormValues>
+          form={form}
+          layout="vertical"
+          initialValues={{ preset: 'daily', format: 'EXCEL' }}
+        >
+          <Space wrap>
+            <Form.Item name="preset" label="报表类型" rules={[{ required: true }]}>
+              <Radio.Group>
+                <Radio.Button value="daily">日报</Radio.Button>
+                <Radio.Button value="monthly">月报</Radio.Button>
+                <Radio.Button value="yearly">年报</Radio.Button>
+                <Radio.Button value="shift">班次</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item name="format" label="格式" rules={[{ required: true }]}>
+              <Radio.Group>
+                <Radio.Button value="EXCEL">Excel</Radio.Button>
+                <Radio.Button value="PDF">PDF</Radio.Button>
+                <Radio.Button value="CSV">CSV</Radio.Button>
+              </Radio.Group>
+            </Form.Item>
+          </Space>
 
-        <Space wrap>
-          {(preset === 'daily' || preset === 'shift') && (
-            <Form.Item name="date" label="日期" rules={[{ required: true }]}>
-              <DatePicker />
-            </Form.Item>
-          )}
-          {preset === 'monthly' && (
-            <Form.Item name="month" label="月份" rules={[{ required: true }]}>
-              <DatePicker.MonthPicker />
-            </Form.Item>
-          )}
-          {preset === 'yearly' && (
-            <Form.Item name="year" label="年份" rules={[{ required: true }]}>
-              <DatePicker.YearPicker />
-            </Form.Item>
-          )}
-          {preset === 'shift' && (
-            <Form.Item name="shiftId" label="班次" rules={[{ required: true }]}>
-              <Select
-                style={{ width: 220 }}
-                options={shifts.map((s) => ({ label: `${s.code} ${s.name}`, value: s.id }))}
+          <Space wrap>
+            {(preset === 'daily' || preset === 'shift') && (
+              <Form.Item name="date" label="日期" rules={[{ required: true }]}>
+                <DatePicker />
+              </Form.Item>
+            )}
+            {preset === 'monthly' && (
+              <Form.Item name="month" label="月份" rules={[{ required: true }]}>
+                <DatePicker.MonthPicker />
+              </Form.Item>
+            )}
+            {preset === 'yearly' && (
+              <Form.Item name="year" label="年份" rules={[{ required: true }]}>
+                <DatePicker.YearPicker />
+              </Form.Item>
+            )}
+            {preset === 'shift' && (
+              <Form.Item name="shiftId" label="班次" rules={[{ required: true }]}>
+                <Select
+                  style={{ width: 220 }}
+                  options={shifts.map((s) => ({ label: `${s.code} ${s.name}`, value: s.id }))}
+                />
+              </Form.Item>
+            )}
+          </Space>
+
+          <Space wrap>
+            <Form.Item name="orgNodeId" label="组织节点">
+              <TreeSelect
+                allowClear
+                treeData={buildTreeData(tree)}
+                treeDefaultExpandAll
+                style={{ width: 240 }}
               />
             </Form.Item>
-          )}
-        </Space>
+            <Form.Item name="energyTypes" label="能源类型">
+              <Select
+                mode="multiple"
+                allowClear
+                style={{ width: 240 }}
+                options={ets.map((e) => ({ label: `${e.name} (${e.unit})`, value: e.code }))}
+              />
+            </Form.Item>
+          </Space>
 
-        <Space wrap>
-          <Form.Item name="orgNodeId" label="组织节点">
-            <TreeSelect
-              allowClear
-              treeData={buildTreeData(tree)}
-              treeDefaultExpandAll
-              style={{ width: 240 }}
-            />
+          <Form.Item>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={submitting}
+              onClick={handleSubmit}
+            >
+              提交导出任务
+            </Button>
           </Form.Item>
-          <Form.Item name="energyTypes" label="能源类型">
-            <Select
-              mode="multiple"
-              allowClear
-              style={{ width: 240 }}
-              options={ets.map((e) => ({ label: `${e.name} (${e.unit})`, value: e.code }))}
-            />
-          </Form.Item>
-        </Space>
-
-        <Form.Item>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            loading={submitting}
-            onClick={handleSubmit}
-          >
-            提交导出任务
-          </Button>
-        </Form.Item>
-      </Form>
-    </Card>
+        </Form>
+      </Card>
     </>
   );
 }

@@ -7,6 +7,7 @@ import { TooltipComponent, LegendComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import { dashboardApi, type CompositionDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
+import { translate, ENERGY_TYPE_LABEL } from '@/utils/i18n-dict';
 
 echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
 
@@ -23,7 +24,7 @@ function buildOption(data: CompositionDTO[]) {
         radius: ['40%', '70%'],
         center: ['50%', '45%'],
         data: data.map((d) => ({
-          name: d.energyType,
+          name: translate(ENERGY_TYPE_LABEL, d.energyType),
           value: d.total,
           label: {
             formatter: `{b}\n${(d.share * 100).toFixed(1)}%`,

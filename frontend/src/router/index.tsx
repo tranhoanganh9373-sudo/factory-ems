@@ -12,7 +12,6 @@ import UserEditPage from '@/pages/admin/users/edit';
 import UserPermissionPage from '@/pages/admin/users/permissions';
 import RoleListPage from '@/pages/admin/roles/list';
 import AuditListPage from '@/pages/admin/audit/list';
-import HomePage from '@/pages/home';
 import DashboardPage from '@/pages/dashboard';
 import ReportPage from '@/pages/report';
 import TariffPage from '@/pages/tariff';
@@ -52,7 +51,6 @@ export function AppRouter() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="home" element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="orgtree" element={<OrgTreePage />} />
         <Route path="meters" element={<MetersPage />} />

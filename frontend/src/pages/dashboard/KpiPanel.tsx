@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardApi, type KpiDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
 import { KpiCard } from '@/components/KpiCard';
+import { translate, ENERGY_TYPE_LABEL } from '@/utils/i18n-dict';
 
 export default function KpiPanel() {
   const { range, customFrom, customTo, orgNodeId, energyType } = useDashboardFilterStore();
@@ -29,7 +30,7 @@ export default function KpiPanel() {
       {data.map((item) => (
         <KpiCard
           key={item.energyType}
-          label={item.energyType}
+          label={translate(ENERGY_TYPE_LABEL, item.energyType)}
           value={item.total != null ? item.total.toFixed(2) : '0'}
           unit={item.unit}
           delta={item.mom != null ? item.mom * 100 : undefined}

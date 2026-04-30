@@ -12,6 +12,7 @@ import {
 import { CanvasRenderer } from 'echarts/renderers';
 import { dashboardApi, type SeriesDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
+import { translate, ENERGY_TYPE_LABEL } from '@/utils/i18n-dict';
 import dayjs from 'dayjs';
 
 echarts.use([
@@ -31,7 +32,7 @@ function buildOption(series: SeriesDTO[]) {
         if (!params.length) return '';
         const time = dayjs(params[0].value[0]).format('MM-DD HH:mm');
         const lines = params.map((p) => {
-          const s = series.find((s) => s.energyType === p.seriesName);
+          const s = series.find((s) => translate(ENERGY_TYPE_LABEL, s.energyType) === p.seriesName);
           return `${p.marker}${p.seriesName}: ${p.value[1]?.toFixed(2) ?? '—'} ${s?.unit ?? ''}`;
         });
         return [time, ...lines].join('<br/>');
@@ -42,7 +43,7 @@ function buildOption(series: SeriesDTO[]) {
     xAxis: { type: 'time', boundaryGap: false },
     yAxis: { type: 'value' },
     series: series.map((s) => ({
-      name: s.energyType,
+      name: translate(ENERGY_TYPE_LABEL, s.energyType),
       type: 'line',
       smooth: true,
       showSymbol: false,

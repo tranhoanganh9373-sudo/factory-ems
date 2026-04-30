@@ -6,11 +6,7 @@ interface Props<T> extends TableProps<T> {
   toolbarExtra?: ReactNode;
 }
 
-export function DataTable<T extends object>({
-  toolbarLeft,
-  toolbarExtra,
-  ...rest
-}: Props<T>) {
+export function DataTable<T extends object>({ toolbarLeft, toolbarExtra, ...rest }: Props<T>) {
   return (
     <div
       style={{
@@ -33,10 +29,7 @@ export function DataTable<T extends object>({
           <div>{toolbarExtra}</div>
         </div>
       )}
-      <Table
-        {...rest}
-        pagination={rest.pagination ?? { pageSize: 20, showSizeChanger: true }}
-      />
+      <Table {...rest} pagination={rest.pagination ?? { pageSize: 20, showSizeChanger: true }} />
     </div>
   );
 }

@@ -14,14 +14,14 @@ export function BrandLockup({ variant }: Props) {
         <span
           style={{
             background: '#FFFFFF',
-            padding: '4px 12px',
+            padding: '4px 16px',
             borderRadius: 9999,
             display: 'inline-flex',
             alignItems: 'center',
-            height: 32,
+            height: 64,
           }}
         >
-          <img src={logo} alt={COMPANY} style={{ height: 24, display: 'block' }} />
+          <img src={logo} alt={COMPANY} style={{ height: 56, display: 'block' }} />
         </span>
         <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 500 }}>{SYSTEM}</span>
       </div>

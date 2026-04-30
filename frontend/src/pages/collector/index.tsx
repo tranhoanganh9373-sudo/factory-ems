@@ -1,4 +1,16 @@
-import { App, Button, Card, Empty, Modal, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Empty,
+  Modal,
+  Popconfirm,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -70,93 +82,93 @@ export default function CollectorStatusPage() {
   return (
     <>
       <PageHeader title="数据采集" />
-    <Card
-      title={
-        <Space>
-          <Typography.Text strong>采集器状态</Typography.Text>
-          {running && (
-            <Tag color={running.running ? 'green' : 'default'}>
-              {running.running ? `运行中 · ${running.deviceCount} 台设备` : '未运行'}
-            </Tag>
-          )}
-        </Space>
-      }
-      extra={
-        <Popconfirm
-          title="重新加载 collector.yml"
-          description="服务端会从磁盘重读配置；不变的 device 不受影响。"
-          onConfirm={() => reloadMu.mutate()}
-          okText="确认"
-        >
-          <Button icon={<ReloadOutlined />} loading={reloadMu.isPending} type="primary">
-            重新加载
-          </Button>
-        </Popconfirm>
-      }
-    >
-      {data.length === 0 && !isLoading ? (
-        <Empty description="无采集设备配置（ems.collector.devices 为空或 enabled=false）" />
-      ) : (
-        <Table<DeviceStatusDTO>
-          rowKey="deviceId"
-          dataSource={data}
-          loading={isLoading}
-          pagination={{ pageSize: 50 }}
-          columns={[
-            { title: '设备 ID', dataIndex: 'deviceId', width: 160 },
-            { title: '关联测点', dataIndex: 'meterCode', width: 200 },
-            {
-              title: '状态',
-              dataIndex: 'state',
-              width: 100,
-              render: (s: DeviceState) => {
-                const c = STATE_MAP[s] ?? { tone: 'default' as const, label: s };
-                return <StatusTag tone={c.tone}>{c.label}</StatusTag>;
+      <Card
+        title={
+          <Space>
+            <Typography.Text strong>采集器状态</Typography.Text>
+            {running && (
+              <Tag color={running.running ? 'green' : 'default'}>
+                {running.running ? `运行中 · ${running.deviceCount} 台设备` : '未运行'}
+              </Tag>
+            )}
+          </Space>
+        }
+        extra={
+          <Popconfirm
+            title="重新加载 collector.yml"
+            description="服务端会从磁盘重读配置；不变的 device 不受影响。"
+            onConfirm={() => reloadMu.mutate()}
+            okText="确认"
+          >
+            <Button icon={<ReloadOutlined />} loading={reloadMu.isPending} type="primary">
+              重新加载
+            </Button>
+          </Popconfirm>
+        }
+      >
+        {data.length === 0 && !isLoading ? (
+          <Empty description="无采集设备配置（ems.collector.devices 为空或 enabled=false）" />
+        ) : (
+          <Table<DeviceStatusDTO>
+            rowKey="deviceId"
+            dataSource={data}
+            loading={isLoading}
+            pagination={{ pageSize: 50 }}
+            columns={[
+              { title: '设备 ID', dataIndex: 'deviceId', width: 160 },
+              { title: '关联测点', dataIndex: 'meterCode', width: 200 },
+              {
+                title: '状态',
+                dataIndex: 'state',
+                width: 100,
+                render: (s: DeviceState) => {
+                  const c = STATE_MAP[s] ?? { tone: 'default' as const, label: s };
+                  return <StatusTag tone={c.tone}>{c.label}</StatusTag>;
+                },
               },
-            },
-            {
-              title: '上次读取',
-              dataIndex: 'lastReadAt',
-              width: 180,
-              render: (v: string | null) => (
-                <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
-              ),
-            },
-            {
-              title: '上次状态切换',
-              dataIndex: 'lastTransitionAt',
-              width: 180,
-              render: (v: string | null) => (
-                <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
-              ),
-            },
-            { title: '成功', dataIndex: 'successCount', width: 90 },
-            { title: '失败', dataIndex: 'failureCount', width: 90 },
-            {
-              title: '连错',
-              dataIndex: 'consecutiveErrors',
-              width: 80,
-              render: (n: number) => (n > 0 ? <Tag color="red">{n}</Tag> : <span>0</span>),
-            },
-            {
-              title: '最近错误',
-              dataIndex: 'lastError',
-              ellipsis: true,
-              render: (v: string | null) =>
-                v ? (
-                  <Tooltip title={v}>
-                    <Typography.Text type="danger" ellipsis style={{ maxWidth: 280 }}>
-                      {v}
-                    </Typography.Text>
-                  </Tooltip>
-                ) : (
-                  <span style={{ color: '#999' }}>—</span>
+              {
+                title: '上次读取',
+                dataIndex: 'lastReadAt',
+                width: 180,
+                render: (v: string | null) => (
+                  <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
                 ),
-            },
-          ]}
-        />
-      )}
-    </Card>
+              },
+              {
+                title: '上次状态切换',
+                dataIndex: 'lastTransitionAt',
+                width: 180,
+                render: (v: string | null) => (
+                  <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
+                ),
+              },
+              { title: '成功', dataIndex: 'successCount', width: 90 },
+              { title: '失败', dataIndex: 'failureCount', width: 90 },
+              {
+                title: '连错',
+                dataIndex: 'consecutiveErrors',
+                width: 80,
+                render: (n: number) => (n > 0 ? <Tag color="red">{n}</Tag> : <span>0</span>),
+              },
+              {
+                title: '最近错误',
+                dataIndex: 'lastError',
+                ellipsis: true,
+                render: (v: string | null) =>
+                  v ? (
+                    <Tooltip title={v}>
+                      <Typography.Text type="danger" ellipsis style={{ maxWidth: 280 }}>
+                        {v}
+                      </Typography.Text>
+                    </Tooltip>
+                  ) : (
+                    <span style={{ color: '#999' }}>—</span>
+                  ),
+              },
+            ]}
+          />
+        )}
+      </Card>
     </>
   );
 }

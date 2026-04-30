@@ -15,7 +15,7 @@ describe('alarms/history', () => {
             <History />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('告警历史')).toBeInTheDocument();
   });

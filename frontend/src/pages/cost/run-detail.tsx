@@ -73,83 +73,86 @@ export default function CostRunDetailPage() {
     <>
       <PageHeader title="批次详情" />
       <Card title={`分摊批次 #${runId}`}>
-      {run && (
-        <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>
-          <Descriptions.Item label="状态">
-            {(() => {
-              const cfg = BATCH_STATE[run.status] ?? { tone: 'default' as StatusTone, label: run.status };
-              return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
-            })()}
-          </Descriptions.Item>
-          <Descriptions.Item label="账期">
-            {dayjs(run.periodStart).format('YYYY-MM-DD HH:mm')} ~{' '}
-            {dayjs(run.periodEnd).format('MM-DD HH:mm')}
-          </Descriptions.Item>
-          <Descriptions.Item label="总金额">{run.totalAmount ?? '—'}</Descriptions.Item>
-          <Descriptions.Item label="提交时间">
-            {dayjs(run.createdAt).format('YYYY-MM-DD HH:mm:ss')}
-          </Descriptions.Item>
-          <Descriptions.Item label="完成时间">
-            {run.finishedAt ? dayjs(run.finishedAt).format('YYYY-MM-DD HH:mm:ss') : '—'}
-          </Descriptions.Item>
-          <Descriptions.Item label="错误">{run.errorMessage ?? '—'}</Descriptions.Item>
-        </Descriptions>
-      )}
+        {run && (
+          <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="状态">
+              {(() => {
+                const cfg = BATCH_STATE[run.status] ?? {
+                  tone: 'default' as StatusTone,
+                  label: run.status,
+                };
+                return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="账期">
+              {dayjs(run.periodStart).format('YYYY-MM-DD HH:mm')} ~{' '}
+              {dayjs(run.periodEnd).format('MM-DD HH:mm')}
+            </Descriptions.Item>
+            <Descriptions.Item label="总金额">{run.totalAmount ?? '—'}</Descriptions.Item>
+            <Descriptions.Item label="提交时间">
+              {dayjs(run.createdAt).format('YYYY-MM-DD HH:mm:ss')}
+            </Descriptions.Item>
+            <Descriptions.Item label="完成时间">
+              {run.finishedAt ? dayjs(run.finishedAt).format('YYYY-MM-DD HH:mm:ss') : '—'}
+            </Descriptions.Item>
+            <Descriptions.Item label="错误">{run.errorMessage ?? '—'}</Descriptions.Item>
+          </Descriptions>
+        )}
 
-      <Space style={{ marginBottom: 16 }}>
-        <TreeSelect
-          allowClear
-          placeholder="按组织过滤"
-          treeData={buildTreeData(orgTree)}
-          treeDefaultExpandAll
-          style={{ width: 220 }}
-          value={filterOrg}
-          onChange={setFilterOrg}
-        />
-        <Select
-          allowClear
-          placeholder="按能源过滤"
-          style={{ width: 180 }}
-          value={filterEnergy}
-          onChange={setFilterEnergy}
-          options={[
-            { value: 'ELEC', label: '电' },
-            { value: 'WATER', label: '水' },
-            { value: 'GAS', label: '气' },
-            { value: 'STEAM', label: '汽' },
-            { value: 'OIL', label: '油' },
-          ]}
-        />
-      </Space>
+        <Space style={{ marginBottom: 16 }}>
+          <TreeSelect
+            allowClear
+            placeholder="按组织过滤"
+            treeData={buildTreeData(orgTree)}
+            treeDefaultExpandAll
+            style={{ width: 220 }}
+            value={filterOrg}
+            onChange={setFilterOrg}
+          />
+          <Select
+            allowClear
+            placeholder="按能源过滤"
+            style={{ width: 180 }}
+            value={filterEnergy}
+            onChange={setFilterEnergy}
+            options={[
+              { value: 'ELEC', label: '电' },
+              { value: 'WATER', label: '水' },
+              { value: 'GAS', label: '气' },
+              { value: 'STEAM', label: '汽' },
+              { value: 'OIL', label: '油' },
+            ]}
+          />
+        </Space>
 
-      {filteredLines.length === 0 && !isLoading ? (
-        <Empty description="暂无明细" />
-      ) : (
-        <Table<CostLineDTO>
-          rowKey="id"
-          loading={isLoading}
-          dataSource={filteredLines}
-          pagination={{ pageSize: 50 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            {
-              title: '组织',
-              dataIndex: 'targetOrgId',
-              width: 180,
-              render: (id: number) => orgNameById.get(id) ?? `#${id}`,
-            },
-            { title: '能源', dataIndex: 'energyType', width: 80 },
-            { title: '用量', dataIndex: 'quantity', width: 110 },
-            { title: '尖电费', dataIndex: 'sharpAmount', width: 100 },
-            { title: '峰电费', dataIndex: 'peakAmount', width: 100 },
-            { title: '平电费', dataIndex: 'flatAmount', width: 100 },
-            { title: '谷电费', dataIndex: 'valleyAmount', width: 100 },
-            { title: '合计', dataIndex: 'amount', width: 100 },
-            { title: '规则', dataIndex: 'ruleId', width: 80, render: (v) => `#${v}` },
-          ]}
-        />
-      )}
-    </Card>
+        {filteredLines.length === 0 && !isLoading ? (
+          <Empty description="暂无明细" />
+        ) : (
+          <Table<CostLineDTO>
+            rowKey="id"
+            loading={isLoading}
+            dataSource={filteredLines}
+            pagination={{ pageSize: 50 }}
+            scroll={{ x: 'max-content' }}
+            columns={[
+              {
+                title: '组织',
+                dataIndex: 'targetOrgId',
+                width: 180,
+                render: (id: number) => orgNameById.get(id) ?? `#${id}`,
+              },
+              { title: '能源', dataIndex: 'energyType', width: 80 },
+              { title: '用量', dataIndex: 'quantity', width: 110 },
+              { title: '尖电费', dataIndex: 'sharpAmount', width: 100 },
+              { title: '峰电费', dataIndex: 'peakAmount', width: 100 },
+              { title: '平电费', dataIndex: 'flatAmount', width: 100 },
+              { title: '谷电费', dataIndex: 'valleyAmount', width: 100 },
+              { title: '合计', dataIndex: 'amount', width: 100 },
+              { title: '规则', dataIndex: 'ruleId', width: 80, render: (v) => `#${v}` },
+            ]}
+          />
+        )}
+      </Card>
     </>
   );
 }

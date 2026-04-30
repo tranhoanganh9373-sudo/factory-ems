@@ -11,22 +11,22 @@ export default function RoleListPage() {
     <>
       <PageHeader title="角色管理" />
       <Card>
-      <Table<RoleDTO>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data}
-        pagination={false}
-        columns={[
-          {
-            title: '编码',
-            dataIndex: 'code',
-            render: (c) => <Tag color={c === 'ADMIN' ? 'red' : 'blue'}>{c}</Tag>,
-          },
-          { title: '名称', dataIndex: 'name' },
-          { title: '说明', dataIndex: 'description' },
-        ]}
-      />
-    </Card>
+        <Table<RoleDTO>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data}
+          pagination={false}
+          columns={[
+            {
+              title: '编码',
+              dataIndex: 'code',
+              render: (c) => <Tag color={c === 'ADMIN' ? 'red' : 'blue'}>{c}</Tag>,
+            },
+            { title: '名称', dataIndex: 'name' },
+            { title: '说明', dataIndex: 'description' },
+          ]}
+        />
+      </Card>
     </>
   );
 }

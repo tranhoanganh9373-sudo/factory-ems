@@ -15,7 +15,7 @@ describe('production/shifts', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('班次管理')).toBeInTheDocument();
   });

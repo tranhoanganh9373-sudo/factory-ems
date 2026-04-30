@@ -15,7 +15,7 @@ describe('orgtree', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('组织树')).toBeInTheDocument();
   });

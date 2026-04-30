@@ -48,40 +48,40 @@ export default function UserEditPage() {
     <>
       <PageHeader title="编辑用户" />
       <Card extra={<Button onClick={() => nav(-1)}>返回</Button>}>
-      <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
-        <Form.Item label="用户名">
-          <Input disabled value={user.username} />
-        </Form.Item>
-        <Form.Item name="displayName" label="姓名" rules={[{ max: 128 }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="enabled" label="启用" valuePropName="checked">
-          <Switch />
-        </Form.Item>
-        <Button
-          type="primary"
-          onClick={() =>
-            form
-              .validateFields()
-              .then((v) => updateMut.mutate({ displayName: v.displayName, enabled: v.enabled }))
-          }
-          loading={updateMut.isPending}
-        >
-          保存基础信息
-        </Button>
-      </Form>
+        <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
+          <Form.Item label="用户名">
+            <Input disabled value={user.username} />
+          </Form.Item>
+          <Form.Item name="displayName" label="姓名" rules={[{ max: 128 }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="enabled" label="启用" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+          <Button
+            type="primary"
+            onClick={() =>
+              form
+                .validateFields()
+                .then((v) => updateMut.mutate({ displayName: v.displayName, enabled: v.enabled }))
+            }
+            loading={updateMut.isPending}
+          >
+            保存基础信息
+          </Button>
+        </Form>
 
-      <Card type="inner" title="角色" style={{ marginTop: 24, maxWidth: 480 }}>
-        <Form.Item label="角色" name="roleCodes" initialValue={user.roles}>
-          <Select
-            mode="multiple"
-            options={roles.map((r) => ({ label: r.name, value: r.code }))}
-            defaultValue={user.roles}
-            onChange={(codes) => rolesMut.mutate(codes)}
-          />
-        </Form.Item>
+        <Card type="inner" title="角色" style={{ marginTop: 24, maxWidth: 480 }}>
+          <Form.Item label="角色" name="roleCodes" initialValue={user.roles}>
+            <Select
+              mode="multiple"
+              options={roles.map((r) => ({ label: r.name, value: r.code }))}
+              defaultValue={user.roles}
+              onChange={(codes) => rolesMut.mutate(codes)}
+            />
+          </Form.Item>
+        </Card>
       </Card>
-    </Card>
     </>
   );
 }

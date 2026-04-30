@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import ReactECharts from 'echarts-for-react';
 import { dashboardApi, type TariffDistributionDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
+import { translate, TARIFF_PERIOD_LABEL } from '@/utils/i18n-dict';
 
 const PERIOD_COLORS: Record<string, string> = {
   SHARP: '#cf1322',
@@ -24,7 +25,7 @@ function buildOption(data: TariffDistributionDTO) {
         radius: ['40%', '70%'],
         center: ['50%', '45%'],
         data: data.slices.map((s) => ({
-          name: s.periodType,
+          name: translate(TARIFF_PERIOD_LABEL, s.periodType),
           value: s.value,
           itemStyle: { color: PERIOD_COLORS[s.periodType] },
         })),

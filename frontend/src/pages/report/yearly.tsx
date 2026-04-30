@@ -26,8 +26,14 @@ export default function YearlyReportPage() {
   const [orgNodeId, setOrgNodeId] = useState<number | undefined>();
   const [energyTypes, setEnergyTypes] = useState<string[] | undefined>();
 
-  const { data: tree = [] } = useQuery({ queryKey: ['orgtree'], queryFn: () => orgTreeApi.getTree() });
-  const { data: ets = [] } = useQuery({ queryKey: ['energyTypes'], queryFn: meterApi.listEnergyTypes });
+  const { data: tree = [] } = useQuery({
+    queryKey: ['orgtree'],
+    queryFn: () => orgTreeApi.getTree(),
+  });
+  const { data: ets = [] } = useQuery({
+    queryKey: ['energyTypes'],
+    queryFn: meterApi.listEnergyTypes,
+  });
 
   const yr = year.year();
   const { data, isLoading, error } = useQuery({
@@ -53,7 +59,11 @@ export default function YearlyReportPage() {
         }
       >
         <Space wrap style={{ marginBottom: 16 }}>
-          <DatePicker.YearPicker value={year} onChange={(v) => v && setYear(v)} allowClear={false} />
+          <DatePicker.YearPicker
+            value={year}
+            onChange={(v) => v && setYear(v)}
+            allowClear={false}
+          />
           <TreeSelect
             allowClear
             placeholder="组织节点"

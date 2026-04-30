@@ -17,7 +17,7 @@ describe('AppLayout', () => {
         <MemoryRouter initialEntries={['/home']}>
           <AppLayout />
         </MemoryRouter>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('能源管理系统')).toBeInTheDocument();
   });

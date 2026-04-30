@@ -19,9 +19,13 @@ export function PageHeader({ title, subtitle, extra }: Props) {
       }}
     >
       <div>
-        <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ems-color-text-primary)' }}>{title}</div>
+        <div style={{ fontSize: 20, fontWeight: 600, color: 'var(--ems-color-text-primary)' }}>
+          {title}
+        </div>
         {subtitle && (
-          <div style={{ fontSize: 13, color: 'var(--ems-color-text-secondary)', marginTop: 4 }}>{subtitle}</div>
+          <div style={{ fontSize: 13, color: 'var(--ems-color-text-secondary)', marginTop: 4 }}>
+            {subtitle}
+          </div>
         )}
       </div>
       {extra && <div>{extra}</div>}

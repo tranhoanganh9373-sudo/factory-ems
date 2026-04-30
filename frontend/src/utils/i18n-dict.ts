@@ -24,6 +24,32 @@ export const ENERGY_TYPE_LABEL = {
   OIL: '油',
 } as const;
 
+export const TARIFF_PERIOD_LABEL = {
+  SHARP: '尖峰',
+  PEAK: '高峰',
+  FLAT: '平段',
+  VALLEY: '低谷',
+} as const;
+
+export const AUDIT_ACTION_LABEL = {
+  LOGIN: '登录',
+  LOGOUT: '登出',
+  LOGIN_FAIL: '登录失败',
+  CREATE: '新建',
+  UPDATE: '更新',
+  DELETE: '删除',
+  MOVE: '移动',
+  CONFIG_CHANGE: '配置变更',
+  BILL_GENERATE: '生成账单',
+} as const;
+
+export const RESOURCE_TYPE_LABEL = {
+  AUTH: '认证',
+  USER: '用户',
+  ORG_NODE: '组织节点',
+  NODE_PERMISSION: '节点权限',
+} as const;
+
 export const COLLECTOR_PROTOCOL_LABEL = {
   MODBUS_TCP: 'Modbus TCP',
   MODBUS_RTU: 'Modbus RTU',

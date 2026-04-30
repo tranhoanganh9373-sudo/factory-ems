@@ -15,7 +15,7 @@ describe('admin/users', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('用户管理')).toBeInTheDocument();
   });

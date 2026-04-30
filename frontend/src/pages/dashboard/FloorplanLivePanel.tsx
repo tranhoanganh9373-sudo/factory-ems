@@ -2,11 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Empty, Select, Skeleton, Space, Tooltip, Typography } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { Stage, Layer, Image as KonvaImage, Circle, Text, Group } from 'react-konva';
-import {
-  dashboardApi,
-  type FloorplanLiveDTO,
-  type FloorplanLivePoint,
-} from '@/api/dashboard';
+import { dashboardApi, type FloorplanLiveDTO, type FloorplanLivePoint } from '@/api/dashboard';
 import { floorplanApi, floorplanImageUrl } from '@/api/floorplan';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
 import { useThemeStore } from '@/stores/themeStore';
@@ -49,7 +45,12 @@ export default function FloorplanLivePanel() {
   }, [list, selectedId]);
 
   const { data, isLoading, isError } = useQuery<FloorplanLiveDTO>({
-    queryKey: ['dashboard', 'floorplan-live', selectedId, { range, customFrom, customTo, orgNodeId }],
+    queryKey: [
+      'dashboard',
+      'floorplan-live',
+      selectedId,
+      { range, customFrom, customTo, orgNodeId },
+    ],
     queryFn: () =>
       dashboardApi.getFloorplanLive(selectedId!, {
         range,

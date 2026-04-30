@@ -15,7 +15,7 @@ describe('tariff', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('电价方案')).toBeInTheDocument();
   });

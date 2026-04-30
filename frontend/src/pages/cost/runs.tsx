@@ -81,87 +81,87 @@ export default function CostRunsPage() {
         }
       />
       <Card>
-      {runIds.length === 0 ? (
-        <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>
-          本会话尚无批次。点"新建批次"触发一次分摊；列表展示<strong>当前会话</strong>提交的最近 50
-          条 run。
-        </div>
-      ) : (
-        <Table<CostRunDTO>
-          rowKey="id"
-          loading={runsQuery.isLoading}
-          dataSource={runs}
-          pagination={{ pageSize: 20 }}
-          columns={[
-            {
-              title: 'ID',
-              dataIndex: 'id',
-              width: 90,
-              render: (id: number) => <Link to={`/cost/runs/${id}`}>#{id}</Link>,
-            },
-            {
-              title: '账期',
-              width: 220,
-              render: (_, r) =>
-                `${dayjs(r.periodStart).format('YYYY-MM-DD HH:mm')} ~ ${dayjs(r.periodEnd).format('MM-DD HH:mm')}`,
-            },
-            {
-              title: '状态',
-              dataIndex: 'status',
-              width: 110,
-              render: (s: RunStatus) => {
-                const cfg = BATCH_STATE[s] ?? { tone: 'default' as StatusTone, label: s };
-                return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+        {runIds.length === 0 ? (
+          <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>
+            本会话尚无批次。点"新建批次"触发一次分摊；列表展示<strong>当前会话</strong>提交的最近 50
+            条 run。
+          </div>
+        ) : (
+          <Table<CostRunDTO>
+            rowKey="id"
+            loading={runsQuery.isLoading}
+            dataSource={runs}
+            pagination={{ pageSize: 20 }}
+            columns={[
+              {
+                title: 'ID',
+                dataIndex: 'id',
+                width: 90,
+                render: (id: number) => <Link to={`/cost/runs/${id}`}>#{id}</Link>,
               },
-            },
-            { title: '总金额', dataIndex: 'totalAmount', width: 120 },
-            {
-              title: '提交时间',
-              dataIndex: 'createdAt',
-              width: 160,
-              render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm:ss'),
-            },
-            {
-              title: '完成时间',
-              dataIndex: 'finishedAt',
-              width: 160,
-              render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '—'),
-            },
-            { title: '错误', dataIndex: 'errorMessage', ellipsis: true },
-          ]}
-        />
-      )}
+              {
+                title: '账期',
+                width: 220,
+                render: (_, r) =>
+                  `${dayjs(r.periodStart).format('YYYY-MM-DD HH:mm')} ~ ${dayjs(r.periodEnd).format('MM-DD HH:mm')}`,
+              },
+              {
+                title: '状态',
+                dataIndex: 'status',
+                width: 110,
+                render: (s: RunStatus) => {
+                  const cfg = BATCH_STATE[s] ?? { tone: 'default' as StatusTone, label: s };
+                  return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+                },
+              },
+              { title: '总金额', dataIndex: 'totalAmount', width: 120 },
+              {
+                title: '提交时间',
+                dataIndex: 'createdAt',
+                width: 160,
+                render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm:ss'),
+              },
+              {
+                title: '完成时间',
+                dataIndex: 'finishedAt',
+                width: 160,
+                render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm:ss') : '—'),
+              },
+              { title: '错误', dataIndex: 'errorMessage', ellipsis: true },
+            ]}
+          />
+        )}
 
-      <Modal
-        title="新建分摊批次"
-        open={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        onOk={onSubmit}
-        destroyOnClose
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="range"
-            label="账期 (period)"
-            rules={[{ required: true, message: '必须选区间' }]}
-          >
-            <DatePicker.RangePicker showTime style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item name="ruleIds" label="规则 (可选；不选 = 所有启用规则)">
-            <Select
-              mode="multiple"
-              placeholder="留空 = 所有启用且生效的规则"
-              options={rules
-                .filter((r) => r.enabled)
-                .map((r) => ({
-                  value: r.id,
-                  label: `${r.code} (${r.algorithm} · ${r.energyType})`,
-                }))}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        <Modal
+          title="新建分摊批次"
+          open={createOpen}
+          onCancel={() => setCreateOpen(false)}
+          onOk={onSubmit}
+          destroyOnClose
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              name="range"
+              label="账期 (period)"
+              rules={[{ required: true, message: '必须选区间' }]}
+            >
+              <DatePicker.RangePicker showTime style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="ruleIds" label="规则 (可选；不选 = 所有启用规则)">
+              <Select
+                mode="multiple"
+                placeholder="留空 = 所有启用且生效的规则"
+                options={rules
+                  .filter((r) => r.enabled)
+                  .map((r) => ({
+                    value: r.id,
+                    label: `${r.code} (${r.algorithm} · ${r.energyType})`,
+                  }))}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </Card>
     </>
   );
 }

@@ -75,7 +75,13 @@ export default function ProductionEntryPage() {
   });
 
   const { data: pageData, isLoading } = useQuery({
-    queryKey: ['production-entries', range[0].format('YYYY-MM-DD'), range[1].format('YYYY-MM-DD'), filterOrg, page],
+    queryKey: [
+      'production-entries',
+      range[0].format('YYYY-MM-DD'),
+      range[1].format('YYYY-MM-DD'),
+      filterOrg,
+      page,
+    ],
     queryFn: () =>
       productionEntryApi.search({
         from: range[0].format('YYYY-MM-DD'),
@@ -282,10 +288,7 @@ export default function ProductionEntryPage() {
               title: '操作',
               width: 80,
               render: (_, e) => (
-                <Popconfirm
-                  title={`删除 #${e.id}？`}
-                  onConfirm={() => deleteMut.mutate(e.id)}
-                >
+                <Popconfirm title={`删除 #${e.id}？`} onConfirm={() => deleteMut.mutate(e.id)}>
                   <Button size="small" danger icon={<DeleteOutlined />}>
                     删除
                   </Button>

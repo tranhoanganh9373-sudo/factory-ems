@@ -21,6 +21,6 @@ export const useThemeStore = create<ThemeStoreState>()(
       setMode: (mode) => set({ mode }),
       toggle: () => set({ mode: get().mode === 'light' ? 'dark' : 'light' }),
     }),
-    { name: 'ems.theme.mode' },
-  ),
+    { name: 'ems.theme.mode' }
+  )
 );

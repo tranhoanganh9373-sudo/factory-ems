@@ -15,7 +15,7 @@ describe('floorplan/list', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('设备分布图')).toBeInTheDocument();
   });

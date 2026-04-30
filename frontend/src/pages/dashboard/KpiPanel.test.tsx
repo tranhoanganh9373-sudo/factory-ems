@@ -9,7 +9,7 @@ describe('KpiPanel', () => {
     render(
       <QueryClientProvider client={qc}>
         <KpiPanel />
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     // Either skeleton, error alert, empty, or data — but should not crash.
     expect(document.body).toBeDefined();

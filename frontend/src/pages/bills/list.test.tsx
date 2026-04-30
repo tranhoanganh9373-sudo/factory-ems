@@ -15,7 +15,7 @@ describe('bills/list', () => {
             <List />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('账单列表')).toBeInTheDocument();
   });

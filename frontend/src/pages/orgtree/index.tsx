@@ -55,25 +55,33 @@ export default function OrgTreePage() {
         extra={
           isAdmin && (
             <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-              新建节点
-            </Button>
-            <Button icon={<EditOutlined />} disabled={!selected} onClick={() => setEditOpen(true)}>
-              编辑
-            </Button>
-            <Button icon={<SwapOutlined />} disabled={!selected} onClick={() => setMoveOpen(true)}>
-              移动
-            </Button>
-            <Popconfirm
-              title="确认删除？"
-              disabled={!selected}
-              onConfirm={() => selected && del.mutate(selected.id)}
-            >
-              <Button danger icon={<DeleteOutlined />} disabled={!selected}>
-                删除
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+                新建节点
               </Button>
-            </Popconfirm>
-          </Space>
+              <Button
+                icon={<EditOutlined />}
+                disabled={!selected}
+                onClick={() => setEditOpen(true)}
+              >
+                编辑
+              </Button>
+              <Button
+                icon={<SwapOutlined />}
+                disabled={!selected}
+                onClick={() => setMoveOpen(true)}
+              >
+                移动
+              </Button>
+              <Popconfirm
+                title="确认删除？"
+                disabled={!selected}
+                onConfirm={() => selected && del.mutate(selected.id)}
+              >
+                <Button danger icon={<DeleteOutlined />} disabled={!selected}>
+                  删除
+                </Button>
+              </Popconfirm>
+            </Space>
           )
         }
       >

@@ -96,11 +96,7 @@ export function EditMeterModal({
             }))}
           />
         </Form.Item>
-        <Form.Item
-          name="influxMeasurement"
-          label="测量名称"
-          rules={[{ required: true, max: 128 }]}
-        >
+        <Form.Item name="influxMeasurement" label="测量名称" rules={[{ required: true, max: 128 }]}>
           <Input />
         </Form.Item>
         <Form.Item name="influxTagKey" label="标签键" rules={[{ required: true, max: 64 }]}>

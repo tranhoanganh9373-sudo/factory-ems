@@ -15,7 +15,7 @@ describe('collector', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('数据采集')).toBeInTheDocument();
   });

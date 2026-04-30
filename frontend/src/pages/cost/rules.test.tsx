@@ -15,7 +15,7 @@ describe('cost/rules', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('分摊规则')).toBeInTheDocument();
   });

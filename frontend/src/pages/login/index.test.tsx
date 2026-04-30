@@ -8,7 +8,7 @@ describe('LoginPage', () => {
     render(
       <MemoryRouter>
         <LoginPage />
-      </MemoryRouter>,
+      </MemoryRouter>
     );
     expect(screen.getByText('能源管理系统')).toBeInTheDocument();
     expect(screen.getByText('松羽科技集团')).toBeInTheDocument();

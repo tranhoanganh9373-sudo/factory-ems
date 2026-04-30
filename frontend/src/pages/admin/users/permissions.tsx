@@ -84,67 +84,72 @@ export default function UserPermissionPage() {
           </Space>
         }
       >
-      <Table<NodePermissionDTO>
-        rowKey="id"
-        dataSource={perms}
-        columns={[
-          {
-            title: '组织节点',
-            dataIndex: 'orgNodeId',
-            render: (nid) => {
-              const n = nodeById(nid, tree);
-              return n ? `${n.name} (${n.code})` : nid;
+        <Table<NodePermissionDTO>
+          rowKey="id"
+          dataSource={perms}
+          columns={[
+            {
+              title: '组织节点',
+              dataIndex: 'orgNodeId',
+              render: (nid) => {
+                const n = nodeById(nid, tree);
+                return n ? `${n.name} (${n.code})` : nid;
+              },
             },
-          },
-          {
-            title: '范围',
-            dataIndex: 'scope',
-            render: (s) => (s === 'SUBTREE' ? '子树（含后代）' : '仅此节点'),
-          },
-          { title: '授予时间', dataIndex: 'createdAt' },
-          {
-            title: '操作',
-            key: 'ops',
-            render: (_, p) => (
-              <Popconfirm title="确认撤销？" onConfirm={() => revokeMut.mutate(p.id)}>
-                <Button danger size="small">
-                  撤销
-                </Button>
-              </Popconfirm>
-            ),
-          },
-        ]}
-      />
+            {
+              title: '范围',
+              dataIndex: 'scope',
+              render: (s) => (s === 'SUBTREE' ? '子树（含后代）' : '仅此节点'),
+            },
+            { title: '授予时间', dataIndex: 'createdAt' },
+            {
+              title: '操作',
+              key: 'ops',
+              render: (_, p) => (
+                <Popconfirm title="确认撤销？" onConfirm={() => revokeMut.mutate(p.id)}>
+                  <Button danger size="small">
+                    撤销
+                  </Button>
+                </Popconfirm>
+              ),
+            },
+          ]}
+        />
 
-      <Modal
-        title="授权节点"
-        open={addOpen}
-        onCancel={() => setAddOpen(false)}
-        destroyOnClose
-        onOk={() => form.validateFields().then((v) => assignMut.mutate(v))}
-        confirmLoading={assignMut.isPending}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
-            <TreeSelect
-              treeData={toSelectData(tree)}
-              treeDefaultExpandAll
-              showSearch
-              treeNodeFilterProp="title"
-              allowClear
-            />
-          </Form.Item>
-          <Form.Item name="scope" label="范围" rules={[{ required: true }]} initialValue="SUBTREE">
-            <Select
-              options={[
-                { label: '子树（含所有后代）', value: 'SUBTREE' },
-                { label: '仅此节点', value: 'NODE_ONLY' },
-              ]}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        <Modal
+          title="授权节点"
+          open={addOpen}
+          onCancel={() => setAddOpen(false)}
+          destroyOnClose
+          onOk={() => form.validateFields().then((v) => assignMut.mutate(v))}
+          confirmLoading={assignMut.isPending}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
+              <TreeSelect
+                treeData={toSelectData(tree)}
+                treeDefaultExpandAll
+                showSearch
+                treeNodeFilterProp="title"
+                allowClear
+              />
+            </Form.Item>
+            <Form.Item
+              name="scope"
+              label="范围"
+              rules={[{ required: true }]}
+              initialValue="SUBTREE"
+            >
+              <Select
+                options={[
+                  { label: '子树（含所有后代）', value: 'SUBTREE' },
+                  { label: '仅此节点', value: 'NODE_ONLY' },
+                ]}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </Card>
     </>
   );
 }

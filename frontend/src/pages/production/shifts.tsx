@@ -144,100 +144,91 @@ export default function ShiftsPage() {
           </Button>
         }
       >
-      <Table<ShiftDTO>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={data}
-        pagination={false}
-        columns={[
-          { title: '代码', dataIndex: 'code', width: 100 },
-          { title: '名称', dataIndex: 'name' },
-          {
-            title: '起止时间',
-            render: (_, s) => (
-              <Space>
-                <span>
-                  {s.timeStart} → {s.timeEnd}
-                </span>
-                {isCrossMidnight(s.timeStart, s.timeEnd) && (
-                  <Tag color="orange">跨零点</Tag>
-                )}
-              </Space>
-            ),
-          },
-          { title: '排序', dataIndex: 'sortOrder', width: 80 },
-          {
-            title: '启用',
-            dataIndex: 'enabled',
-            width: 70,
-            render: (e: boolean) => (e ? <Tag color="green">是</Tag> : <Tag>否</Tag>),
-          },
-          {
-            title: '操作',
-            width: 160,
-            render: (_, s) => (
-              <Space>
-                <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(s)}>
-                  编辑
-                </Button>
-                <Popconfirm
-                  title={`删除 ${s.code}？`}
-                  onConfirm={() => deleteMut.mutate(s.id)}
-                >
-                  <Button size="small" danger icon={<DeleteOutlined />}>
-                    删除
+        <Table<ShiftDTO>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={data}
+          pagination={false}
+          columns={[
+            { title: '代码', dataIndex: 'code', width: 100 },
+            { title: '名称', dataIndex: 'name' },
+            {
+              title: '起止时间',
+              render: (_, s) => (
+                <Space>
+                  <span>
+                    {s.timeStart} → {s.timeEnd}
+                  </span>
+                  {isCrossMidnight(s.timeStart, s.timeEnd) && <Tag color="orange">跨零点</Tag>}
+                </Space>
+              ),
+            },
+            { title: '排序', dataIndex: 'sortOrder', width: 80 },
+            {
+              title: '启用',
+              dataIndex: 'enabled',
+              width: 70,
+              render: (e: boolean) => (e ? <Tag color="green">是</Tag> : <Tag>否</Tag>),
+            },
+            {
+              title: '操作',
+              width: 160,
+              render: (_, s) => (
+                <Space>
+                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(s)}>
+                    编辑
                   </Button>
-                </Popconfirm>
-              </Space>
-            ),
-          },
-        ]}
-      />
+                  <Popconfirm title={`删除 ${s.code}？`} onConfirm={() => deleteMut.mutate(s.id)}>
+                    <Button size="small" danger icon={<DeleteOutlined />}>
+                      删除
+                    </Button>
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
 
-      <Modal
-        title={editing ? `编辑班次：${editing.code}` : '新建班次'}
-        open={open}
-        onOk={handleOk}
-        onCancel={() => {
-          setOpen(false);
-          setEditing(null);
-        }}
-        confirmLoading={createMut.isPending || updateMut.isPending}
-        destroyOnClose
-      >
-        <Form<ShiftFormValues> form={form} layout="vertical">
-          <Form.Item
-            name="code"
-            label="代码"
-            rules={[{ required: true, max: 32 }]}
-          >
-            <Input disabled={!!editing} />
-          </Form.Item>
-          <Form.Item name="name" label="名称" rules={[{ required: true, max: 64 }]}>
-            <Input />
-          </Form.Item>
-          <Space>
-            <Form.Item name="timeStart" label="开始" rules={[{ required: true }]}>
-              <TimePicker format="HH:mm" minuteStep={15} />
+        <Modal
+          title={editing ? `编辑班次：${editing.code}` : '新建班次'}
+          open={open}
+          onOk={handleOk}
+          onCancel={() => {
+            setOpen(false);
+            setEditing(null);
+          }}
+          confirmLoading={createMut.isPending || updateMut.isPending}
+          destroyOnClose
+        >
+          <Form<ShiftFormValues> form={form} layout="vertical">
+            <Form.Item name="code" label="代码" rules={[{ required: true, max: 32 }]}>
+              <Input disabled={!!editing} />
             </Form.Item>
-            <Form.Item name="timeEnd" label="结束" rules={[{ required: true }]}>
-              <TimePicker format="HH:mm" minuteStep={15} />
+            <Form.Item name="name" label="名称" rules={[{ required: true, max: 64 }]}>
+              <Input />
             </Form.Item>
-            <Form.Item name="sortOrder" label="排序">
-              <InputNumber min={0} />
-            </Form.Item>
-          </Space>
-          {editing && (
-            <Form.Item name="enabled" label="启用" valuePropName="checked">
-              <Switch />
-            </Form.Item>
-          )}
-          <div style={{ color: '#888', fontSize: 12 }}>
-            提示：若 结束 ≤ 开始，将作为跨零点班次（如 22:00 → 06:00）。
-          </div>
-        </Form>
-      </Modal>
-    </Card>
+            <Space>
+              <Form.Item name="timeStart" label="开始" rules={[{ required: true }]}>
+                <TimePicker format="HH:mm" minuteStep={15} />
+              </Form.Item>
+              <Form.Item name="timeEnd" label="结束" rules={[{ required: true }]}>
+                <TimePicker format="HH:mm" minuteStep={15} />
+              </Form.Item>
+              <Form.Item name="sortOrder" label="排序">
+                <InputNumber min={0} />
+              </Form.Item>
+            </Space>
+            {editing && (
+              <Form.Item name="enabled" label="启用" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            )}
+            <div style={{ color: '#888', fontSize: 12 }}>
+              提示：若 结束 ≤ 开始，将作为跨零点班次（如 22:00 → 06:00）。
+            </div>
+          </Form>
+        </Modal>
+      </Card>
     </>
   );
 }

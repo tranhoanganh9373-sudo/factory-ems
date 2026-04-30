@@ -26,8 +26,14 @@ export default function MonthlyReportPage() {
   const [orgNodeId, setOrgNodeId] = useState<number | undefined>();
   const [energyTypes, setEnergyTypes] = useState<string[] | undefined>();
 
-  const { data: tree = [] } = useQuery({ queryKey: ['orgtree'], queryFn: () => orgTreeApi.getTree() });
-  const { data: ets = [] } = useQuery({ queryKey: ['energyTypes'], queryFn: meterApi.listEnergyTypes });
+  const { data: tree = [] } = useQuery({
+    queryKey: ['orgtree'],
+    queryFn: () => orgTreeApi.getTree(),
+  });
+  const { data: ets = [] } = useQuery({
+    queryKey: ['energyTypes'],
+    queryFn: meterApi.listEnergyTypes,
+  });
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['report', 'monthly', month.format('YYYY-MM'), orgNodeId, energyTypes],

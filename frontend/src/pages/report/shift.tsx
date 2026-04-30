@@ -28,8 +28,14 @@ export default function ShiftReportPage() {
   const [orgNodeId, setOrgNodeId] = useState<number | undefined>();
   const [energyTypes, setEnergyTypes] = useState<string[] | undefined>();
 
-  const { data: tree = [] } = useQuery({ queryKey: ['orgtree'], queryFn: () => orgTreeApi.getTree() });
-  const { data: ets = [] } = useQuery({ queryKey: ['energyTypes'], queryFn: meterApi.listEnergyTypes });
+  const { data: tree = [] } = useQuery({
+    queryKey: ['orgtree'],
+    queryFn: () => orgTreeApi.getTree(),
+  });
+  const { data: ets = [] } = useQuery({
+    queryKey: ['energyTypes'],
+    queryFn: meterApi.listEnergyTypes,
+  });
   const { data: shifts = [] } = useQuery({
     queryKey: ['shifts', 'enabled'],
     queryFn: () => shiftApi.list(true),

@@ -87,7 +87,8 @@ export default function FilterBar() {
       <TreeSelect
         allowClear
         placeholder="组织节点"
-        style={{ width: 180 }}
+        style={{ width: 240 }}
+        dropdownStyle={{ minWidth: 360 }}
         treeData={buildTreeData(tree)}
         value={orgNodeId}
         onChange={(v: number | undefined) => setOrgNodeId(v)}

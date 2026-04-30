@@ -15,7 +15,7 @@ describe('report', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('即席查询')).toBeInTheDocument();
   });

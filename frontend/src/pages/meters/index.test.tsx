@@ -15,7 +15,7 @@ describe('meters', () => {
             <Page />
           </MemoryRouter>
         </AntdApp>
-      </QueryClientProvider>,
+      </QueryClientProvider>
     );
     expect(screen.getByText('表计管理')).toBeInTheDocument();
   });
