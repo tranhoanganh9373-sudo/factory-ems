@@ -58,6 +58,7 @@
 - [perf-2026-04-25.md](./perf-2026-04-25.md) — 性能基线
 - [alarm-runbook.md](./alarm-runbook.md) — 采集中断告警运维
 - [observability-deployment.md](./observability-deployment.md) — 可观测性栈部署（Phase C ✅）
+- [observability-runbook.md](./observability-runbook.md) — 可观测性栈运维 / 16 告警处置（Phase F ✅）
 
 ## Cross-Reference: 产品 / API / Spec / Plan
 
