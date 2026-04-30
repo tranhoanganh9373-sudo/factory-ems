@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Typography, Space } from 'antd';
+import { ConfigProvider, Layout, Menu, Avatar, Dropdown, Space } from 'antd';
 import {
   UserOutlined,
-  LogoutOutlined,
-  SettingOutlined,
   ApiOutlined,
   DashboardOutlined,
   FileTextOutlined,
@@ -15,6 +13,9 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
 import { AlarmBell } from '@/components/AlarmBell';
+import { BrandLockup } from '@/components/BrandLockup';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useDensity } from '@/hooks/useDensity';
 
 const { Header, Sider, Content } = Layout;
 
@@ -22,6 +23,7 @@ export default function AppLayout() {
   const { user, clear, hasRole } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const density = useDensity();
 
   const menuItems = useMemo(() => {
     const items: {
@@ -149,17 +151,13 @@ export default function AppLayout() {
 
   const userMenu = {
     items: [
-      { key: 'profile', icon: <SettingOutlined />, label: <Link to="/profile">修改密码</Link> },
+      { key: 'profile', label: '个人中心', onClick: () => navigate('/profile') },
+      { type: 'divider' as const },
       {
         key: 'logout',
-        icon: <LogoutOutlined />,
         label: '退出登录',
         onClick: async () => {
-          try {
-            await authApi.logout();
-          } catch {
-            // ignore
-          }
+          await authApi.logout().catch(() => {});
           clear();
           navigate('/login');
         },
@@ -168,41 +166,55 @@ export default function AppLayout() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 24px',
-        }}
-      >
-        <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
-          工厂能源管理系统
-        </Typography.Title>
-        <Space size="middle">
-          <AlarmBell />
-          <Dropdown menu={userMenu} trigger={['click']}>
-            <span style={{ color: 'white', cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
-            </span>
-          </Dropdown>
-        </Space>
-      </Header>
-      <Layout>
-        <Sider width={220} theme="light">
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            defaultOpenKeys={['admin']}
-            items={menuItems}
-            style={{ height: '100%', borderRight: 0 }}
-          />
-        </Sider>
-        <Content style={{ padding: 24, background: '#fff', margin: 16 }}>
-          <Outlet />
-        </Content>
+    <ConfigProvider componentSize={density}>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+            background: 'var(--ems-color-bg-header)',
+            height: 56,
+            lineHeight: '56px',
+          }}
+        >
+          <BrandLockup variant="header" />
+          <Space size="middle">
+            <ThemeToggle />
+            <AlarmBell />
+            <Dropdown menu={userMenu} placement="bottomRight">
+              <Space style={{ color: '#FFFFFF', cursor: 'pointer' }}>
+                <Avatar size="small" icon={<UserOutlined />} />
+                <span>{user?.username ?? '用户'}</span>
+              </Space>
+            </Dropdown>
+          </Space>
+        </Header>
+        <Layout>
+          <Sider
+            width={240}
+            collapsible
+            theme="light"
+            style={{ background: 'var(--ems-color-bg-sider)' }}
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              style={{ borderInlineEnd: 0, paddingTop: 8 }}
+            />
+          </Sider>
+          <Content
+            style={{
+              padding: density === 'small' ? 16 : 24,
+              background: 'var(--ems-color-bg-page)',
+            }}
+          >
+            <Outlet />
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 }
