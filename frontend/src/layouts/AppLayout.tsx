@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography, Space } from 'antd';
 import {
   UserOutlined,
   LogoutOutlined,
@@ -9,10 +9,12 @@ import {
   FileTextOutlined,
   DollarOutlined,
   AccountBookOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
+import { AlarmBell } from '@/components/AlarmBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -98,6 +100,38 @@ export default function AppLayout() {
         ],
       });
     }
+    if (hasRole('ADMIN') || hasRole('OPERATOR')) {
+      items.push({
+        key: 'alarms',
+        label: (
+          <span>
+            <BellOutlined /> 系统健康
+          </span>
+        ),
+        children: [
+          {
+            key: '/alarms/health',
+            label: <Link to="/alarms/health">健康总览</Link>,
+          },
+          {
+            key: '/alarms/history',
+            label: <Link to="/alarms/history">告警历史</Link>,
+          },
+          {
+            key: '/alarms/rules',
+            label: <Link to="/alarms/rules">阈值规则</Link>,
+          },
+          ...(hasRole('ADMIN')
+            ? [
+                {
+                  key: '/alarms/webhook',
+                  label: <Link to="/alarms/webhook">Webhook 配置</Link>,
+                },
+              ]
+            : []),
+        ],
+      });
+    }
     if (hasRole('ADMIN')) {
       items.push({
         key: 'admin',
@@ -146,11 +180,14 @@ export default function AppLayout() {
         <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
           工厂能源管理系统
         </Typography.Title>
-        <Dropdown menu={userMenu} trigger={['click']}>
-          <span style={{ color: 'white', cursor: 'pointer' }}>
-            <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
-          </span>
-        </Dropdown>
+        <Space size="middle">
+          <AlarmBell />
+          <Dropdown menu={userMenu} trigger={['click']}>
+            <span style={{ color: 'white', cursor: 'pointer' }}>
+              <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
+            </span>
+          </Dropdown>
+        </Space>
       </Header>
       <Layout>
         <Sider width={220} theme="light">

@@ -14,7 +14,7 @@
 
 | 文档 | 范围 | Phase 负责人 |
 |------|------|-------------|
-| [alarm-api.md](./alarm-api.md) | 采集中断告警 16 个端点完整规约 | Phase F |
+| [alarm-api.md](./alarm-api.md) | 采集中断告警 16 个端点完整规约 | Phase F ✅ |
 
 ## 通用约定
 

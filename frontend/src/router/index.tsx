@@ -32,6 +32,10 @@ import BillsListPage from '@/pages/bills/list';
 import BillPeriodsPage from '@/pages/bills/periods';
 import BillDetailPage from '@/pages/bills/detail';
 import CollectorStatusPage from '@/pages/collector';
+import AlarmHealthPage from '@/pages/alarms/health';
+import AlarmHistoryPage from '@/pages/alarms/history';
+import AlarmRulesPage from '@/pages/alarms/rules';
+import AlarmWebhookPage from '@/pages/alarms/webhook';
 
 export function AppRouter() {
   return (
@@ -109,6 +113,26 @@ export function AppRouter() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="alarms"
+          element={
+            <ProtectedRoute requiredAnyRole={['ADMIN', 'OPERATOR']}>
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="health" element={<AlarmHealthPage />} />
+          <Route path="history" element={<AlarmHistoryPage />} />
+          <Route path="rules" element={<AlarmRulesPage />} />
+          <Route
+            path="webhook"
+            element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AlarmWebhookPage />
+              </ProtectedRoute>
+            }
+          />
+        </Route>
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>

@@ -17,13 +17,13 @@
 
 | 文档 | 受众 | 范围 | Phase 负责人 |
 |------|------|------|-------------|
-| [alarm-feature-overview.md](./alarm-feature-overview.md) | 销售/客户 | 功能概览 + 价值主张 + 适用场景 | Phase H |
-| [alarm-config-reference.md](./alarm-config-reference.md) | 实施工程师 | 全部配置参数 + 调优建议 | Phase A |
-| [alarm-data-model.md](./alarm-data-model.md) | 实施/数据分析 | 5 张表的字段含义 + 业务含义 | Phase B |
-| [alarm-business-rules.md](./alarm-business-rules.md) | 客户/实施 | 业务规则（状态机 + 抑制窗口 + 维护模式） | Phase C |
-| [alarm-detection-rules.md](./alarm-detection-rules.md) | 客户/实施 | 检测口径（什么时候触发、什么时候不触发） | Phase D |
-| [alarm-webhook-integration.md](./alarm-webhook-integration.md) | 客户开发对接 | Webhook 接入指南（含钉钉/企微/自定义示例） | Phase E |
-| [alarm-user-guide.md](./alarm-user-guide.md) | 最终用户 | 操作手册（管理员视角 + 操作员视角） | Phase G |
+| [alarm-feature-overview.md](./alarm-feature-overview.md) | 销售/客户 | 功能概览 + 价值主张 + 适用场景 | Phase H ✅ |
+| [alarm-config-reference.md](./alarm-config-reference.md) | 实施工程师 | 全部配置参数 + 调优建议 | Phase A ✅ |
+| [alarm-data-model.md](./alarm-data-model.md) | 实施/数据分析 | 5 张表的字段含义 + 业务含义 | Phase B ✅ |
+| [alarm-business-rules.md](./alarm-business-rules.md) | 客户/实施 | 业务规则（状态机 + 抑制窗口 + 维护模式） | Phase C ✅ |
+| [alarm-detection-rules.md](./alarm-detection-rules.md) | 客户/实施 | 检测口径（什么时候触发、什么时候不触发） | Phase D ✅ |
+| [alarm-webhook-integration.md](./alarm-webhook-integration.md) | 客户开发对接 | Webhook 接入指南（含钉钉/企微/自定义示例） | Phase E ✅ |
+| [alarm-user-guide.md](./alarm-user-guide.md) | 最终用户 | 操作手册（管理员视角 + 操作员视角） | Phase G ✅ |
 
 > Phase F 的 API 规约写到 [`docs/api/alarm-api.md`](../api/alarm-api.md)（开发对接文档）。
 
