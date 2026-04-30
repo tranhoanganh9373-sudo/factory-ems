@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { billsApi, type BillLineDTO } from '@/api/bills';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 function fmt(v: string | null): string {
   if (v == null) return '—';
@@ -11,6 +13,7 @@ function fmt(v: string | null): string {
 }
 
 export default function BillDetailPage() {
+  useDocumentTitle('账单 - 详情');
   const { id } = useParams<{ id: string }>();
   const billId = Number(id);
 
@@ -30,6 +33,8 @@ export default function BillDetailPage() {
   if (!bill) return <Empty description="账单不存在" />;
 
   return (
+    <>
+    <PageHeader title="账单详情" />
     <Card
       title={
         <span>
@@ -84,5 +89,6 @@ export default function BillDetailPage() {
         ]}
       />
     </Card>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Table, Select, TreeSelect, Space, Empty, Tag, Button, App } from 'antd';
+import { Card, Table, Select, TreeSelect, Space, Empty, Button, App } from 'antd';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DownloadOutlined } from '@ant-design/icons';
@@ -8,11 +8,14 @@ import { billsApi, type BillDTO, type BillPeriodStatus } from '@/api/bills';
 import { type EnergyTypeCode } from '@/api/cost';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { submitExport, pollExport, downloadBlob } from '@/api/reportPreset';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const PERIOD_STATUS_COLOR: Record<BillPeriodStatus, string> = {
-  OPEN: 'default',
-  CLOSED: 'success',
-  LOCKED: 'red',
+const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
+  OPEN: { tone: 'info', label: '开放' },
+  CLOSED: { tone: 'success', label: '已关闭' },
+  LOCKED: { tone: 'error', label: '已锁定' },
 };
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
@@ -43,6 +46,7 @@ function fmtNum(v: string | null): string {
 }
 
 export default function BillsListPage() {
+  useDocumentTitle('账单 - 列表');
   const { message } = App.useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPeriodId = (() => {
@@ -145,8 +149,9 @@ export default function BillsListPage() {
   }
 
   return (
+    <>
+    <PageHeader title="账单列表" />
     <Card
-      title="账单"
       extra={
         <Button
           type="primary"
@@ -165,14 +170,17 @@ export default function BillsListPage() {
           style={{ width: 240 }}
           value={periodId}
           onChange={setPeriodId}
-          options={periods.map((p) => ({
-            value: p.id,
-            label: (
-              <span>
-                {p.yearMonth} <Tag color={PERIOD_STATUS_COLOR[p.status]}>{p.status}</Tag>
-              </span>
-            ),
-          }))}
+          options={periods.map((p) => {
+            const cfg = PERIOD_STATUS[p.status] ?? { tone: 'default' as StatusTone, label: p.status };
+            return {
+              value: p.id,
+              label: (
+                <span>
+                  {p.yearMonth} <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>
+                </span>
+              ),
+            };
+          })}
         />
         <TreeSelect
           allowClear
@@ -257,5 +265,6 @@ export default function BillsListPage() {
         />
       )}
     </Card>
+    </>
   );
 }

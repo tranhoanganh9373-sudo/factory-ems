@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   Card,
   Table,
-  Tag,
   Button,
   Space,
   Modal,
@@ -17,14 +16,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { billsApi, type BillPeriodDTO, type BillPeriodStatus } from '@/api/bills';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const STATUS_COLOR: Record<BillPeriodStatus, string> = {
-  OPEN: 'default',
-  CLOSED: 'success',
-  LOCKED: 'red',
+const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
+  OPEN: { tone: 'info', label: '开放' },
+  CLOSED: { tone: 'success', label: '已关闭' },
+  LOCKED: { tone: 'error', label: '已锁定' },
 };
 
 export default function BillPeriodsPage() {
+  useDocumentTitle('账单 - 账期管理');
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { canUnlockPeriod } = usePermissions();
@@ -133,8 +136,9 @@ export default function BillPeriodsPage() {
   };
 
   return (
+    <>
+    <PageHeader title="账期管理" />
     <Card
-      title="账期管理"
       extra={
         <Button type="primary" onClick={() => setCreateOpen(true)}>
           创建账期
@@ -153,7 +157,10 @@ export default function BillPeriodsPage() {
             title: '状态',
             dataIndex: 'status',
             width: 100,
-            render: (s: BillPeriodStatus) => <Tag color={STATUS_COLOR[s]}>{s}</Tag>,
+            render: (s: BillPeriodStatus) => {
+              const cfg = PERIOD_STATUS[s] ?? { tone: 'default' as StatusTone, label: s };
+              return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+            },
           },
           {
             title: '关闭',
@@ -255,5 +262,6 @@ export default function BillPeriodsPage() {
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }
