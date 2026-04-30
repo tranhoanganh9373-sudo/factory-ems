@@ -16,6 +16,8 @@ import {
   Typography,
   Upload,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { UploadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -50,6 +52,7 @@ function buildTreeData(nodes: OrgNodeDTO[]): object[] {
 }
 
 export default function ProductionEntryPage() {
+  useDocumentTitle('日产量录入');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [form] = Form.useForm<EntryFormValues>();
@@ -134,8 +137,8 @@ export default function ProductionEntryPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
+      <PageHeader title="日产量录入" />
       <Card
-        title="日产量录入"
         extra={
           <Upload
             accept=".csv"

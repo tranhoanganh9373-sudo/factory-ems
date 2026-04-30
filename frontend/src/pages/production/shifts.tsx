@@ -14,6 +14,8 @@ import {
   Tag,
   TimePicker,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -36,6 +38,7 @@ interface ShiftFormValues {
 }
 
 export default function ShiftsPage() {
+  useDocumentTitle('班次管理');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -132,14 +135,15 @@ export default function ShiftsPage() {
   }
 
   return (
-    <Card
-      title="班次管理"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新建班次
-        </Button>
-      }
-    >
+    <>
+      <PageHeader title="班次管理" />
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新建班次
+          </Button>
+        }
+      >
       <Table<ShiftDTO>
         rowKey="id"
         loading={isLoading}
@@ -234,5 +238,6 @@ export default function ShiftsPage() {
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }
