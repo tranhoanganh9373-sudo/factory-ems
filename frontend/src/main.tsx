@@ -10,6 +10,7 @@ import './styles/theme-dark.css';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { useThemeStore } from './stores/themeStore';
+import { buildAntdTheme } from './styles/tokens';
 
 document.documentElement.setAttribute('data-theme', useThemeStore.getState().mode);
 useThemeStore.subscribe((state) =>
@@ -22,18 +23,25 @@ const queryClient = new QueryClient({
   },
 });
 
+function ThemedConfigProvider({ children }: { children: React.ReactNode }) {
+  const mode = useThemeStore((s) => s.mode);
+  return (
+    <ConfigProvider locale={zhCN} theme={buildAntdTheme(mode)}>
+      <AntdApp>{children}</AntdApp>
+    </ConfigProvider>
+  );
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ConfigProvider locale={zhCN}>
-      <AntdApp>
-        <QueryClientProvider client={queryClient}>
-          <ErrorBoundary>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </ErrorBoundary>
-        </QueryClientProvider>
-      </AntdApp>
-    </ConfigProvider>
+    <ThemedConfigProvider>
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundary>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ErrorBoundary>
+      </QueryClientProvider>
+    </ThemedConfigProvider>
   </React.StrictMode>,
 );
