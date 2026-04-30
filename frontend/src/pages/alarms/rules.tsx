@@ -19,6 +19,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { alarmRuleApi, type AlarmRuleOverrideDTO, type OverrideRequest } from '@/api/alarm';
 import { useAuthStore } from '@/stores/authStore';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 interface FormValues {
   deviceId: number;
@@ -29,6 +31,7 @@ interface FormValues {
 }
 
 export default function AlarmRulesPage() {
+  useDocumentTitle('告警 - 规则');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { hasRole } = useAuthStore();
@@ -112,7 +115,7 @@ export default function AlarmRulesPage() {
 
   return (
     <div>
-      <h2>阈值规则</h2>
+      <PageHeader title="告警规则" />
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>

@@ -19,6 +19,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { webhookApi, type DeliveryLogDTO, type WebhookConfigRequest } from '@/api/alarm';
 import dayjs from 'dayjs';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 interface FormValues {
   enabled: boolean;
@@ -29,6 +31,7 @@ interface FormValues {
 }
 
 export default function AlarmWebhookPage() {
+  useDocumentTitle('告警 - 通知配置');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [form] = Form.useForm<FormValues>();
@@ -125,7 +128,7 @@ export default function AlarmWebhookPage() {
 
   return (
     <div>
-      <h2>Webhook 配置</h2>
+      <PageHeader title="告警通知配置" />
 
       <Row gutter={16}>
         <Col xs={24} lg={14}>
