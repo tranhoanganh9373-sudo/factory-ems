@@ -9,6 +9,7 @@ import {
   FileTextOutlined,
   DollarOutlined,
   AccountBookOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
@@ -96,6 +97,38 @@ export default function AppLayout() {
         children: [
           { key: '/bills', label: <Link to="/bills">账单列表</Link> },
           { key: '/bills/periods', label: <Link to="/bills/periods">账期管理</Link> },
+        ],
+      });
+    }
+    if (hasRole('ADMIN') || hasRole('OPERATOR')) {
+      items.push({
+        key: 'alarms',
+        label: (
+          <span>
+            <BellOutlined /> 系统健康
+          </span>
+        ),
+        children: [
+          {
+            key: '/alarms/health',
+            label: <Link to="/alarms/health">健康总览</Link>,
+          },
+          {
+            key: '/alarms/history',
+            label: <Link to="/alarms/history">告警历史</Link>,
+          },
+          {
+            key: '/alarms/rules',
+            label: <Link to="/alarms/rules">阈值规则</Link>,
+          },
+          ...(hasRole('ADMIN')
+            ? [
+                {
+                  key: '/alarms/webhook',
+                  label: <Link to="/alarms/webhook">Webhook 配置</Link>,
+                },
+              ]
+            : []),
         ],
       });
     }
