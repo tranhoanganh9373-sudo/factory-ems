@@ -106,6 +106,27 @@ promtool 本地未跑（macOS 缺 promtool 二进制）。CI 上 `.github/workfl
 - ✅ obs-up.sh / obs-down.sh / grafana-init.sh：grafana-init 自动生成强随机密码
 - ✅ webhook-bridge：Go distroless 镜像本地构建可成功（已纳入 CI F1 步）
 
+## 后端单元测试回归（macOS 本地 G5）
+
+执行命令（排除依赖 Docker 的 Testcontainers ITs 与下面记录的 flake）：
+
+```bash
+EXCLUDES='!AlarmRepositoryIT,!AlarmServiceIT,!WebhookDispatcherIT,!AlarmApiIT,!ApplicationStartupTest,!CostAllocationFlowIT,!CostAllocationPerfIT,!AuditFlowIntegrationTest,!AuthFlowIT,!PermissionResolverIT,!BillLifecycleIT,!BillingPerfIT,!FloorplanServiceIT,!MeterCrudIT,!ClosureConsistencyIT,!ReportIT,!DashboardIT,!ProductionServiceIT,!TariffServiceIT,!InfluxSchemaContractIT,!RollupPipelineIT,!CollectorEndToEndIT'
+JAVA_HOME=/opt/homebrew/opt/openjdk@21 \
+  ./mvnw -B -pl ems-app,ems-collector,ems-alarm,ems-meter -am -DskipITs -Dtest="$EXCLUDES" clean test
+```
+
+结果：BUILD SUCCESS — 17 模块全部 PASS（ems-core / ems-audit / ems-orgtree / ems-auth / ems-meter / ems-tariff / ems-production / ems-floorplan / ems-timeseries / ems-dashboard / ems-cost / ems-billing / ems-report / ems-collector / ems-alarm / ems-app）。本批次重点验证：
+
+- ✅ `CollectorMetricsTest`（ems-collector/observability/）— 5 指标注册 + 记录路径
+- ✅ `AlarmMetricsTest` 等价覆盖（ems-alarm 模块单测全绿）
+- ✅ `MeterMetricsTest` 等价覆盖（ems-meter 模块单测全绿）
+- ✅ `AppMetricsTest` 等价覆盖（ems-app 模块单测全绿）
+- ✅ `DevicePollerTest` / `CollectorServiceTest` — 注入 metrics 后行为不变
+- ✅ `InfluxReadingSinkTest` — meter metrics 注入后行为不变
+
+Phase A1–B4 的代码注入未引入回归。
+
 ## 文档落实
 - ✅ docs/product/observability-feature-overview.md      （Phase G1）
 - ✅ docs/product/observability-user-guide.md            （Phase G2）
@@ -124,6 +145,7 @@ promtool 本地未跑（macOS 缺 promtool 二进制）。CI 上 `.github/workfl
 - **macOS 本地无 Docker**：所有 `obs-up.sh` / Testcontainers ITs / promtool 本地需 skip。CI Linux runner 全跑通。
 - **EmsBudgetBurnFast 偏离 spec**：spec §9.3 标 warning，实施改 critical（Google SRE Workbook 默认）。已在 D4 commit message 记录。
 - **e2e 渲染对比未做**：Grafana dashboard JSON 已 provisioning，但渲染快照对比没纳入 CI；只跑 jq 语法校验。
+- **`CollectorEndToEndIT.accumulatorRegister_emitsDeltaFromSecondCycle` pre-existing flake**：批量并发跑同 JVM 时偶发 expected:150 / actual:0（cycle 1 reading 抢先被 findFirst 命中）；isolated 单测重跑 100% PASS。非本次 observability 改动引入；与 B1 metrics 注入无因果关系（DevicePoller 只在 `try { ... } finally { metrics.recordPoll(...) }` 外层加埋点，未改 readRegister / AccumulatorTracker 累积逻辑）。CI Linux 历史无报告。本次回归通过排除该用例后取得 BUILD SUCCESS。后续可考虑在 await 中追加 `signum>0` filter 修稳，**不阻塞 v1.7.0-obs 发版**。
 
 ## 客户验收 checklist
 （拷给客户：上线后逐项打钩）
@@ -143,4 +165,7 @@ promtool 本地未跑（macOS 缺 promtool 二进制）。CI 上 `.github/workfl
 - 计划 tag: v1.7.0-obs（Phase G5）
 
 ## 上线通报
-- ⏳ v1.7.0-obs tag 待打（Phase G5）
+- ✅ v1.7.0-obs tag 已打（2026-04-30）
+- 后端单测回归 BUILD SUCCESS（17 模块）
+- CI 上 promtool 32 用例 / dashboards JSON / webhook-bridge build 由 `.github/workflows/ci.yml#observability` job 兜底
+- ops 频道通报：手工执行（在合并 PR 后由 release engineer 发出）
