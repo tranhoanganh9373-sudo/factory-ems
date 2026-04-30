@@ -115,7 +115,7 @@ class AlarmRepositoryIT {
         alarms.saveAndFlush(newAlarm(1L, AlarmType.SILENT_TIMEOUT, AlarmStatus.RESOLVED, base.minusMinutes(2)));
         alarms.saveAndFlush(newAlarm(1L, AlarmType.SILENT_TIMEOUT, AlarmStatus.RESOLVED, base.minusMinutes(1)));
 
-        Page<Alarm> page = alarms.search(AlarmStatus.ACTIVE, null, null, null, null, PageRequest.of(0, 10));
+        Page<Alarm> page = alarms.findAll(AlarmSpecifications.matching(AlarmStatus.ACTIVE, null, null, null, null), PageRequest.of(0, 10));
 
         assertThat(page.getTotalElements()).isEqualTo(2);
         assertThat(page.getContent()).allMatch(a -> a.getStatus() == AlarmStatus.ACTIVE);
@@ -128,7 +128,7 @@ class AlarmRepositoryIT {
         alarms.saveAndFlush(newAlarm(2L, AlarmType.SILENT_TIMEOUT, AlarmStatus.ACTIVE, base.minusMinutes(2)));
         alarms.saveAndFlush(newAlarm(3L, AlarmType.SILENT_TIMEOUT, AlarmStatus.ACTIVE, base.minusMinutes(1)));
 
-        Page<Alarm> page = alarms.search(null, 2L, null, null, null, PageRequest.of(0, 10));
+        Page<Alarm> page = alarms.findAll(AlarmSpecifications.matching(null, 2L, null, null, null), PageRequest.of(0, 10));
 
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent().get(0).getDeviceId()).isEqualTo(2L);
@@ -144,7 +144,7 @@ class AlarmRepositoryIT {
         alarms.saveAndFlush(newAlarm(1L, AlarmType.SILENT_TIMEOUT, AlarmStatus.ACTIVE, t3));
 
         // from=t2 (inclusive), to=t3 (exclusive) → only the t2 row
-        Page<Alarm> page = alarms.search(null, null, null, t2, t3, PageRequest.of(0, 10));
+        Page<Alarm> page = alarms.findAll(AlarmSpecifications.matching(null, null, null, t2, t3), PageRequest.of(0, 10));
 
         assertThat(page.getTotalElements()).isEqualTo(1);
         assertThat(page.getContent().get(0).getId()).isEqualTo(t2Alarm.getId());
@@ -157,7 +157,7 @@ class AlarmRepositoryIT {
             alarms.saveAndFlush(newAlarm(1L, AlarmType.SILENT_TIMEOUT, AlarmStatus.ACTIVE, base.minusMinutes(i + 1)));
         }
 
-        Page<Alarm> page = alarms.search(null, null, null, null, null, PageRequest.of(1, 2));
+        Page<Alarm> page = alarms.findAll(AlarmSpecifications.matching(null, null, null, null, null), PageRequest.of(1, 2));
 
         assertThat(page.getTotalElements()).isEqualTo(5);
         assertThat(page.getContent()).hasSize(2);

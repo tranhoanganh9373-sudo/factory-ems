@@ -10,6 +10,7 @@ import com.ems.alarm.entity.ResolvedReason;
 import com.ems.alarm.exception.AlarmNotFoundException;
 import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
+import com.ems.alarm.repository.AlarmSpecifications;
 import com.ems.alarm.service.AlarmService;
 import com.ems.alarm.service.AlarmStateMachine;
 import com.ems.alarm.service.ThresholdResolver;
@@ -59,7 +60,7 @@ public class AlarmServiceImpl implements AlarmService {
                                           OffsetDateTime from, OffsetDateTime to,
                                           int page, int size) {
         PageRequest pr = PageRequest.of(page - 1, size, Sort.by("triggeredAt").descending());
-        Page<Alarm> p = alarmRepo.search(status, deviceId, type, from, to, pr);
+        Page<Alarm> p = alarmRepo.findAll(AlarmSpecifications.matching(status, deviceId, type, from, to), pr);
         List<AlarmListItemDTO> items = p.getContent().stream().map(this::toListItem).toList();
         return PageDTO.of(items, p.getTotalElements(), page, size);
     }
@@ -150,7 +151,7 @@ public class AlarmServiceImpl implements AlarmService {
     }
 
     private void countByDevice(Map<Long, Long> acc, AlarmStatus status) {
-        Page<Alarm> p = alarmRepo.search(status, null, null, null, null,
+        Page<Alarm> p = alarmRepo.findAll(AlarmSpecifications.matching(status, null, null, null, null),
                 PageRequest.of(0, 1000));
         for (Alarm a : p.getContent()) {
             acc.merge(a.getDeviceId(), 1L, Long::sum);

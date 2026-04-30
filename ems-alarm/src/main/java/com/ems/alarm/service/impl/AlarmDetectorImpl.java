@@ -14,6 +14,7 @@ import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.MeterRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +45,7 @@ public class AlarmDetectorImpl implements AlarmDetector {
     public AlarmDetectorImpl(CollectorService collector, MeterRepository meters,
                              AlarmRepository alarms, ThresholdResolver thresholds,
                              AlarmStateMachine sm, AlarmDispatcher dispatcher,
-                             AlarmProperties props, Clock clock,
+                             AlarmProperties props, @Qualifier("alarmClock") Clock clock,
                              AlarmMetrics metrics) {
         this.collector = collector;
         this.meters = meters;

@@ -16,6 +16,7 @@ COPY ems-report/pom.xml     ems-report/
 COPY ems-cost/pom.xml       ems-cost/
 COPY ems-billing/pom.xml    ems-billing/
 COPY ems-collector/pom.xml  ems-collector/
+COPY ems-alarm/pom.xml      ems-alarm/
 COPY ems-app/pom.xml        ems-app/
 COPY tools/mock-data-generator/pom.xml tools/mock-data-generator/
 COPY tools/modbus-simulator/pom.xml    tools/modbus-simulator/
@@ -37,6 +38,7 @@ COPY ems-report     ems-report
 COPY ems-cost       ems-cost
 COPY ems-billing    ems-billing
 COPY ems-collector  ems-collector
+COPY ems-alarm      ems-alarm
 COPY ems-app        ems-app
 COPY tools          tools
 RUN mvn -B -q -T 4 clean package -DskipTests -pl ems-app -am
