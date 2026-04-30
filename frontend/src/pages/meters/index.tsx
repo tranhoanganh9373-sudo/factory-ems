@@ -20,6 +20,10 @@ import { meterApi, MeterDTO, MeterTopologyEdgeDTO } from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 import { alarmApi } from '@/api/alarm';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag } from '@/components/StatusTag';
+import { METER_STATE_LABEL, translate } from '@/utils/i18n-dict';
 import { CreateMeterModal } from './CreateMeterModal';
 import { EditMeterModal } from './EditMeterModal';
 import { BindParentModal } from './BindParentModal';
@@ -67,6 +71,7 @@ function buildTopologyTree(meters: MeterDTO[], edges: MeterTopologyEdgeDTO[]): T
 }
 
 export default function MetersPage() {
+  useDocumentTitle('表计管理');
   const { isAdmin } = usePermissions();
   const qc = useQueryClient();
 
@@ -158,8 +163,14 @@ export default function MetersPage() {
       title: '状态',
       key: 'enabled',
       width: 80,
-      render: (_, r) =>
-        r.enabled ? <Tag color="success">启用</Tag> : <Tag color="default">禁用</Tag>,
+      render: (_, r) => {
+        const s = r.enabled ? 'ACTIVE' : 'INACTIVE';
+        return (
+          <StatusTag tone={r.enabled ? 'success' : 'default'}>
+            {translate(METER_STATE_LABEL, s)}
+          </StatusTag>
+        );
+      },
     },
     {
       title: '告警',
@@ -287,16 +298,17 @@ export default function MetersPage() {
   );
 
   return (
-    <Card
-      title="测点管理"
-      extra={
-        isAdmin && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-            新建测点
-          </Button>
-        )
-      }
-    >
+    <Card>
+      <PageHeader
+        title="表计管理"
+        extra={
+          isAdmin && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+              新建测点
+            </Button>
+          )
+        }
+      />
       <Tabs
         items={[
           { key: 'list', label: '列表', children: listTab },

@@ -41,7 +41,7 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
 
   return (
     <Modal
-      title="新建测点"
+      title="新增表计"
       open={open}
       onCancel={onClose}
       onOk={() =>
@@ -88,15 +88,15 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
         </Form.Item>
         <Form.Item
           name="influxMeasurement"
-          label="InfluxDB Measurement"
+          label="测量名称"
           rules={[{ required: true, max: 128 }]}
         >
           <Input />
         </Form.Item>
-        <Form.Item name="influxTagKey" label="Tag Key" rules={[{ required: true, max: 64 }]}>
+        <Form.Item name="influxTagKey" label="标签键" rules={[{ required: true, max: 64 }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="influxTagValue" label="Tag Value" rules={[{ required: true, max: 128 }]}>
+        <Form.Item name="influxTagValue" label="标签值" rules={[{ required: true, max: 128 }]}>
           <Input />
         </Form.Item>
         <Form.Item name="enabled" label="启用" valuePropName="checked">
