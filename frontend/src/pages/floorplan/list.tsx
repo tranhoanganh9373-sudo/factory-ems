@@ -25,6 +25,8 @@ import {
   type FloorplanDTO,
 } from '@/api/floorplan';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
   return nodes.map((n) => ({
@@ -42,6 +44,7 @@ interface UploadFormValues {
 }
 
 export default function FloorplanListPage() {
+  useDocumentTitle('设备分布图 - 列表');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -94,14 +97,15 @@ export default function FloorplanListPage() {
   }
 
   return (
-    <Card
-      title="平面图列表"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          上传新图
-        </Button>
-      }
-    >
+    <>
+      <PageHeader title="设备分布图" />
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            上传新图
+          </Button>
+        }
+      >
       {isLoading ? (
         <Spin />
       ) : list.length === 0 ? (
@@ -192,5 +196,6 @@ export default function FloorplanListPage() {
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }

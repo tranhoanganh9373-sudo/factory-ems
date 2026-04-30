@@ -24,6 +24,8 @@ import {
   type SetPointEntry,
 } from '@/api/floorplan';
 import { meterApi, type MeterDTO } from '@/api/meter';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 interface PointDraft {
   meterId: number;
@@ -46,6 +48,7 @@ const POINT_COLOR = '#1677ff';
 const SELECTED_COLOR = '#fa8c16';
 
 export default function FloorplanEditorPage() {
+  useDocumentTitle('设备分布图 - 编辑');
   const { message } = App.useApp();
   const { id } = useParams();
   const fpId = Number(id);
@@ -155,16 +158,18 @@ export default function FloorplanEditorPage() {
   if (!data) return null;
 
   return (
-    <Card
-      title={
-        <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/floorplan')}>
-            返回列表
-          </Button>
-          <Typography.Text strong>编辑：{data.floorplan.name}</Typography.Text>
-        </Space>
-      }
-      extra={
+    <>
+      <PageHeader title="编辑设备分布图" />
+      <Card
+        title={
+          <Space>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/floorplan')}>
+              返回列表
+            </Button>
+            <Typography.Text strong>编辑：{data.floorplan.name}</Typography.Text>
+          </Space>
+        }
+        extra={
         <Space>
           <Select
             allowClear
@@ -304,5 +309,6 @@ export default function FloorplanEditorPage() {
         />
       </Card>
     </Card>
+    </>
   );
 }
