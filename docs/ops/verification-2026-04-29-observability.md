@@ -147,6 +147,8 @@ Phase A1–B4 的代码注入未引入回归。
 - **e2e 渲染对比未做**：Grafana dashboard JSON 已 provisioning，但渲染快照对比没纳入 CI；只跑 jq 语法校验。
 - **`CollectorEndToEndIT.accumulatorRegister_emitsDeltaFromSecondCycle` pre-existing flake**：批量并发跑同 JVM 时偶发 expected:150 / actual:0（cycle 1 reading 抢先被 findFirst 命中）；isolated 单测重跑 100% PASS。非本次 observability 改动引入；与 B1 metrics 注入无因果关系（DevicePoller 只在 `try { ... } finally { metrics.recordPoll(...) }` 外层加埋点，未改 readRegister / AccumulatorTracker 累积逻辑）。CI Linux 历史无报告。本次回归通过排除该用例后取得 BUILD SUCCESS。后续可考虑在 await 中追加 `signum>0` filter 修稳，**不阻塞 v1.7.0-obs 发版**。
 
+> **post-tag review 补充**：tag 之后跑了一轮额外 review（java-reviewer + silent-failure-hunter）+ 单测 ×2，发现 3 条 v1.7.0-obs 自引入问题已就地修复（见 commit `18d4ddf fix(obs): metrics 调用隔离`），另发现 6 条 pre-existing 问题（与 observability 无关、属其他模块原作者范围）转入独立 follow-up tracker：[`follow-up-2026-04-29-pre-existing-issues.md`](./follow-up-2026-04-29-pre-existing-issues.md)。
+
 ## 客户验收 checklist
 （拷给客户：上线后逐项打钩）
 

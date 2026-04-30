@@ -60,6 +60,7 @@
 - [alarm-runbook.md](./alarm-runbook.md) — 采集中断告警运维
 - [observability-deployment.md](./observability-deployment.md) — 可观测性栈部署（Phase C ✅）
 - [observability-runbook.md](./observability-runbook.md) — 可观测性栈运维 / 16 告警处置（Phase F ✅）
+- [follow-up-2026-04-29-pre-existing-issues.md](./follow-up-2026-04-29-pre-existing-issues.md) — v1.7.0-obs review 中发现的 6 条 pre-existing 问题（CRITICAL ×1 / IMPORTANT ×3 / MINOR ×2）独立 follow-up
 
 ## Cross-Reference: 产品 / API / Spec / Plan
 
