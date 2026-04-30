@@ -1,11 +1,14 @@
-import { Card, Row, Col, Typography, Alert } from 'antd';
+import { Card, Row, Col, Alert } from 'antd';
 import { useAuthStore } from '@/stores/authStore';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function HomePage() {
+  useDocumentTitle('首页');
   const user = useAuthStore((s) => s.user);
   return (
     <div>
-      <Typography.Title level={3}>欢迎，{user?.displayName || user?.username}</Typography.Title>
+      <PageHeader title="首页" subtitle={`欢迎，${user?.displayName || user?.username || ''}`} />
       <Alert
         style={{ marginBottom: 24 }}
         type="info"
