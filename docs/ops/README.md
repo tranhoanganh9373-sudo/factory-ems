@@ -37,6 +37,7 @@
 | [verification-2026-04-28-plan1.5.2.md](./verification-2026-04-28-plan1.5.2.md) | Plan 1.5.2 — RTU + 热重载 + 持久 buffer | 2026-04-28 |
 | [verification-2026-04-28-plan1.5.3.md](./verification-2026-04-28-plan1.5.3.md) | Plan 1.5.3 — 上线收尾 (v1.5.0) | 2026-04-28 |
 | [verification-2026-04-28-deploy-pack.md](./verification-2026-04-28-deploy-pack.md) | 装机交付包验收（无硬件等待期） | 2026-04-28 |
+| [verification-2026-04-29-alarm.md](./verification-2026-04-29-alarm.md) | 采集中断告警 ems-alarm | 2026-04-29 |
 
 > Plan 2.1（成本后端）的验收并入 [verification-2026-04-26-plan2.2.md](./verification-2026-04-26-plan2.2.md)（计费依赖成本，连同验收）。
 
@@ -55,8 +56,7 @@
 - [dry-run-procedure.md](./dry-run-procedure.md) — Dry-run 流程
 - [onboarding-checklist.md](./onboarding-checklist.md) — 上线 checklist
 - [perf-2026-04-25.md](./perf-2026-04-25.md) — 性能基线
-
-> **采集中断告警 (ems-alarm)** runbook 由 **Plan H** 落地：`alarm-runbook.md`（占位）
+- [alarm-runbook.md](./alarm-runbook.md) — 采集中断告警运维
 
 ## Cross-Reference: 产品 / API / Spec / Plan
 
@@ -64,19 +64,19 @@
 
 | 文档 | 状态 | 范围 |
 |------|------|------|
-| `alarm-feature-overview.md` | 占位 → Phase H 填 | 销售/客户视角的功能概览 |
-| `alarm-config-reference.md` | 占位 → Phase A 填 | 配置参数详解 + 调优 |
-| `alarm-data-model.md` | 占位 → Phase B 填 | 5 张表字段词典 + 业务 SQL |
-| `alarm-business-rules.md` | 占位 → Phase C 填 | 状态机 + 抑制窗 + 维护模式 |
-| `alarm-detection-rules.md` | 占位 → Phase D 填 | 检测口径 + 不触发场景 + 排障决策树 |
-| `alarm-webhook-integration.md` | 占位 → Phase E 填 | 钉钉/企微/自定义对接 + 多语言验签 |
-| `alarm-user-guide.md` | 占位 → Phase G 填 | 管理员/操作员使用手册 + FAQ |
+| `alarm-feature-overview.md` | 已完成（Phase H） | 销售/客户视角的功能概览 |
+| `alarm-config-reference.md` | 已完成（Phase A） | 配置参数详解 + 调优 |
+| `alarm-data-model.md` | 已完成（Phase B） | 5 张表字段词典 + 业务 SQL |
+| `alarm-business-rules.md` | 已完成（Phase C） | 状态机 + 抑制窗 + 维护模式 |
+| `alarm-detection-rules.md` | 已完成（Phase D） | 检测口径 + 不触发场景 + 排障决策树 |
+| `alarm-webhook-integration.md` | 已完成（Phase E） | 钉钉/企微/自定义对接 + 多语言验签 |
+| `alarm-user-guide.md` | 已完成（Phase G） | 管理员/操作员使用手册 + FAQ |
 
 ### API 规约（[docs/api/](../api/README.md)）
 
 | 文档 | 状态 | 范围 |
 |------|------|------|
-| `alarm-api.md` | 占位 → Phase F 填 | 16 端点完整规约 + curl 示例 |
+| `alarm-api.md` | 已完成（Phase F） | 16 端点完整规约 + curl 示例 |
 
 ### Spec / Plan（[docs/superpowers/](../superpowers/)）
 
