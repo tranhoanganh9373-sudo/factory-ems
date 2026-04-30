@@ -1,7 +1,10 @@
 import { Card, Form, Input, Button, message } from 'antd';
 import { authApi } from '@/api/auth';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function ProfilePage() {
+  useDocumentTitle('个人中心');
   const [form] = Form.useForm();
   const onFinish = async (v: { oldPassword: string; newPassword: string; confirm: string }) => {
     if (v.newPassword !== v.confirm) {
@@ -17,7 +20,9 @@ export default function ProfilePage() {
     }
   };
   return (
-    <Card title="修改密码" style={{ maxWidth: 480 }}>
+    <>
+      <PageHeader title="个人中心" />
+      <Card title="修改密码" style={{ maxWidth: 480 }}>
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Form.Item name="oldPassword" label="原密码" rules={[{ required: true }]}>
           <Input.Password />
@@ -33,5 +38,6 @@ export default function ProfilePage() {
         </Button>
       </Form>
     </Card>
+    </>
   );
 }
