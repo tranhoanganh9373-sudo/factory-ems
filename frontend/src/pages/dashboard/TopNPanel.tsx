@@ -71,15 +71,15 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
           marginBottom: 8,
         }}
       >
-        <Typography.Text strong>用能 Top N</Typography.Text>
+        <Typography.Text strong>综合排名</Typography.Text>
         <Select options={LIMIT_OPTIONS} value={limit} onChange={setLimit} style={{ width: 100 }} />
       </div>
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 5 }} />
       ) : isError ? (
-        <Alert type="error" message="Top N 数据加载失败" showIcon />
+        <Alert type="error" message="综合排名数据加载失败" showIcon />
       ) : !data?.length ? (
-        <Empty description="暂无 Top N 数据" />
+        <Empty description="暂无综合排名数据" />
       ) : (
         <Table
           rowKey="meterId"

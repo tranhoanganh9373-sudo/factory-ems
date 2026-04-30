@@ -52,7 +52,7 @@ export default function CostDistributionPanel() {
   return (
     <div>
       <Space style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-        <Typography.Text strong>成本分布（cost-distribution）</Typography.Text>
+        <Typography.Text strong>成本分布</Typography.Text>
         <Space>
           <DatePicker
             picker="month"
