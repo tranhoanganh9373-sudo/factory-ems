@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { billsApi, type BillLineDTO } from '@/api/bills';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { ENERGY_TYPE_LABEL, translate } from '@/utils/i18n-dict';
 
 function fmt(v: string | null): string {
   if (v == null) return '—';
@@ -38,19 +39,19 @@ export default function BillDetailPage() {
     <Card
       title={
         <span>
-          账单 #{bill.id} <Tag color="blue">{bill.energyType}</Tag>
+          账单 #{bill.id} <Tag color="blue">{translate(ENERGY_TYPE_LABEL, bill.energyType)}</Tag>
         </span>
       }
       extra={<Link to={`/bills?periodId=${bill.periodId}`}>← 返回列表</Link>}
     >
       <Descriptions size="small" column={3} bordered style={{ marginBottom: 24 }}>
         <Descriptions.Item label="账期 ID">{bill.periodId}</Descriptions.Item>
-        <Descriptions.Item label="cost run">#{bill.runId}</Descriptions.Item>
+        <Descriptions.Item label="核算批次">#{bill.runId}</Descriptions.Item>
         <Descriptions.Item label="组织 ID">{bill.orgNodeId}</Descriptions.Item>
 
         <Descriptions.Item label="用量">{fmt(bill.quantity)}</Descriptions.Item>
         <Descriptions.Item label="金额合计">{fmt(bill.amount)}</Descriptions.Item>
-        <Descriptions.Item label="能源">{bill.energyType}</Descriptions.Item>
+        <Descriptions.Item label="能源">{translate(ENERGY_TYPE_LABEL, bill.energyType)}</Descriptions.Item>
 
         <Descriptions.Item label="尖电费">{fmt(bill.sharpAmount)}</Descriptions.Item>
         <Descriptions.Item label="峰电费">{fmt(bill.peakAmount)}</Descriptions.Item>
@@ -82,7 +83,7 @@ export default function BillDetailPage() {
         pagination={false}
         columns={[
           { title: 'ID', dataIndex: 'id', width: 80 },
-          { title: 'rule_id', dataIndex: 'ruleId', width: 100 },
+          { title: '规则 ID', dataIndex: 'ruleId', width: 100 },
           { title: '来源标签', dataIndex: 'sourceLabel' },
           { title: '用量', dataIndex: 'quantity', width: 120, render: fmt },
           { title: '金额', dataIndex: 'amount', width: 120, render: fmt },

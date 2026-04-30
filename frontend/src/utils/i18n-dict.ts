@@ -16,6 +16,14 @@ export const METER_STATE_LABEL = {
   INACTIVE: '离线',
 } as const;
 
+export const ENERGY_TYPE_LABEL = {
+  ELEC: '电',
+  WATER: '水',
+  GAS: '气',
+  STEAM: '蒸汽',
+  OIL: '油',
+} as const;
+
 export const COLLECTOR_PROTOCOL_LABEL = {
   MODBUS_TCP: 'Modbus TCP',
   MODBUS_RTU: 'Modbus RTU',

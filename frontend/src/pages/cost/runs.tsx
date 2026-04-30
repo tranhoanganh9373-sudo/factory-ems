@@ -150,7 +150,7 @@ export default function CostRunsPage() {
           <Form.Item name="ruleIds" label="规则 (可选；不选 = 所有启用规则)">
             <Select
               mode="multiple"
-              placeholder="留空 = 所有启用且 effective 的规则"
+              placeholder="留空 = 所有启用且生效的规则"
               options={rules
                 .filter((r) => r.enabled)
                 .map((r) => ({

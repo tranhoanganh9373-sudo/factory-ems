@@ -18,7 +18,7 @@ export default function RoleListPage() {
         pagination={false}
         columns={[
           {
-            title: 'Code',
+            title: '编码',
             dataIndex: 'code',
             render: (c) => <Tag color={c === 'ADMIN' ? 'red' : 'blue'}>{c}</Tag>,
           },

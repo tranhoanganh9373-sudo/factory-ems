@@ -466,10 +466,10 @@ function DryRunModal({ rule, onClose }: { rule: CostRuleDTO | null; onClose: () 
               dataSource={lines.map((l, i) => ({ ...l, id: l.id || i }))}
               pagination={false}
               columns={[
-                { title: 'org', dataIndex: 'targetOrgId', width: 100 },
-                { title: 'energy', dataIndex: 'energyType', width: 80 },
-                { title: 'qty', dataIndex: 'quantity', width: 100 },
-                { title: 'amount', dataIndex: 'amount', width: 100 },
+                { title: '组织', dataIndex: 'targetOrgId', width: 100 },
+                { title: '能源', dataIndex: 'energyType', width: 80 },
+                { title: '用量', dataIndex: 'quantity', width: 100 },
+                { title: '金额', dataIndex: 'amount', width: 100 },
                 { title: '尖', dataIndex: 'sharpAmount', width: 80 },
                 { title: '峰', dataIndex: 'peakAmount', width: 80 },
                 { title: '平', dataIndex: 'flatAmount', width: 80 },

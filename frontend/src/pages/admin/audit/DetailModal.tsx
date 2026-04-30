@@ -25,10 +25,10 @@ export function DetailModal({ log, onClose }: { log: AuditLogDTO | null; onClose
         <Descriptions.Item label="User-Agent">{log.userAgent}</Descriptions.Item>
       </Descriptions>
       <Typography.Title level={5} style={{ marginTop: 16 }}>
-        Detail
+        详情
       </Typography.Title>
       <pre style={{ background: '#fafafa', padding: 12, maxHeight: 320, overflow: 'auto' }}>
-        {detailObj ? JSON.stringify(detailObj, null, 2) : (log.detail ?? '(none)')}
+        {detailObj ? JSON.stringify(detailObj, null, 2) : (log.detail ?? '（无）')}
       </pre>
     </Modal>
   );
