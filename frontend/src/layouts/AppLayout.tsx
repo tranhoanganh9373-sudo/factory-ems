@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Typography } from 'antd';
+import { Layout, Menu, Avatar, Dropdown, Typography, Space } from 'antd';
 import {
   UserOutlined,
   LogoutOutlined,
@@ -13,6 +13,7 @@ import {
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
+import { AlarmBell } from '@/components/AlarmBell';
 
 const { Header, Sider, Content } = Layout;
 
@@ -146,11 +147,14 @@ export default function AppLayout() {
         <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
           工厂能源管理系统
         </Typography.Title>
-        <Dropdown menu={userMenu} trigger={['click']}>
-          <span style={{ color: 'white', cursor: 'pointer' }}>
-            <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
-          </span>
-        </Dropdown>
+        <Space size="middle">
+          <AlarmBell />
+          <Dropdown menu={userMenu} trigger={['click']}>
+            <span style={{ color: 'white', cursor: 'pointer' }}>
+              <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
+            </span>
+          </Dropdown>
+        </Space>
       </Header>
       <Layout>
         <Sider width={220} theme="light">
