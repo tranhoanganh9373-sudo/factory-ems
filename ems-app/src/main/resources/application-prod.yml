@@ -11,3 +11,24 @@ logging:
   level:
     root: INFO
     com.ems: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: factory-ems
+      instance: ${HOSTNAME:unknown}
+  tracing:
+    sampling:
+      probability: 0.1
+  otlp:
+    tracing:
+      endpoint: ${OTLP_TRACING_ENDPOINT:http://tempo:4318/v1/traces}
