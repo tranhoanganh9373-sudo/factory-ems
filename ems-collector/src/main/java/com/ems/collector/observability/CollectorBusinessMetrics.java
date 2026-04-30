@@ -21,6 +21,9 @@ import java.util.concurrent.atomic.AtomicLong;
  *   <li>{@code ems.collector.read.failure.total} (Counter, labels {@code device_id} + {@code reason}) — 失败累计</li>
  * </ul>
  *
+ * <p>follow-up #4: 原名为 {@code CollectorMetrics}，与 {@link com.ems.collector.health.CollectorMetrics}
+ * 同名导致 import 冲突 + Java symbol clash；改名 {@code CollectorBusinessMetrics} 保留语义同时消歧。
+ *
  * <p>Granularity 说明：spec 文本写"单次寄存器读"，但 DevicePoller 当前 cycle 结构是"一次 cycle = 多寄存器顺序读"，
  * 失败按 cycle 级（任一 attempt 全成功才记 success；retries+1 全失败才记 failure）。本实现按 cycle-attempt 粒度
  * 记录：每次成功的 cycle → +1 success；每次失败的 cycle → +1 failure。这与 spec 期望的 cardinality 与
@@ -32,7 +35,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 见 {@link com.ems.collector.poller.DevicePoller}）。
  */
 @Component
-public class CollectorMetrics {
+public class CollectorBusinessMetrics {
 
     /** 已知 reason 集合；未匹配 → 归一化为 "other"。 */
     static final Set<String> KNOWN_REASONS =
@@ -43,13 +46,13 @@ public class CollectorMetrics {
      * 内部使用一次性 SimpleMeterRegistry，写入会累积但不会被任何 scrape 看到，
      * 等价于 NOOP。
      */
-    public static final CollectorMetrics NOOP = new CollectorMetrics(new SimpleMeterRegistry());
+    public static final CollectorBusinessMetrics NOOP = new CollectorBusinessMetrics(new SimpleMeterRegistry());
 
     private final MeterRegistry registry;
     private final AtomicLong onlineHolder = new AtomicLong();
     private final AtomicLong offlineHolder = new AtomicLong();
 
-    public CollectorMetrics(MeterRegistry registry) {
+    public CollectorBusinessMetrics(MeterRegistry registry) {
         this.registry = registry;
         registry.gauge("ems.collector.devices.online", onlineHolder);
         registry.gauge("ems.collector.devices.offline", offlineHolder);

@@ -6,7 +6,7 @@ import com.ems.collector.config.FunctionType;
 import com.ems.collector.config.Protocol;
 import com.ems.collector.config.RegisterConfig;
 import com.ems.collector.config.RegisterKind;
-import com.ems.collector.observability.CollectorMetrics;
+import com.ems.collector.observability.CollectorBusinessMetrics;
 import com.ems.collector.transport.ModbusIoException;
 import com.ems.collector.transport.ModbusMaster;
 
@@ -62,8 +62,8 @@ public class DevicePoller {
     private final AccumulatorTracker accumulator = new AccumulatorTracker();
     /** RTU device 的串口互斥锁（同 port 多 unit-id 共享同一 lock）；TCP device = null。 */
     private final Lock serialLock;
-    /** Spec §8.2 业务 metrics 注入；测试场景使用 {@link CollectorMetrics#NOOP}。 */
-    private final CollectorMetrics metrics;
+    /** Spec §8.2 业务 metrics 注入；测试场景使用 {@link CollectorBusinessMetrics#NOOP}。 */
+    private final CollectorBusinessMetrics metrics;
 
     /* ── runtime state ─────────────────────────────────────────────────── */
     private DeviceState state = DeviceState.HEALTHY;
@@ -79,7 +79,7 @@ public class DevicePoller {
                         ReadingSink sink,
                         Clock clock,
                         StateTransitionListener listener) {
-        this(config, master, sink, clock, listener, null, CollectorMetrics.NOOP);
+        this(config, master, sink, clock, listener, null, CollectorBusinessMetrics.NOOP);
     }
 
     public DevicePoller(DeviceConfig config,
@@ -88,7 +88,7 @@ public class DevicePoller {
                         Clock clock,
                         StateTransitionListener listener,
                         Lock serialLock) {
-        this(config, master, sink, clock, listener, serialLock, CollectorMetrics.NOOP);
+        this(config, master, sink, clock, listener, serialLock, CollectorBusinessMetrics.NOOP);
     }
 
     public DevicePoller(DeviceConfig config,
@@ -97,14 +97,14 @@ public class DevicePoller {
                         Clock clock,
                         StateTransitionListener listener,
                         Lock serialLock,
-                        CollectorMetrics metrics) {
+                        CollectorBusinessMetrics metrics) {
         this.config = config;
         this.master = master;
         this.sink = sink;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.listener = listener == null ? StateTransitionListener.NOOP : listener;
         this.serialLock = serialLock;
-        this.metrics = metrics == null ? CollectorMetrics.NOOP : metrics;
+        this.metrics = metrics == null ? CollectorBusinessMetrics.NOOP : metrics;
         this.lastTransitionAt = this.clock.instant();
     }
 

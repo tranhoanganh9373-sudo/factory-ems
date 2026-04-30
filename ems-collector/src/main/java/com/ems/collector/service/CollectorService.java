@@ -4,6 +4,7 @@ import com.ems.collector.config.CollectorProperties;
 import com.ems.collector.config.DeviceConfig;
 import com.ems.collector.config.Protocol;
 import com.ems.collector.health.CollectorMetrics;
+import com.ems.collector.observability.CollectorBusinessMetrics;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.DeviceSnapshot;
 import com.ems.collector.poller.DeviceState;
@@ -15,6 +16,7 @@ import com.ems.meter.observability.MeterMetrics;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -65,7 +67,7 @@ public class CollectorService {
     private final Clock clock;
     private final DevicePoller.StateTransitionListener stateListener;
     private final CollectorMetrics metrics;
-    private final com.ems.collector.observability.CollectorMetrics businessMetrics;
+    private final CollectorBusinessMetrics businessMetrics;
     private final MeterMetrics meterMetrics;
     private final SerialPortLockRegistry serialLocks;
 
@@ -75,29 +77,13 @@ public class CollectorService {
     private ScheduledExecutorService gaugeScheduler;
     private volatile boolean running = false;
 
-    public CollectorService(CollectorProperties props,
-                            ReadingSink sink,
-                            ModbusMasterFactory masterFactory,
-                            Clock clock,
-                            DevicePoller.StateTransitionListener stateListener,
-                            CollectorMetrics metrics,
-                            SerialPortLockRegistry serialLocks) {
-        this(props, sink, masterFactory, clock, stateListener, metrics, serialLocks,
-                com.ems.collector.observability.CollectorMetrics.NOOP, MeterMetrics.NOOP);
-    }
-
-    public CollectorService(CollectorProperties props,
-                            ReadingSink sink,
-                            ModbusMasterFactory masterFactory,
-                            Clock clock,
-                            DevicePoller.StateTransitionListener stateListener,
-                            CollectorMetrics metrics,
-                            SerialPortLockRegistry serialLocks,
-                            com.ems.collector.observability.CollectorMetrics businessMetrics) {
-        this(props, sink, masterFactory, clock, stateListener, metrics, serialLocks,
-                businessMetrics, MeterMetrics.NOOP);
-    }
-
+    /**
+     * follow-up #4: 唯一构造器（之前有 7-arg / 8-arg / 9-arg 三个 overload，依赖 Spring
+     * "greediest satisfiable constructor" 选最长那个，重构容易触发隐性歧义）。改成单
+     * ctor + 显式 {@code @Autowired}：DI 路径锁死，不靠 Spring 启发式。测试用 NOOP
+     * 单例填空。
+     */
+    @Autowired
     public CollectorService(CollectorProperties props,
                             ReadingSink sink,
                             ModbusMasterFactory masterFactory,
@@ -105,7 +91,7 @@ public class CollectorService {
                             DevicePoller.StateTransitionListener stateListener,
                             CollectorMetrics metrics,
                             SerialPortLockRegistry serialLocks,
-                            com.ems.collector.observability.CollectorMetrics businessMetrics,
+                            CollectorBusinessMetrics businessMetrics,
                             MeterMetrics meterMetrics) {
         this.props = props;
         this.sink = sink;
@@ -114,7 +100,7 @@ public class CollectorService {
         this.stateListener = stateListener == null ? DevicePoller.StateTransitionListener.NOOP : stateListener;
         this.metrics = metrics;
         this.businessMetrics = businessMetrics == null
-                ? com.ems.collector.observability.CollectorMetrics.NOOP : businessMetrics;
+                ? CollectorBusinessMetrics.NOOP : businessMetrics;
         this.meterMetrics = meterMetrics == null ? MeterMetrics.NOOP : meterMetrics;
         this.serialLocks = serialLocks == null ? new SerialPortLockRegistry() : serialLocks;
     }

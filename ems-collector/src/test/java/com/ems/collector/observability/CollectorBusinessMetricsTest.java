@@ -11,12 +11,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * spec §8.2 — 5 个 collector 业务 metrics 注册和写入正确性。
  */
-class CollectorMetricsTest {
+class CollectorBusinessMetricsTest {
 
     @Test
     void registers_allFiveMetrics() {
         MeterRegistry registry = new SimpleMeterRegistry();
-        CollectorMetrics metrics = new CollectorMetrics(registry);
+        CollectorBusinessMetrics metrics = new CollectorBusinessMetrics(registry);
 
         metrics.recordPoll("modbus-tcp", Duration.ofMillis(120));
         metrics.setOnline(42);
@@ -41,7 +41,7 @@ class CollectorMetricsTest {
     @Test
     void recordReadFailure_unknownReason_normalizesToOther() {
         MeterRegistry registry = new SimpleMeterRegistry();
-        CollectorMetrics metrics = new CollectorMetrics(registry);
+        CollectorBusinessMetrics metrics = new CollectorBusinessMetrics(registry);
 
         metrics.recordReadFailure("d", "weird-thing-not-in-enum");
 
@@ -52,7 +52,7 @@ class CollectorMetricsTest {
     @Test
     void setOnline_setOffline_isAuthoritative_LastWriteWins() {
         MeterRegistry registry = new SimpleMeterRegistry();
-        CollectorMetrics metrics = new CollectorMetrics(registry);
+        CollectorBusinessMetrics metrics = new CollectorBusinessMetrics(registry);
 
         metrics.setOnline(10);
         metrics.setOnline(7);

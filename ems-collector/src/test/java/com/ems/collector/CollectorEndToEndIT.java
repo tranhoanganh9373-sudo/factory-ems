@@ -224,7 +224,9 @@ class CollectorEndToEndIT {
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
                 metrics,
-                new com.ems.collector.transport.SerialPortLockRegistry()
+                new com.ems.collector.transport.SerialPortLockRegistry(),
+                com.ems.collector.observability.CollectorBusinessMetrics.NOOP,
+                com.ems.meter.observability.MeterMetrics.NOOP
         );
         svc.start();
     }
