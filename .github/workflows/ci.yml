@@ -74,3 +74,63 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.yml down -v
+
+  observability:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install promtool & amtool
+        run: |
+          set -e
+          PROM_VER=2.54.1
+          AM_VER=0.27.0
+          curl -sL https://github.com/prometheus/prometheus/releases/download/v${PROM_VER}/prometheus-${PROM_VER}.linux-amd64.tar.gz | tar xz -C /tmp
+          curl -sL https://github.com/prometheus/alertmanager/releases/download/v${AM_VER}/alertmanager-${AM_VER}.linux-amd64.tar.gz | tar xz -C /tmp
+          sudo mv /tmp/prometheus-${PROM_VER}.linux-amd64/promtool /usr/local/bin/
+          sudo mv /tmp/alertmanager-${AM_VER}.linux-amd64/amtool /usr/local/bin/
+          promtool --version
+          amtool --version
+
+      - name: Validate prometheus rules syntax
+        run: promtool check rules ops/observability/prometheus/rules/*.yml
+
+      - name: Run promtool unit tests (32 cases)
+        run: promtool test rules ops/observability/prometheus/rules/_tests/*.yml
+
+      - name: Validate prometheus.yml
+        run: |
+          # promtool check config insists on rule_files paths existing relative to CWD;
+          # the cfg references /etc/prometheus/rules/*.yml which is the in-container path.
+          # We do a YAML parse check instead, then call promtool check on a tweaked copy.
+          python3 -c "import yaml; yaml.safe_load(open('ops/observability/prometheus/prometheus.yml'))"
+          # Make a temp copy with rule_files patched to repo paths
+          sed 's|/etc/prometheus/rules|ops/observability/prometheus/rules|' \
+            ops/observability/prometheus/prometheus.yml > /tmp/prometheus.ci.yml
+          promtool check config /tmp/prometheus.ci.yml
+
+      - name: Validate alertmanager.yml
+        env:
+          OBS_SMTP_HOST: smtp.example.com:587
+          OBS_SMTP_USER: alerts@example.com
+          OBS_SMTP_PASSWORD: x
+          OBS_ALERT_RECEIVER_EMAIL: oncall@example.com
+          OBS_GENERIC_WEBHOOK: http://example.com/wh
+        run: amtool check-config ops/observability/alertmanager/alertmanager.yml
+
+      - name: Validate Grafana dashboards JSON
+        run: |
+          set -e
+          for f in ops/observability/grafana/dashboards/*.json; do
+            jq empty "$f"
+          done
+
+      - name: Build webhook-bridge image
+        run: docker build -t obs-webhook-bridge:ci ops/observability/webhook-bridge
+
+      - name: Validate Grafana provisioning YAML
+        run: |
+          set -e
+          for f in ops/observability/grafana/provisioning/*/*.yml; do
+            python3 -c "import yaml; yaml.safe_load(open('$f'))"
+          done
