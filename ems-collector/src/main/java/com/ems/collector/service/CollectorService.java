@@ -71,6 +71,8 @@ public class CollectorService {
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
+    /** follow-up #5: gauge 刷新独立线程池，避免与 device polling 抢 worker slot（>200 设备时尤甚）。 */
+    private ScheduledExecutorService gaugeScheduler;
     private volatile boolean running = false;
 
     public CollectorService(CollectorProperties props,
@@ -156,8 +158,10 @@ public class CollectorService {
             stagger += 100;
         }
         // Spec §8.2: ems.collector.devices.online/offline gauge 周期刷新（30s）
-        // 立即跑一次（initialDelay=0）让启动时 gauge 有值；后续每 30s 一次
-        scheduler.scheduleAtFixedRate(this::refreshDeviceGauges,
+        // follow-up #5: 独立 single-thread scheduler；不挤占 device polling worker slot
+        gaugeScheduler = Executors.newSingleThreadScheduledExecutor(
+                new NamedThreadFactory("ems-collector-gauge-"));
+        gaugeScheduler.scheduleAtFixedRate(this::refreshDeviceGauges,
                 0, DEVICE_STATE_REFRESH_MS, TimeUnit.MILLISECONDS);
         log.info("collector started: {} device(s)", pollers.size());
     }
@@ -231,6 +235,19 @@ public class CollectorService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 scheduler.shutdownNow();
+            }
+        }
+        // follow-up #5: gauge scheduler 与 polling scheduler 同步 shutdown
+        if (gaugeScheduler != null) {
+            gaugeScheduler.shutdown();
+            try {
+                if (!gaugeScheduler.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.warn("collector gauge scheduler did not terminate in {}s; forcing", SHUTDOWN_TIMEOUT_SECONDS);
+                    gaugeScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                gaugeScheduler.shutdownNow();
             }
         }
         for (DevicePoller p : pollers.values()) {
