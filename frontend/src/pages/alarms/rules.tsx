@@ -17,11 +17,7 @@ import {
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import {
-  alarmRuleApi,
-  type AlarmRuleOverrideDTO,
-  type OverrideRequest,
-} from '@/api/alarm';
+import { alarmRuleApi, type AlarmRuleOverrideDTO, type OverrideRequest } from '@/api/alarm';
 import { useAuthStore } from '@/stores/authStore';
 
 interface FormValues {
@@ -170,8 +166,7 @@ export default function AlarmRulesPage() {
               title: '维护模式',
               dataIndex: 'maintenanceMode',
               width: 120,
-              render: (v: boolean) =>
-                v ? <Tag color="warning">维护中</Tag> : <Tag>关闭</Tag>,
+              render: (v: boolean) => (v ? <Tag color="warning">维护中</Tag> : <Tag>关闭</Tag>),
             },
             {
               title: '备注',
@@ -231,18 +226,10 @@ export default function AlarmRulesPage() {
           >
             <InputNumber min={1} disabled={editing !== null} style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item
-            label="静默超时（秒）"
-            name="silentTimeoutSeconds"
-            extra="留空则沿用全局默认"
-          >
+          <Form.Item label="静默超时（秒）" name="silentTimeoutSeconds" extra="留空则沿用全局默认">
             <InputNumber min={1} placeholder="如 120" style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item
-            label="连续失败次数"
-            name="consecutiveFailCount"
-            extra="留空则沿用全局默认"
-          >
+          <Form.Item label="连续失败次数" name="consecutiveFailCount" extra="留空则沿用全局默认">
             <InputNumber min={1} placeholder="如 5" style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item label="维护模式" name="maintenanceMode" valuePropName="checked">

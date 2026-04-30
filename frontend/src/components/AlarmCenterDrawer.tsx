@@ -53,29 +53,31 @@ export function AlarmCenterDrawer({ open, onClose }: Props) {
           dataSource={items}
           renderItem={(a: AlarmListItemDTO) => (
             <List.Item
-              actions={[
-                isAdmin && (
+              actions={
+                [
+                  isAdmin && (
+                    <Button
+                      key="ack"
+                      size="small"
+                      loading={ack.isPending && ack.variables === a.id}
+                      onClick={() => ack.mutate(a.id)}
+                    >
+                      确认
+                    </Button>
+                  ),
                   <Button
-                    key="ack"
+                    key="go"
+                    type="link"
                     size="small"
-                    loading={ack.isPending && ack.variables === a.id}
-                    onClick={() => ack.mutate(a.id)}
+                    onClick={() => {
+                      nav(`/alarms/history?id=${a.id}`);
+                      onClose();
+                    }}
                   >
-                    确认
-                  </Button>
-                ),
-                <Button
-                  key="go"
-                  type="link"
-                  size="small"
-                  onClick={() => {
-                    nav(`/alarms/history?id=${a.id}`);
-                    onClose();
-                  }}
-                >
-                  详情
-                </Button>,
-              ].filter(Boolean) as React.ReactNode[]}
+                    详情
+                  </Button>,
+                ].filter(Boolean) as React.ReactNode[]
+              }
             >
               <List.Item.Meta
                 title={

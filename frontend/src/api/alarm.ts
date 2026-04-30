@@ -68,7 +68,7 @@ export interface OverrideRequest {
 export interface WebhookConfigDTO {
   enabled: boolean;
   url: string;
-  secret: string;          // "***" 表示已设置但脱敏
+  secret: string; // "***" 表示已设置但脱敏
   adapterType: string;
   timeoutMs: number;
   updatedAt: string | null;
@@ -77,7 +77,7 @@ export interface WebhookConfigDTO {
 export interface WebhookConfigRequest {
   enabled: boolean;
   url: string;
-  secret?: string;        // 留空表示保持原值
+  secret?: string; // 留空表示保持原值
   adapterType?: string;
   timeoutMs: number;
 }
@@ -109,11 +109,9 @@ export const alarmApi = {
     to?: string;
     page?: number;
     size?: number;
-  }) =>
-    apiClient.get<PageDTO<AlarmListItemDTO>>('/alarms', { params }).then((r) => r.data),
+  }) => apiClient.get<PageDTO<AlarmListItemDTO>>('/alarms', { params }).then((r) => r.data),
 
-  getById: (id: number) =>
-    apiClient.get<AlarmDTO>(`/alarms/${id}`).then((r) => r.data),
+  getById: (id: number) => apiClient.get<AlarmDTO>(`/alarms/${id}`).then((r) => r.data),
 
   ack: (id: number) => apiClient.post<void>(`/alarms/${id}/ack`).then((r) => r.data),
 
@@ -128,8 +126,7 @@ export const alarmApi = {
 
 // ───── 阈值规则 ─────
 export const alarmRuleApi = {
-  getDefaults: () =>
-    apiClient.get<DefaultsDTO>('/alarm-rules/defaults').then((r) => r.data),
+  getDefaults: () => apiClient.get<DefaultsDTO>('/alarm-rules/defaults').then((r) => r.data),
 
   listOverrides: () =>
     apiClient.get<AlarmRuleOverrideDTO[]>('/alarm-rules/overrides').then((r) => r.data),
@@ -138,7 +135,9 @@ export const alarmRuleApi = {
     apiClient.get<AlarmRuleOverrideDTO>(`/alarm-rules/overrides/${deviceId}`).then((r) => r.data),
 
   setOverride: (deviceId: number, req: OverrideRequest) =>
-    apiClient.put<AlarmRuleOverrideDTO>(`/alarm-rules/overrides/${deviceId}`, req).then((r) => r.data),
+    apiClient
+      .put<AlarmRuleOverrideDTO>(`/alarm-rules/overrides/${deviceId}`, req)
+      .then((r) => r.data),
 
   clearOverride: (deviceId: number) =>
     apiClient.delete<void>(`/alarm-rules/overrides/${deviceId}`).then((r) => r.data),

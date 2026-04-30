@@ -17,11 +17,7 @@ import {
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import {
-  webhookApi,
-  type DeliveryLogDTO,
-  type WebhookConfigRequest,
-} from '@/api/alarm';
+import { webhookApi, type DeliveryLogDTO, type WebhookConfigRequest } from '@/api/alarm';
 import dayjs from 'dayjs';
 
 interface FormValues {
@@ -57,7 +53,7 @@ export default function AlarmWebhookPage() {
       form.setFieldsValue({
         enabled: cfg.enabled,
         url: cfg.url,
-        secret: '',  // 始终空：留空=保持原值
+        secret: '', // 始终空：留空=保持原值
         adapterType: cfg.adapterType || 'GENERIC_JSON',
         timeoutMs: cfg.timeoutMs > 0 ? cfg.timeoutMs : 5000,
       });
@@ -107,7 +103,7 @@ export default function AlarmWebhookPage() {
     update.mutate({
       enabled: v.enabled,
       url: v.url,
-      secret: v.secret || '',  // 空字符串 = 保持原值（后端约定）
+      secret: v.secret || '', // 空字符串 = 保持原值（后端约定）
       adapterType: v.adapterType,
       timeoutMs: v.timeoutMs,
     });
@@ -162,13 +158,15 @@ export default function AlarmWebhookPage() {
                 }
                 rules={[{ max: 255, message: '最多 255 字符' }]}
               >
-                <Input.Password placeholder={cfg?.secret === '***' ? '*** 已设置 ***' : '建议 openssl rand -hex 32'} />
+                <Input.Password
+                  placeholder={
+                    cfg?.secret === '***' ? '*** 已设置 ***' : '建议 openssl rand -hex 32'
+                  }
+                />
               </Form.Item>
               <Form.Item label="适配器类型" name="adapterType" rules={[{ required: true }]}>
                 <Select
-                  options={[
-                    { value: 'GENERIC_JSON', label: 'GENERIC_JSON（首版唯一支持）' },
-                  ]}
+                  options={[{ value: 'GENERIC_JSON', label: 'GENERIC_JSON（首版唯一支持）' }]}
                 />
               </Form.Item>
               <Form.Item
@@ -202,7 +200,11 @@ export default function AlarmWebhookPage() {
               </Descriptions.Item>
               <Descriptions.Item label="URL">{cfg?.url || '—'}</Descriptions.Item>
               <Descriptions.Item label="密钥">
-                {cfg?.secret === '***' ? <Tag color="success">已设置</Tag> : <Tag color="warning">未设置</Tag>}
+                {cfg?.secret === '***' ? (
+                  <Tag color="success">已设置</Tag>
+                ) : (
+                  <Tag color="warning">未设置</Tag>
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="适配器">{cfg?.adapterType || '—'}</Descriptions.Item>
               <Descriptions.Item label="超时（ms）">{cfg?.timeoutMs || '—'}</Descriptions.Item>

@@ -15,12 +15,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-  alarmApi,
-  type AlarmListItemDTO,
-  type AlarmStatus,
-  type AlarmType,
-} from '@/api/alarm';
+import { alarmApi, type AlarmListItemDTO, type AlarmStatus, type AlarmType } from '@/api/alarm';
 import { useAuthStore } from '@/stores/authStore';
 import dayjs, { type Dayjs } from 'dayjs';
 
@@ -111,8 +106,7 @@ export default function AlarmHistoryPage() {
     return <Tag color="success">已恢复</Tag>;
   };
 
-  const typeText = (t: AlarmType) =>
-    t === 'SILENT_TIMEOUT' ? '采集中断' : '连续失败';
+  const typeText = (t: AlarmType) => (t === 'SILENT_TIMEOUT' ? '采集中断' : '连续失败');
 
   const durationOf = (a: AlarmListItemDTO) => {
     const start = dayjs(a.triggeredAt);
@@ -230,10 +224,7 @@ export default function AlarmHistoryPage() {
                   详情
                 </Button>
                 {isAdmin && a.status === 'ACTIVE' && (
-                  <Popconfirm
-                    title="确认该告警？"
-                    onConfirm={() => ack.mutate(a.id)}
-                  >
+                  <Popconfirm title="确认该告警？" onConfirm={() => ack.mutate(a.id)}>
                     <Button
                       size="small"
                       type="primary"
@@ -244,14 +235,8 @@ export default function AlarmHistoryPage() {
                   </Popconfirm>
                 )}
                 {isAdmin && (a.status === 'ACTIVE' || a.status === 'ACKED') && (
-                  <Popconfirm
-                    title="手动标记为已恢复？"
-                    onConfirm={() => resolve.mutate(a.id)}
-                  >
-                    <Button
-                      size="small"
-                      loading={resolve.isPending && resolve.variables === a.id}
-                    >
+                  <Popconfirm title="手动标记为已恢复？" onConfirm={() => resolve.mutate(a.id)}>
+                    <Button size="small" loading={resolve.isPending && resolve.variables === a.id}>
                       手动恢复
                     </Button>
                   </Popconfirm>
@@ -281,22 +266,16 @@ export default function AlarmHistoryPage() {
               {dayjs(detail.triggeredAt).format('YYYY-MM-DD HH:mm:ss')}
             </Descriptions.Item>
             <Descriptions.Item label="最后数据时间">
-              {detail.lastSeenAt
-                ? dayjs(detail.lastSeenAt).format('YYYY-MM-DD HH:mm:ss')
-                : '—'}
+              {detail.lastSeenAt ? dayjs(detail.lastSeenAt).format('YYYY-MM-DD HH:mm:ss') : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="确认时间">
-              {detail.ackedAt
-                ? dayjs(detail.ackedAt).format('YYYY-MM-DD HH:mm:ss')
-                : '—'}
+              {detail.ackedAt ? dayjs(detail.ackedAt).format('YYYY-MM-DD HH:mm:ss') : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="确认人">
               {detail.ackedBy !== null ? String(detail.ackedBy) : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="恢复时间">
-              {detail.resolvedAt
-                ? dayjs(detail.resolvedAt).format('YYYY-MM-DD HH:mm:ss')
-                : '—'}
+              {detail.resolvedAt ? dayjs(detail.resolvedAt).format('YYYY-MM-DD HH:mm:ss') : '—'}
             </Descriptions.Item>
             <Descriptions.Item label="恢复方式">
               {detail.resolvedReason === 'AUTO'
