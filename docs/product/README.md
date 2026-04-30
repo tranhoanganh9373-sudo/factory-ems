@@ -32,6 +32,7 @@
 | 文档 | 受众 | 范围 | Phase 负责人 |
 |------|------|------|-------------|
 | [observability-config-reference.md](./observability-config-reference.md) | 实施工程师 | 配置参考（env / yml / 启停 / 升级 / 预算 / FAQ） | Phase A ✅ |
+| [observability-metrics-dictionary.md](./observability-metrics-dictionary.md) | 数据/集成工程师 | 17 个业务指标字典 + cardinality + PromQL 模板 | Phase B ✅ |
 
 ## 与 docs/ops 的边界
 
