@@ -1,0 +1,119 @@
+# factory-ems Observability Stack
+# Independent compose file; product stack lives in repo root docker-compose.yml.
+# Common docker network 'ems-net' is external; created by ./scripts/obs-up.sh.
+
+name: factory-ems-obs
+
+networks:
+  ems-net:
+    external: true
+    name: ${OBS_NETWORK_NAME:-ems-net}
+
+volumes:
+  prom-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  alertmanager-data:
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${OBS_PROMETHEUS_RETENTION:-30d}
+      - --web.enable-lifecycle
+    ports:
+      - 127.0.0.1:9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - prom-data:/prometheus
+    networks: [ems-net]
+
+  loki:
+    image: grafana/loki:3.1.0
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/loki/loki-config.yml
+      - -config.expand-env=true
+    environment:
+      OBS_LOKI_RETENTION: ${OBS_LOKI_RETENTION:-336h}
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    networks: [ems-net]
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/tempo/tempo.yml
+      - -config.expand-env=true
+    environment:
+      OBS_TEMPO_RETENTION: ${OBS_TEMPO_RETENTION:-72h}
+    ports:
+      - 4318:4318
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    networks: [ems-net]
+
+  promtail:
+    image: grafana/promtail:3.1.0
+    restart: unless-stopped
+    command:
+      - -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    networks: [ems-net]
+    depends_on:
+      - loki
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    env_file:
+      - .env.obs
+    ports:
+      - 127.0.0.1:9093:9093
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    networks: [ems-net]
+
+  obs-webhook-bridge:
+    build:
+      context: ./webhook-bridge
+    image: factory-ems/obs-webhook-bridge:1.0.0
+    restart: unless-stopped
+    env_file:
+      - .env.obs
+    networks: [ems-net]
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${OBS_GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${OBS_GRAFANA_ADMIN_PASSWORD}
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+    ports:
+      - 127.0.0.1:3000:3000
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    networks: [ems-net]
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
