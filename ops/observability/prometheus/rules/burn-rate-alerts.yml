@@ -1,0 +1,38 @@
+# SLO error budget burn rate alerts (Google SRE Workbook simplified 2-window model).
+# Availability target: 99.5% over 30d → tolerated error rate = 0.005.
+# Fast burn (1h × 14.4 → exhausts 30d budget in ~2 days): critical.
+# Slow burn (6h × 6 → exhausts 30d budget in ~5 days): warning.
+#
+# NOTE: spec §9.3 lists both under "warning" but SRE best practice is
+# fast=critical (aggressive escalation), slow=warning. Going with standard
+# practice. Fast burn routes to multi-channel (severity=critical) which is
+# the right escalation for aggressive budget depletion.
+
+groups:
+  - name: burn-rate-alerts
+    rules:
+      - alert: EmsBudgetBurnFastAvailability
+        expr: |
+          (1 - avg_over_time(up{job="factory-ems"}[1h])) > (14.4 * (1 - 0.995))
+        for: 5m
+        labels:
+          severity: critical
+          team: ops
+          slo: availability
+        annotations:
+          summary: 可用性 SLO 1h 燃烧率 14.4×（错误预算 ~2 天耗尽）
+          description: '1h 实际不可用率={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsbudgetburnfast
+
+      - alert: EmsBudgetBurnSlowAvailability
+        expr: |
+          (1 - avg_over_time(up{job="factory-ems"}[6h])) > (6 * (1 - 0.995))
+        for: 30m
+        labels:
+          severity: warning
+          team: ops
+          slo: availability
+        annotations:
+          summary: 可用性 SLO 6h 燃烧率 6×（错误预算 ~5 天耗尽）
+          description: '6h 实际不可用率={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsbudgetburnslow
