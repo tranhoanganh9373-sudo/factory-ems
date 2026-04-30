@@ -1,0 +1,13 @@
+apiVersion: 1
+providers:
+  - name: factory-ems
+    orgId: 1
+    folder: factory-ems
+    type: file
+    disableDeletion: false
+    editable: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false
