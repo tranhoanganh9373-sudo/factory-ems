@@ -74,6 +74,7 @@
 | `alarm-user-guide.md` | 已完成（Phase G） | 管理员/操作员使用手册 + FAQ |
 | `observability-config-reference.md` | 已完成（Phase A） | obs 栈配置 / 启停 / 升级 / 资源预算 / FAQ |
 | `observability-metrics-dictionary.md` | 已完成（Phase B） | 17 个业务指标字典 + cardinality + PromQL |
+| `observability-slo-rules.md` | 已完成（Phase D） | 4 SLO + 16 告警 + 客户视角 |
 
 ### API 规约（[docs/api/](../api/README.md)）
 
