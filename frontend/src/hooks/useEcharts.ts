@@ -1,30 +1,25 @@
 import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts/core';
 import type { EChartsOption } from 'echarts';
+import { useEchartsTheme } from './useEchartsTheme';
 
-/**
- * Returns a ref to attach to a DOM element; initialises an ECharts instance,
- * updates it when `option` changes, and disposes on unmount.
- * Also resizes the chart when the window resizes.
- */
 export function useEcharts(option: EChartsOption) {
   const elRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
+  const themeName = useEchartsTheme();
 
   useEffect(() => {
     if (!elRef.current) return;
-    const chart = echarts.init(elRef.current);
+    const chart = echarts.init(elRef.current, themeName);
     chartRef.current = chart;
-
     const onResize = () => chart.resize();
     window.addEventListener('resize', onResize);
-
     return () => {
       window.removeEventListener('resize', onResize);
       chart.dispose();
       chartRef.current = null;
     };
-  }, []);
+  }, [themeName]);
 
   useEffect(() => {
     if (chartRef.current) {
