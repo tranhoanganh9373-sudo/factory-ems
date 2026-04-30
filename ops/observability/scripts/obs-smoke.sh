@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Smoke check: each service /ready or /api/health endpoint reachable.
-# Phase F2 will extend this with end-to-end alert injection.
+# Includes end-to-end alert injection via Alertmanager v2 API.
 
 set -euo pipefail
 
@@ -42,3 +42,14 @@ if docker ps --format '{{.Names}}' | grep -q '^factory-ems-obs[-_]tempo[-_]'; th
 fi
 
 echo "All exposed services ready."
+
+echo "Injecting test alert via Alertmanager API..."
+curl -fsS -X POST http://127.0.0.1:9093/api/v2/alerts -H 'Content-Type: application/json' -d '[
+  {"labels": {"alertname":"SmokeTest","severity":"warning","instance":"smoke"},
+   "annotations": {"summary":"smoke test"},
+   "startsAt":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}
+]'
+sleep 5
+echo "Verifying alert propagated to alertmanager..."
+curl -fsS http://127.0.0.1:9093/api/v2/alerts | jq -e '.[] | select(.labels.alertname=="SmokeTest")' >/dev/null
+echo "  ✓ alert flow OK"
