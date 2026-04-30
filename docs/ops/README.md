@@ -71,6 +71,7 @@
 | `alarm-detection-rules.md` | 已完成（Phase D） | 检测口径 + 不触发场景 + 排障决策树 |
 | `alarm-webhook-integration.md` | 已完成（Phase E） | 钉钉/企微/自定义对接 + 多语言验签 |
 | `alarm-user-guide.md` | 已完成（Phase G） | 管理员/操作员使用手册 + FAQ |
+| `observability-config-reference.md` | 已完成（Phase A） | obs 栈配置 / 启停 / 升级 / 资源预算 / FAQ |
 
 ### API 规约（[docs/api/](../api/README.md)）
 

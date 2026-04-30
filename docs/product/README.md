@@ -27,6 +27,12 @@
 
 > Phase F 的 API 规约写到 [`docs/api/alarm-api.md`](../api/alarm-api.md)（开发对接文档）。
 
+### 子项目：可观测性栈（observability，2026-04-29 起）
+
+| 文档 | 受众 | 范围 | Phase 负责人 |
+|------|------|------|-------------|
+| [observability-config-reference.md](./observability-config-reference.md) | 实施工程师 | 配置参考（env / yml / 启停 / 升级 / 预算 / FAQ） | Phase A ✅ |
+
 ## 与 docs/ops 的边界
 
 - `docs/ops/alarm-runbook.md` —— 运维场景（排查、备份、监控接入），由 Phase H 完成
