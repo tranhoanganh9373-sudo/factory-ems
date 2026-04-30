@@ -1,0 +1,60 @@
+# Critical alerts — 5 minutes response time, multi-channel notification.
+# Severity label drives Alertmanager routing (severity="critical" → multi-channel).
+
+groups:
+  - name: critical-alerts
+    rules:
+      - alert: EmsAppDown
+        expr: up{job="factory-ems"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: factory-ems 实例不可达
+          description: '{{ $labels.instance }} actuator 抓取失败 ≥ 2 分钟'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsappdown
+
+      - alert: EmsAppHighErrorRate
+        expr: rate(ems_app_exception_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: 应用异常速率超过 1 次/秒（持续 5 分钟）
+          description: 'instance={{ $labels.instance }} 当前 rate={{ $value | humanize }}/s'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsapphigherrorrate
+
+      - alert: EmsDataFreshnessCritical
+        expr: max(ems_meter_reading_lag_seconds) > 600
+        for: 2m
+        labels:
+          severity: critical
+          team: data
+        annotations:
+          summary: 数据新鲜度劣化（max lag > 10 分钟）
+          description: '当前最大 lag={{ $value | humanizeDuration }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsdatafreshnesscritical
+
+      - alert: EmsDbConnectionPoolExhausted
+        expr: hikaricp_connections_active / hikaricp_connections_max > 0.95
+        for: 3m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: 数据库连接池近满（>95%）
+          description: 'pool={{ $labels.pool }} active/max={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsdbconnectionpoolexhausted
+
+      - alert: EmsDiskSpaceCritical
+        expr: node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes < 0.10
+        for: 5m
+        labels:
+          severity: critical
+          team: ops
+        annotations:
+          summary: 磁盘可用空间 < 10%
+          description: 'mount={{ $labels.mountpoint }} avail={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsdiskspacecritical
