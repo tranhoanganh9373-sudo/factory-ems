@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { Card, Table, Button, Tag, Modal, Form, DatePicker, Select, message } from 'antd';
+import { Card, Table, Button, Modal, Form, DatePicker, Select, message } from 'antd';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import dayjs, { type Dayjs } from 'dayjs';
 import { costApi, type CostRunDTO, type RunStatus } from '@/api/cost';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const STATUS_COLOR: Record<RunStatus, string> = {
-  PENDING: 'default',
-  RUNNING: 'processing',
-  SUCCESS: 'success',
-  FAILED: 'error',
-  SUPERSEDED: 'warning',
+const BATCH_STATE: Record<RunStatus, { tone: StatusTone; label: string }> = {
+  PENDING: { tone: 'default', label: '待运行' },
+  RUNNING: { tone: 'info', label: '运行中' },
+  SUCCESS: { tone: 'success', label: '成功' },
+  FAILED: { tone: 'error', label: '失败' },
+  SUPERSEDED: { tone: 'warning', label: '已覆盖' },
 };
 
 interface SubmitFormValues {
@@ -19,6 +22,7 @@ interface SubmitFormValues {
 }
 
 export default function CostRunsPage() {
+  useDocumentTitle('成本核算 - 分摊批次');
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [form] = Form.useForm<SubmitFormValues>();
@@ -67,14 +71,16 @@ export default function CostRunsPage() {
   const runs = (runsQuery.data ?? []).slice().sort((a, b) => b.id - a.id);
 
   return (
-    <Card
-      title="分摊批次"
-      extra={
-        <Button type="primary" onClick={() => setCreateOpen(true)}>
-          新建批次
-        </Button>
-      }
-    >
+    <>
+      <PageHeader
+        title="分摊批次"
+        extra={
+          <Button type="primary" onClick={() => setCreateOpen(true)}>
+            新建批次
+          </Button>
+        }
+      />
+      <Card>
       {runIds.length === 0 ? (
         <div style={{ padding: 32, textAlign: 'center', color: '#888' }}>
           本会话尚无批次。点"新建批次"触发一次分摊；列表展示<strong>当前会话</strong>提交的最近 50
@@ -103,7 +109,10 @@ export default function CostRunsPage() {
               title: '状态',
               dataIndex: 'status',
               width: 110,
-              render: (s: RunStatus) => <Tag color={STATUS_COLOR[s]}>{s}</Tag>,
+              render: (s: RunStatus) => {
+                const cfg = BATCH_STATE[s] ?? { tone: 'default' as StatusTone, label: s };
+                return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+              },
             },
             { title: '总金额', dataIndex: 'totalAmount', width: 120 },
             {
@@ -153,6 +162,7 @@ export default function CostRunsPage() {
         </Form>
       </Modal>
     </Card>
+    </>
   );
 }
 

@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Card, Table, Tag, Descriptions, Space, Select, TreeSelect, Empty } from 'antd';
+import { Card, Table, Descriptions, Space, Select, TreeSelect, Empty } from 'antd';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { costApi, type CostLineDTO, type EnergyTypeCode, type RunStatus } from '@/api/cost';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const STATUS_COLOR: Record<RunStatus, string> = {
-  PENDING: 'default',
-  RUNNING: 'processing',
-  SUCCESS: 'success',
-  FAILED: 'error',
-  SUPERSEDED: 'warning',
+const BATCH_STATE: Record<RunStatus, { tone: StatusTone; label: string }> = {
+  PENDING: { tone: 'default', label: '待运行' },
+  RUNNING: { tone: 'info', label: '运行中' },
+  SUCCESS: { tone: 'success', label: '成功' },
+  FAILED: { tone: 'error', label: '失败' },
+  SUPERSEDED: { tone: 'warning', label: '已覆盖' },
 };
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
@@ -36,6 +39,7 @@ function flattenOrgs(nodes: OrgNodeDTO[]): Map<number, string> {
 }
 
 export default function CostRunDetailPage() {
+  useDocumentTitle('成本核算 - 批次详情');
   const { id } = useParams<{ id: string }>();
   const runId = Number(id);
   const [filterOrg, setFilterOrg] = useState<number | undefined>();
@@ -66,11 +70,16 @@ export default function CostRunDetailPage() {
   );
 
   return (
-    <Card title={`分摊批次 #${runId}`}>
+    <>
+      <PageHeader title="批次详情" />
+      <Card title={`分摊批次 #${runId}`}>
       {run && (
         <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>
           <Descriptions.Item label="状态">
-            <Tag color={STATUS_COLOR[run.status]}>{run.status}</Tag>
+            {(() => {
+              const cfg = BATCH_STATE[run.status] ?? { tone: 'default' as StatusTone, label: run.status };
+              return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+            })()}
           </Descriptions.Item>
           <Descriptions.Item label="账期">
             {dayjs(run.periodStart).format('YYYY-MM-DD HH:mm')} ~{' '}
@@ -141,5 +150,6 @@ export default function CostRunDetailPage() {
         />
       )}
     </Card>
+    </>
   );
 }

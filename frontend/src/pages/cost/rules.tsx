@@ -18,6 +18,8 @@ import {
   Descriptions,
 } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   costApi,
@@ -81,6 +83,7 @@ interface RuleFormValues {
 }
 
 export default function CostRulesPage() {
+  useDocumentTitle('成本核算 - 分摊规则');
   const qc = useQueryClient();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CostRuleDTO | null>(null);
@@ -200,14 +203,16 @@ export default function CostRulesPage() {
   const algoHint = ALGORITHM_OPTIONS.find((a) => a.value === watchedAlgorithm)?.hint;
 
   return (
-    <Card
-      title="分摊规则"
-      extra={
-        <Button type="primary" onClick={openCreate}>
-          新建规则
-        </Button>
-      }
-    >
+    <>
+      <PageHeader
+        title="分摊规则"
+        extra={
+          <Button type="primary" onClick={openCreate}>
+            新建规则
+          </Button>
+        }
+      />
+      <Card>
       <Table<CostRuleDTO>
         rowKey="id"
         loading={isLoading}
@@ -394,6 +399,7 @@ export default function CostRulesPage() {
 
       <DryRunModal rule={dryRunRule} onClose={() => setDryRunRule(null)} />
     </Card>
+    </>
   );
 }
 
