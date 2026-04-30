@@ -75,6 +75,8 @@ OBS_WECHAT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?...
 docker network create ems-net 2>/dev/null || true
 ```
 
+> **主机端依赖**：`docker compose v2` + `curl` + `jq`（smoke 脚本端到端 alert 校验需要）。macOS：`brew install jq`；Linux：`apt-get install jq` / `yum install jq`。
+
 ### Step 4: 启动观测栈
 
 ```bash
