@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import { meterApi, MeterDTO, MeterTopologyEdgeDTO } from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
+import { alarmApi } from '@/api/alarm';
 import { usePermissions } from '@/hooks/usePermissions';
 import { CreateMeterModal } from './CreateMeterModal';
 import { EditMeterModal } from './EditMeterModal';
@@ -107,6 +108,16 @@ export default function MetersPage() {
     queryFn: () => meterApi.listEnergyTypes(),
   });
 
+  const { data: activeAlarmsPage } = useQuery({
+    queryKey: ['alarms', 'active', 'all'],
+    queryFn: () => alarmApi.list({ status: 'ACTIVE', page: 1, size: 500 }),
+    refetchInterval: 30_000,
+  });
+
+  const activeAlarmDeviceIds = new Set<number>(
+    (activeAlarmsPage?.items ?? []).map((a) => a.deviceId)
+  );
+
   const orgMap = buildOrgMap(tree);
 
   const delMut = useMutation({
@@ -149,6 +160,16 @@ export default function MetersPage() {
       width: 80,
       render: (_, r) =>
         r.enabled ? <Tag color="success">启用</Tag> : <Tag color="default">禁用</Tag>,
+    },
+    {
+      title: '告警',
+      key: 'alarmStatus',
+      width: 90,
+      render: (_, r) => {
+        if (!r.enabled) return <Tag color="default">未启用</Tag>;
+        if (activeAlarmDeviceIds.has(r.id)) return <Tag color="error">告警中</Tag>;
+        return <Tag color="success">正常</Tag>;
+      },
     },
     {
       title: '父测点',

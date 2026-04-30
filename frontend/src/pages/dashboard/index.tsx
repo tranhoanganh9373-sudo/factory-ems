@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Card, Col, Row } from 'antd';
-import { useSearchParams } from 'react-router-dom';
+import { Card, Col, Row, Statistic } from 'antd';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useDashboardSearchParams } from '@/stores/dashboardFilter';
+import { alarmApi } from '@/api/alarm';
 import FilterBar from './FilterBar';
 import KpiPanel from './KpiPanel';
 import RealtimeSeriesPanel from './RealtimeSeriesPanel';
@@ -16,6 +18,17 @@ import CostDistributionPanel from './CostDistributionPanel';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
+
+  const nav = useNavigate();
+
+  const { data: summary } = useQuery({
+    queryKey: ['alarms', 'health'],
+    queryFn: () => alarmApi.healthSummary(),
+    refetchInterval: 30_000,
+  });
+
+  const total = (summary?.onlineCount ?? 0) + (summary?.offlineCount ?? 0);
+  const onlineRate = total === 0 ? 0 : ((summary?.onlineCount ?? 0) / total) * 100;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerMeterId, setDrawerMeterId] = useState<number | null>(() => {
@@ -50,6 +63,32 @@ export default function DashboardPage() {
   return (
     <div style={{ minWidth: 0 }}>
       <FilterBar />
+
+      {/* Row 0: 采集健康 */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+        <Col xs={24} lg={8}>
+          <Card
+            size="small"
+            hoverable
+            onClick={() => nav('/alarms/health')}
+            title="采集健康"
+            bodyStyle={{ padding: 16 }}
+          >
+            <Row gutter={16}>
+              <Col span={12}>
+                <Statistic title="在线率" value={onlineRate.toFixed(1)} suffix="%" />
+              </Col>
+              <Col span={12}>
+                <Statistic
+                  title="当前告警"
+                  value={summary?.alarmCount ?? 0}
+                  valueStyle={{ color: (summary?.alarmCount ?? 0) > 0 ? '#ff4d4f' : undefined }}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
+      </Row>
 
       {/* Row 1: KPI */}
       <Row gutter={[0, 16]} style={{ marginBottom: 16 }}>
