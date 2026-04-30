@@ -26,6 +26,8 @@ import {
 import { meterApi, type MeterDTO } from '@/api/meter';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { useThemeStore } from '@/stores/themeStore';
+import { floorplanTokens } from '@/utils/floorplanTokens';
 
 interface PointDraft {
   meterId: number;
@@ -44,13 +46,12 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-const POINT_COLOR = '#1677ff';
-const SELECTED_COLOR = '#fa8c16';
-
 export default function FloorplanEditorPage() {
   useDocumentTitle('设备分布图 - 编辑');
   const { message } = App.useApp();
   const { id } = useParams();
+  const mode = useThemeStore((s) => s.mode);
+  const tokens = floorplanTokens(mode);
   const fpId = Number(id);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -226,8 +227,8 @@ export default function FloorplanEditorPage() {
                   >
                     <Circle
                       radius={10}
-                      fill={selectedIdx === idx ? SELECTED_COLOR : POINT_COLOR}
-                      stroke="white"
+                      fill={selectedIdx === idx ? tokens.deviceStrokeAlarm : tokens.deviceStroke}
+                      stroke={tokens.deviceFill}
                       strokeWidth={2}
                     />
                     <Text
@@ -235,7 +236,7 @@ export default function FloorplanEditorPage() {
                       y={-6}
                       text={p.label ?? meter?.code ?? `M${p.meterId}`}
                       fontSize={12}
-                      fill="white"
+                      fill={tokens.labelText}
                       shadowColor="black"
                       shadowBlur={3}
                     />

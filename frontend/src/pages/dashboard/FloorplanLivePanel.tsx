@@ -9,6 +9,8 @@ import {
 } from '@/api/dashboard';
 import { floorplanApi, floorplanImageUrl } from '@/api/floorplan';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
+import { useThemeStore } from '@/stores/themeStore';
+import { floorplanTokens } from '@/utils/floorplanTokens';
 
 const LEVEL_COLORS: Record<FloorplanLivePoint['level'], string> = {
   HIGH: '#cf1322',
@@ -28,6 +30,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 export default function FloorplanLivePanel() {
   const { range, customFrom, customTo, orgNodeId } = useDashboardFilterStore();
+  const mode = useThemeStore((s) => s.mode);
+  const tokens = floorplanTokens(mode);
   const isCustomReady = range !== 'CUSTOM' || (!!customFrom && !!customTo);
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -103,13 +107,13 @@ export default function FloorplanLivePanel() {
                 const color = LEVEL_COLORS[p.level];
                 return (
                   <Group key={p.pointId} x={x} y={y}>
-                    <Circle radius={9} fill={color} stroke="white" strokeWidth={2} />
+                    <Circle radius={9} fill={color} stroke={tokens.deviceFill} strokeWidth={2} />
                     <Text
                       x={11}
                       y={-7}
                       text={`${p.label ?? p.meterCode}: ${p.value.toFixed(1)} ${p.unit}`}
                       fontSize={11}
-                      fill="white"
+                      fill={tokens.labelText}
                       shadowColor="black"
                       shadowBlur={3}
                     />
