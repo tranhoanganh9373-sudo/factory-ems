@@ -21,7 +21,14 @@ export function OpcUaPointsList({ fields, ops }: Props) {
             <Input style={{ width: 220 }} placeholder="ns=2;s=Tag1" />
           </Form.Item>
           <Form.Item name={[f.name, 'mode']} label="模式" initialValue="READ">
-            <Select style={{ width: 110 }} options={MODES.map((v) => ({ value: v, label: v }))} />
+            <Select
+              style={{ width: 110 }}
+              options={MODES.map((v) => ({
+                value: v,
+                label: v,
+                disabled: v === 'SUBSCRIBE',
+              }))}
+            />
           </Form.Item>
           <Form.Item name={[f.name, 'samplingIntervalMs']} label="采样间隔(ms)" initialValue={1000}>
             <InputNumber min={0} style={{ width: 110 }} />

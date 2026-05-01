@@ -1,4 +1,4 @@
-import { Form, Input, Select } from 'antd';
+import { Alert, Form, Input, Select } from 'antd';
 import { SecretInput } from '@/components/SecretInput';
 import { OPCUA_SECURITY_MODE_LABEL } from '@/utils/i18n-dict';
 import { OpcUaPointsList } from './OpcUaPointsList';
@@ -6,6 +6,13 @@ import { OpcUaPointsList } from './OpcUaPointsList';
 export function OpcUaForm() {
   return (
     <>
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message="v1 仅支持 SecurityMode.NONE"
+        description="SIGN / SIGN_AND_ENCRYPT 需要证书审批流程，将在 v2 提供。当前版本配置非 NONE 模式会在启动通道时报错。"
+      />
       <Form.Item
         name={['protocolConfig', 'endpointUrl']}
         label="端点 URL"
@@ -18,6 +25,7 @@ export function OpcUaForm() {
           options={Object.entries(OPCUA_SECURITY_MODE_LABEL).map(([v, l]) => ({
             value: v,
             label: l,
+            disabled: v !== 'NONE',
           }))}
         />
       </Form.Item>
