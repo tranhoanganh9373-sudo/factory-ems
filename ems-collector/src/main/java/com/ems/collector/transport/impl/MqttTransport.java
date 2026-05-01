@@ -73,7 +73,11 @@ public final class MqttTransport implements Transport {
         opts.setCleanSession(cfg.cleanSession());
         opts.setKeepAliveInterval((int) cfg.keepAlive().toSeconds());
         opts.setAutomaticReconnect(true);
-        if (cfg.usernameRef() != null && secretResolver != null) {
+        if (cfg.usernameRef() != null) {
+            if (secretResolver == null) {
+                throw new TransportException(
+                    "usernameRef configured but no SecretResolver injected (channelId=" + channelId + ")");
+            }
             opts.setUserName(secretResolver.resolve(cfg.usernameRef()));
             if (cfg.passwordRef() != null) {
                 opts.setPassword(secretResolver.resolve(cfg.passwordRef()).toCharArray());

@@ -58,6 +58,10 @@ class ChannelServiceTest {
         private final java.util.Deque<Transport> queue = new java.util.ArrayDeque<>();
         int createCount = 0;
 
+        RecordingFactory() {
+            super(null);
+        }
+
         void enqueue(Transport... ts) {
             for (Transport t : ts) queue.add(t);
         }

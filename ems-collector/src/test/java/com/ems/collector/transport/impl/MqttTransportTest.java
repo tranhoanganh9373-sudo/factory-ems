@@ -86,4 +86,18 @@ class MqttTransportTest {
     void stop_neverStarted() {
         new MqttTransport().stop();
     }
+
+    @Test
+    @DisplayName("start 配 usernameRef 但 SecretResolver=null 抛 TransportException")
+    void start_usernameRefWithoutResolver_throws() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            "secret://mqtt/u", null, null,
+            1, true, Duration.ofSeconds(60),
+            List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
+        var transport = new MqttTransport();  // 无 secretResolver
+        assertThatThrownBy(() -> transport.start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageContaining("usernameRef configured but no SecretResolver");
+    }
 }
