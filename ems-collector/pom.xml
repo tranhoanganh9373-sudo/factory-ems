@@ -51,11 +51,34 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- MQTT: Paho v3 Client (Eclipse Public License 2.0) — 嵌入式 MQTT 客户端，
+             MQTT 3.1.1 + 5 兼容；用于事件驱动订阅采集。 -->
+        <dependency>
+            <groupId>org.eclipse.paho</groupId>
+            <artifactId>org.eclipse.paho.client.mqttv3</artifactId>
+            <version>1.2.5</version>
+        </dependency>
+
+        <!-- JsonPath: Jayway (Apache 2.0) — 用于 MQTT payload JSONPath 提取。 -->
+        <dependency>
+            <groupId>com.jayway.jsonpath</groupId>
+            <artifactId>json-path</artifactId>
+            <version>2.9.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-testcontainers</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.awaitility</groupId><artifactId>awaitility</artifactId><scope>test</scope></dependency>
+
+        <!-- MQTT testing: HiveMQ Community Edition testcontainer — 仅用于 IT
+             （需 Docker 运行；当 Docker 不可用时 IT 通过 @EnabledIfEnvironmentVariable 跳过）。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>hivemq</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- BouncyCastle: test-only — 用于 OpcUaCertificateStore 测试中生成自签 X509 证书。
              JDK 17+ 强封装 sun.security.x509，行业事实标准是用 BC（Milo / Spring Security 测试同方案）。 -->
