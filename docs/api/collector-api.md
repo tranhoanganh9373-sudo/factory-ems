@@ -431,7 +431,7 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 | 维度 | v1.1 现状 |
 |---|---|
 | 全局限流 | 走 nginx 反代层，详见 docs/ops/nginx-setup.md |
-| 端点级限流 | 未实装（spec 后续版本） |
+| 端点级限流 | 已实装（per-IP token bucket）：默认 GET/HEAD/OPTIONS 600/min/IP，POST/PUT/PATCH/DELETE 60/min/IP，burst 2×；超限返回 `429` + `Retry-After` 秒数。豁免 `/actuator/**`、`/error`、`/login`、`/api/v1/auth/**`。配置项 `ems.security.rate-limit.*` |
 | Token 过期 | 默认 30 分钟（与平台统一） |
 | 审计事件 | `CHANNEL_CREATE` / `CHANNEL_UPDATE` / `CHANNEL_DELETE` / `SECRET_WRITE` / `SECRET_DELETE`（写入 `audit_events` 表） |
 
@@ -445,6 +445,7 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 > - `GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` — OPC UA 服务器证书审批
 > - OPC UA `SecurityMode = SIGN` 客户端 PEM 私钥加载（见 `OpcUaCertificateLoader`）
 > - Modbus TCP / RTU 指数退避自动重连（`ModbusBackoff`：1s→2s→4s→8s→16s→32s→60s 封顶）
+> - API 端点级 per-IP 限流（Bucket4j），见 §5
 
 ---
 
