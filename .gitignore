@@ -45,3 +45,4 @@ e2e/.omc/
 # QA / debug screenshots
 qa-*.png
 .superpowers/
+.gstack/
