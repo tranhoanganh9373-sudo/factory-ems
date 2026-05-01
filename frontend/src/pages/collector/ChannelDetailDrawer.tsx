@@ -1,7 +1,8 @@
-import { Drawer, Descriptions, Tag } from 'antd';
+import { Drawer, Descriptions, Tag, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
-import { collectorDiagApi } from '@/api/collectorDiag';
+import { collectorDiagApi, type RecentSample } from '@/api/collectorDiag';
 import { translate, CONNECTION_STATE_LABEL, COLLECTOR_PROTOCOL_LABEL } from '@/utils/i18n-dict';
 
 interface Props {
@@ -9,12 +10,53 @@ interface Props {
   onClose: () => void;
 }
 
+const QUALITY_COLOR: Record<string, string> = {
+  GOOD: 'green',
+  BAD: 'red',
+  UNCERTAIN: 'orange',
+};
+
+const SAMPLE_COLUMNS: ColumnsType<RecentSample> = [
+  {
+    title: '时间',
+    dataIndex: 'timestamp',
+    key: 'timestamp',
+    width: 120,
+    render: (t: string) => dayjs(t).format('HH:mm:ss.SSS'),
+  },
+  {
+    title: '点位',
+    dataIndex: 'pointKey',
+    key: 'pointKey',
+  },
+  {
+    title: '值',
+    dataIndex: 'value',
+    key: 'value',
+    render: (v: unknown) => (v === null || v === undefined ? '-' : String(v)),
+  },
+  {
+    title: '质量',
+    dataIndex: 'quality',
+    key: 'quality',
+    width: 100,
+    render: (q: string) => <Tag color={QUALITY_COLOR[q] ?? 'default'}>{q}</Tag>,
+  },
+];
+
 export function ChannelDetailDrawer({ channelId, onClose }: Props) {
   const { data } = useQuery({
     queryKey: ['collector', 'state', channelId],
     queryFn: () => (channelId !== null ? collectorDiagApi.get(channelId) : null),
     enabled: channelId !== null,
     refetchInterval: 3000,
+  });
+
+  const { data: samples } = useQuery({
+    queryKey: ['collector', 'recent-samples', channelId],
+    queryFn: () => (channelId !== null ? collectorDiagApi.recentSamples(channelId, 20) : []),
+    enabled: channelId !== null,
+    refetchInterval: 5000,
   });
 
   return (
@@ -52,6 +94,19 @@ export function ChannelDetailDrawer({ channelId, onClose }: Props) {
             </pre>
           </Descriptions.Item>
         </Descriptions>
+      )}
+      {data && (
+        <>
+          <h4 style={{ marginTop: 16 }}>最近样本（最多 20 条）</h4>
+          <Table<RecentSample>
+            size="small"
+            pagination={false}
+            rowKey={(r, idx) => `${r.timestamp}-${r.pointKey}-${idx ?? 0}`}
+            columns={SAMPLE_COLUMNS}
+            dataSource={samples ?? []}
+            locale={{ emptyText: '暂无样本（生产环境无 ring buffer）' }}
+          />
+        </>
       )}
     </Drawer>
   );
