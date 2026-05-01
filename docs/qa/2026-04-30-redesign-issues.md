@@ -56,6 +56,14 @@
 按 K2 计划步骤：
 
 - **Step 2**：剩余 12 个业务路由（dashboard / orgtree / meters / collector / floorplan ×2 / alarms ×4 / tariff / report ×6 / production ×2 / cost ×2 / bills ×2 / admin ×N / profile）× 浅深 = 至少 24 张截图
+  - **自动化脚本已就绪**：`e2e/tests/qa-screenshots-redesign.spec.ts`。后端 + 前端栈起来后跑：
+    ```bash
+    cd /Users/mac/factory-ems/e2e
+    QA_BASE_URL=http://localhost:5173 \
+    QA_ADMIN_USER=admin QA_ADMIN_PASS=admin123! \
+      npm run qa-screenshots
+    ```
+    脚本会全量覆盖 14 路由 × 浅深主题 → 28 张 PNG 写入本目录的 `screenshots/2026-04-30-redesign/`，单路由失败不阻塞其他路由（仅打印 `✗ slug-theme: error`）。
 - **Step 3**：业务页面 bug 列表（仅在 Step 2 走查中发现时记录于本文件）
 - **Step 4**：浏览器 console 全路由检查：login 页本次观察到 1 个 ERROR（无后端时 `GET /api/v1/auth/me` 401，预期）
 - **Step 5**：LCP 性能基线对比 vs `backup/pre-redesign-2026-04-30`，要求不超基线 +10%
