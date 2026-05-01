@@ -75,4 +75,19 @@ class FilesystemSecretResolverTest {
         assertThat(r.listRefs()).containsExactlyInAnyOrder(
             "secret://mqtt/u", "secret://opcua/p");
     }
+
+    @Test
+    @DisplayName("init() 检测到不安全权限（含 GROUP/OTHER 位）抛 SecurityException")
+    void init_unsafePermissions_throwsSecurityException(@TempDir Path unsafe) throws Exception {
+        Files.setPosixFilePermissions(unsafe, Set.of(
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE,
+            PosixFilePermission.GROUP_READ,
+            PosixFilePermission.GROUP_EXECUTE));
+        var resolver = new FilesystemSecretResolver(unsafe);
+        assertThatThrownBy(resolver::init)
+            .isInstanceOf(SecurityException.class)
+            .hasMessageContaining("unsafe permission");
+    }
 }

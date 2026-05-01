@@ -1,5 +1,6 @@
 package com.ems.collector.secret;
 
+import com.ems.audit.aspect.AuditContext;
 import com.ems.audit.event.AuditEvent;
 import com.ems.audit.service.AuditService;
 import jakarta.validation.constraints.NotBlank;
@@ -16,10 +17,12 @@ public class SecretController {
 
     private final SecretResolver resolver;
     private final AuditService auditService;
+    private final AuditContext auditContext;
 
-    public SecretController(SecretResolver resolver, AuditService auditService) {
+    public SecretController(SecretResolver resolver, AuditService auditService, AuditContext auditContext) {
         this.resolver = resolver;
         this.auditService = auditService;
+        this.auditContext = auditContext;
     }
 
     public record WriteRequest(@NotBlank String ref, @NotBlank String value) {}
@@ -33,7 +36,8 @@ public class SecretController {
     public ResponseEntity<Void> write(@RequestBody WriteRequest req) {
         resolver.write(req.ref(), req.value());
         auditService.record(new AuditEvent(
-            null, null, "SECRET_WRITE", "SECRET", req.ref(),
+            auditContext.currentUserId(), auditContext.currentUsername(),
+            "SECRET_WRITE", "SECRET", req.ref(),
             "secret written", null, null, null, OffsetDateTime.now()));
         return ResponseEntity.noContent().build();
     }
@@ -42,7 +46,8 @@ public class SecretController {
     public ResponseEntity<Void> delete(@RequestParam @NotBlank String ref) {
         resolver.delete(ref);
         auditService.record(new AuditEvent(
-            null, null, "SECRET_DELETE", "SECRET", ref,
+            auditContext.currentUserId(), auditContext.currentUsername(),
+            "SECRET_DELETE", "SECRET", ref,
             "secret deleted", null, null, null, OffsetDateTime.now()));
         return ResponseEntity.noContent().build();
     }
