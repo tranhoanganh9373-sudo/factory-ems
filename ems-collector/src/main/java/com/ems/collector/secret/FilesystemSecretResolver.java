@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -35,7 +36,14 @@ public class FilesystemSecretResolver implements SecretResolver {
     @PostConstruct
     public void init() throws IOException {
         if (!Files.exists(secretsDir)) {
-            Files.createDirectories(secretsDir);
+            // 原子创建为 0700，避免「先 0755 创建再 chmod 0700」的短窗口暴露。
+            try {
+                Files.createDirectories(secretsDir,
+                    PosixFilePermissions.asFileAttribute(ALLOWED_DIR_PERMS));
+            } catch (UnsupportedOperationException e) {
+                // 非 POSIX FS（如 Windows、tmpfs no-acl）不支持 file attribute 形式
+                Files.createDirectories(secretsDir);
+            }
         }
         // Heal-on-init: 无论 dir 是新建还是已存在，每次启动都尝试收紧到 0700。
         // 之前只在「新建」分支 chmod，导致容器升级/重建时若 dir 已存在（umask 0022
@@ -44,6 +52,7 @@ public class FilesystemSecretResolver implements SecretResolver {
             Files.setPosixFilePermissions(secretsDir, ALLOWED_DIR_PERMS);
         } catch (UnsupportedOperationException e) {
             log.warn("filesystem does not support POSIX permissions; skipping strict perm enforcement on {}", secretsDir);
+            log.info("SecretResolver initialized at {} (non-POSIX filesystem)", secretsDir);
             return;
         }
         var perms = Files.getPosixFilePermissions(secretsDir);
@@ -80,7 +89,9 @@ public class FilesystemSecretResolver implements SecretResolver {
             Files.writeString(path, value,
                 StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
             try { Files.setPosixFilePermissions(path, FILE_PERMS); }
-            catch (UnsupportedOperationException ignored) {}
+            catch (UnsupportedOperationException e) {
+                log.warn("filesystem does not support POSIX permissions; cannot enforce 0600 on {}", ref);
+            }
             log.info("secret written: {}", ref);
         } catch (IOException e) {
             throw new RuntimeException("write secret failed: " + ref, e);

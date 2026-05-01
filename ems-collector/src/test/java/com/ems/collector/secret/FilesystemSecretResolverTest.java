@@ -5,11 +5,14 @@ import org.junit.jupiter.api.io.TempDir;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import java.nio.file.*;
+import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 
 @DisplayName("FilesystemSecretResolver")
 class FilesystemSecretResolverTest {
@@ -122,5 +125,31 @@ class FilesystemSecretResolverTest {
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("unsafe permission");
         }
+    }
+
+    @Test
+    @DisplayName("init() 原子创建：dir 不存在时调用 2-arg createDirectories(dir, attr)，避免 0755 短窗口")
+    void init_dirDoesNotExist_usesAtomicCreateWithPosixAttr(@TempDir Path parent) throws Exception {
+        // 选一个尚不存在的子目录作为 secretsDir，强制走「创建」分支
+        Path newDir = parent.resolve("secrets-fresh");
+        assertThat(Files.exists(newDir)).isFalse();
+
+        var resolver = new FilesystemSecretResolver(newDir);
+
+        try (MockedStatic<Files> mocked = Mockito.mockStatic(Files.class, Mockito.CALLS_REAL_METHODS)) {
+            resolver.init();
+
+            // 关键回归保护：dir 创建必须用带 PosixFilePermissions attr 的 2-arg 版本，
+            // 而不是先 1-arg 创建 0755 再 chmod 0700。后者存在短暂的 GROUP/OTHER 暴露窗口。
+            mocked.verify(
+                () -> Files.createDirectories(eq(newDir), any(FileAttribute.class)),
+                atLeastOnce());
+        }
+
+        // 行为兜底：最终权限必须是 0700
+        assertThat(Files.getPosixFilePermissions(newDir)).containsExactlyInAnyOrder(
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE);
     }
 }
