@@ -7,6 +7,7 @@ import com.ems.collector.protocol.OpcUaConfig;
 import com.ems.collector.protocol.OpcUaPoint;
 import com.ems.collector.protocol.SecurityMode;
 import com.ems.collector.protocol.SubscriptionMode;
+import com.ems.collector.runtime.ChannelCertificatePendingEvent;
 import com.ems.collector.secret.SecretResolver;
 import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.Sample;
@@ -14,6 +15,7 @@ import com.ems.collector.transport.SampleSink;
 import com.ems.collector.transport.TestResult;
 import com.ems.collector.transport.Transport;
 import com.ems.collector.transport.TransportException;
+import org.springframework.context.ApplicationEventPublisher;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
@@ -60,6 +62,7 @@ public final class OpcUaTransport implements Transport {
 
     private final SecretResolver secretResolver;
     private final OpcUaCertificateStore certStore;
+    private final ApplicationEventPublisher eventPublisher;
 
     private OpcUaClient client;
     private volatile ManagedSubscription subscription;
@@ -67,9 +70,15 @@ public final class OpcUaTransport implements Transport {
     private volatile boolean connected = false;
     private Long channelId;
 
-    public OpcUaTransport(SecretResolver secretResolver, OpcUaCertificateStore certStore) {
+    public OpcUaTransport(SecretResolver secretResolver, OpcUaCertificateStore certStore,
+                          ApplicationEventPublisher eventPublisher) {
         this.secretResolver = secretResolver;
         this.certStore = certStore;
+        this.eventPublisher = eventPublisher;
+    }
+
+    public OpcUaTransport(SecretResolver secretResolver, OpcUaCertificateStore certStore) {
+        this(secretResolver, certStore, null);
     }
 
     /**
@@ -78,14 +87,14 @@ public final class OpcUaTransport implements Transport {
      * 否则 start() 会抛 TransportException。
      */
     public OpcUaTransport(SecretResolver secretResolver) {
-        this(secretResolver, null);
+        this(secretResolver, null, null);
     }
 
     /**
      * 仅供测试用的无参构造器。仅适用于 SecurityMode.NONE。
      */
     public OpcUaTransport() {
-        this(null, null);
+        this(null, null, null);
     }
 
     @Override
@@ -143,7 +152,7 @@ public final class OpcUaTransport implements Transport {
                 clientConfigBuilder
                     .setKeyPair(finalKeyMaterial.keyPair())
                     .setCertificate(finalKeyMaterial.certificate())
-                    .setCertificateValidator(buildCertificateValidator());
+                    .setCertificateValidator(buildCertificateValidator(cfg.endpointUrl()));
                 log.info("opcua tls configured channel={} mode={}", channelId, cfg.securityMode());
             }
 
@@ -265,7 +274,7 @@ public final class OpcUaTransport implements Transport {
      * 构建基于 {@link OpcUaCertificateStore} 的服务端证书校验器。
      * certStore 必须非 null（由 start() 的前置断言保证，仅 SIGN/SIGN_AND_ENCRYPT 模式进入此处）。
      */
-    private ClientCertificateValidator buildCertificateValidator() {
+    private ClientCertificateValidator buildCertificateValidator(String endpointUrl) {
         if (certStore == null) {
             throw new TransportException(
                 "certStore required for SIGN mode (channelId=" + channelId + ")");
@@ -277,11 +286,24 @@ public final class OpcUaTransport implements Transport {
                 try {
                     if (!certStore.isTrusted(serverCert)) {
                         String thumbprint = certStore.thumbprint(serverCert);
+                        String subjectDn = serverCert.getSubjectX500Principal().getName();
+
+                        try {
+                            certStore.addPending(serverCert, channelId, endpointUrl);
+                        } catch (Exception addEx) {
+                            log.warn("opcua addPending failed channel={}: {}", channelId, addEx.toString());
+                        }
+
+                        if (eventPublisher != null) {
+                            eventPublisher.publishEvent(new ChannelCertificatePendingEvent(
+                                    channelId, endpointUrl, thumbprint, subjectDn,
+                                    java.time.Instant.now()));
+                        }
+
                         throw new TransportException(
-                            "server certificate not trusted: "
-                                + serverCert.getSubjectX500Principal().getName()
+                            "server certificate not trusted: " + subjectDn
                                 + " thumbprint=" + thumbprint
-                                + " — use /api/opcua/certs/approve to trust it");
+                                + " — use /api/v1/collector/{channelId}/trust-cert to approve it");
                     }
                 } catch (TransportException e) {
                     throw e;

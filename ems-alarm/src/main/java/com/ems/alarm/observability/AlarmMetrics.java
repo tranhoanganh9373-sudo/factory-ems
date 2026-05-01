@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class AlarmMetrics {
 
     /** 已知 alarm type；未匹配 → 归一化为 {@code "other"}。 */
-    static final Set<String> KNOWN_TYPES = Set.of("silent_timeout", "consecutive_fail", "communication_fault", "other");
+    static final Set<String> KNOWN_TYPES = Set.of("silent_timeout", "consecutive_fail", "communication_fault", "opcua_cert_pending", "other");
     /** 已知 resolved reason；未匹配 → 归一化为 {@code "other"}。 */
     static final Set<String> KNOWN_REASONS = Set.of("auto", "manual", "other");
     /** 已知 webhook outcome；未匹配 → 归一化为 {@code "failure"}（保守视为失败）。 */
