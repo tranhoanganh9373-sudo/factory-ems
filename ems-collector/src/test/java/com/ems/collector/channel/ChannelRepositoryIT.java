@@ -57,7 +57,7 @@ class ChannelRepositoryIT {
         ch.setName(name);
         ch.setProtocol("VIRTUAL");
         ch.setEnabled(enabled);
-        ch.setIsVirtual(true);
+        ch.setVirtual(true);
         ch.setProtocolConfig(new VirtualConfig(
             Duration.ofSeconds(1),
             List.of(new VirtualPoint("v", VirtualMode.CONSTANT, Map.of("value", 1.0), "kW"))

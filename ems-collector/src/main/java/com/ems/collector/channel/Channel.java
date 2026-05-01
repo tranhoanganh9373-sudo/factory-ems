@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -46,6 +47,12 @@ public class Channel {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
+    @PrePersist
+    void onCreate() {
+        if (createdAt == null) createdAt = Instant.now();
+        if (updatedAt == null) updatedAt = Instant.now();
+    }
+
     @PreUpdate
     void onUpdate() { this.updatedAt = Instant.now(); }
 
@@ -62,7 +69,7 @@ public class Channel {
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     public boolean isVirtual() { return isVirtual; }
-    public void setIsVirtual(boolean isVirtual) { this.isVirtual = isVirtual; }
+    public void setVirtual(boolean virtual) { this.isVirtual = virtual; }
 
     public ChannelConfig getProtocolConfig() { return protocolConfig; }
     public void setProtocolConfig(ChannelConfig cfg) { this.protocolConfig = cfg; }
