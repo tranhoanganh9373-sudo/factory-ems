@@ -67,6 +67,20 @@ class OpcUaTransportTest {
     }
 
     @Test
+    @DisplayName("start SUBSCRIBE 模式抛 TransportException")
+    void start_subscribePoint_throws() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:4840", SecurityMode.NONE,
+            null, null, null, null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("p", "ns=2;i=1",
+                SubscriptionMode.SUBSCRIBE, null, null)));
+
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageContaining("SUBSCRIBE");
+    }
+
+    @Test
     @DisplayName("isConnected 初始为 false")
     void isConnected_initial_returnsFalse() {
         assertThat(new OpcUaTransport().isConnected()).isFalse();

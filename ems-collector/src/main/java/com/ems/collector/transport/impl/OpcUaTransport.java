@@ -51,6 +51,14 @@ public final class OpcUaTransport implements Transport {
                 + (config == null ? "null" : config.getClass().getSimpleName()));
         }
         this.channelId = channelId;
+        // v1 仅实现 READ 模式；SUBSCRIBE 留待 v2。早 fail 比静默丢数据更安全。
+        boolean hasSubscribe = cfg.points().stream()
+            .anyMatch(p -> p.mode() == SubscriptionMode.SUBSCRIBE);
+        if (hasSubscribe) {
+            throw new TransportException(
+                "OPC UA SUBSCRIBE mode is not implemented in v1; "
+                    + "configure all points with mode=READ (channelId=" + channelId + ")");
+        }
         try {
             var endpoints = DiscoveryClient.getEndpoints(cfg.endpointUrl()).get();
             var ep = endpoints.stream()
