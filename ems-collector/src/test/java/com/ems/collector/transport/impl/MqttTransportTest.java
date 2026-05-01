@@ -9,6 +9,7 @@ import com.ems.collector.transport.TransportException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +71,7 @@ class MqttTransportTest {
         var cfg = new MqttConfig(
             "tcp://192.0.2.1:1883", "ems-test", null, null, null,
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var result = new MqttTransport().testConnection(cfg);
         assertThat(result.success()).isFalse();
@@ -94,6 +96,7 @@ class MqttTransportTest {
             "tcp://broker:1883", "ems-test",
             "secret://mqtt/u", null, null,
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var transport = new MqttTransport();  // 无 secretResolver
         assertThatThrownBy(() -> transport.start(1L, cfg, s -> {}))
@@ -143,16 +146,63 @@ class MqttTransportTest {
     }
 
     @Test
+    @DisplayName("resolveQosArray QoS 2 — 数组全部填充为 2")
+    void resolveQosArray_qos2_fillsAllSlots() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test", null, null, null,
+            2, true, Duration.ofSeconds(60),
+            null, null, 0, false,
+            List.of(
+                new MqttPoint("p1", "a/b", "$.v", null, null),
+                new MqttPoint("p2", "c/d", "$.v", null, null)
+            ));
+        int[] qos = MqttTransport.resolveQosArray(cfg, 2);
+        assertThat(qos).containsOnly(2).hasSize(2);
+    }
+
+    @Test
     @DisplayName("start 配 tlsCaCertRef 但 SecretResolver=null 抛 TransportException")
     void start_tlsCaCertRefWithoutResolver_throws() {
         var cfg = new MqttConfig(
             "ssl://broker:8883", "ems-test",
             null, null, "secret://mqtt/tls-ca-1",
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var transport = new MqttTransport();  // 无 secretResolver
         assertThatThrownBy(() -> transport.start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
             .hasMessageContaining("tlsCaCertRef configured but no SecretResolver");
+    }
+
+    // ---- buildConnectOptions LWT 单测 ----
+
+    @Test
+    @DisplayName("buildConnectOptions — 无 LWT 时 getWillDestination 为 null")
+    void buildConnectOptions_withoutLastWill_doesNotSetWill() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            null, null, null,
+            1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
+            List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
+        var opts = MqttTransport.buildConnectOptions(cfg, null, 1L);
+        assertThat(opts.getWillDestination()).isNull();
+    }
+
+    @Test
+    @DisplayName("buildConnectOptions — 配 LWT 时 setWill 参数正确")
+    void buildConnectOptions_withLastWill_setsWillCorrectly() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            null, null, null,
+            1, true, Duration.ofSeconds(60),
+            "status/dead", "OFFLINE", 1, true,
+            List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
+        var opts = MqttTransport.buildConnectOptions(cfg, null, 1L);
+        assertThat(opts.getWillDestination()).isEqualTo("status/dead");
+        assertThat(new String(opts.getWillMessage().getPayload(), StandardCharsets.UTF_8)).isEqualTo("OFFLINE");
+        assertThat(opts.getWillMessage().getQos()).isEqualTo(1);
+        assertThat(opts.getWillMessage().isRetained()).isTrue();
     }
 }

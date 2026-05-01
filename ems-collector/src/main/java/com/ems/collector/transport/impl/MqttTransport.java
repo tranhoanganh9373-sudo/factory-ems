@@ -69,13 +69,11 @@ public final class MqttTransport implements Transport {
         this(null);
     }
 
-    @Override
-    public void start(Long channelId, ChannelConfig config, SampleSink sink) {
-        if (!(config instanceof MqttConfig cfg)) {
-            throw new TransportException("expected MqttConfig, got "
-                + (config == null ? "null" : config.getClass().getSimpleName()));
-        }
-        this.channelId = channelId;
+    /**
+     * 根据 MqttConfig 构建 MqttConnectOptions，包含 LWT 设置（若已配置）。
+     * Package-private for testing.
+     */
+    static MqttConnectOptions buildConnectOptions(MqttConfig cfg, SecretResolver secretResolver, Long channelId) {
         var opts = new MqttConnectOptions();
         opts.setCleanSession(cfg.cleanSession());
         opts.setKeepAliveInterval((int) cfg.keepAlive().toSeconds());
@@ -99,6 +97,26 @@ public final class MqttTransport implements Transport {
             opts.setSocketFactory(buildSslSocketFactory(pem));
             log.info("mqtt tls enabled channel={}", channelId);
         }
+        if (cfg.lastWillTopic() != null && !cfg.lastWillTopic().isBlank()
+            && cfg.lastWillPayload() != null) {
+            opts.setWill(
+                cfg.lastWillTopic(),
+                cfg.lastWillPayload().getBytes(StandardCharsets.UTF_8),
+                cfg.lastWillQos(),
+                cfg.lastWillRetained()
+            );
+        }
+        return opts;
+    }
+
+    @Override
+    public void start(Long channelId, ChannelConfig config, SampleSink sink) {
+        if (!(config instanceof MqttConfig cfg)) {
+            throw new TransportException("expected MqttConfig, got "
+                + (config == null ? "null" : config.getClass().getSimpleName()));
+        }
+        this.channelId = channelId;
+        var opts = buildConnectOptions(cfg, secretResolver, channelId);
         try {
             client = new MqttAsyncClient(cfg.brokerUrl(), cfg.clientId(), new MemoryPersistence());
             client.setCallback(new MqttCallbackExtended() {
@@ -142,9 +160,17 @@ public final class MqttTransport implements Transport {
 
     private void subscribe(MqttConfig cfg) throws MqttException {
         var topics = cfg.points().stream().map(MqttPoint::topic).distinct().toArray(String[]::new);
-        var qos = new int[topics.length];
+        client.subscribe(topics, resolveQosArray(cfg, topics.length)).waitForCompletion(SUBSCRIBE_TIMEOUT_MS);
+    }
+
+    /**
+     * 为给定 channel 配置构建 QoS 数组（每个 topic 一个槽位，全部填充 cfg.qos()）。
+     * Package-private for testing.
+     */
+    static int[] resolveQosArray(MqttConfig cfg, int length) {
+        var qos = new int[length];
         Arrays.fill(qos, cfg.qos());
-        client.subscribe(topics, qos).waitForCompletion(SUBSCRIBE_TIMEOUT_MS);
+        return qos;
     }
 
     private void resubscribe(MqttConfig cfg) {

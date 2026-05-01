@@ -5,6 +5,7 @@ import com.ems.collector.protocol.MqttPoint;
 import com.ems.collector.secret.SecretResolver;
 import com.ems.collector.transport.Sample;
 import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -39,6 +41,7 @@ class MqttTransportIT {
         var url = "tcp://" + broker.getHost() + ":" + broker.getMappedPort(1883);
         var cfg = new MqttConfig(url, "ems-test", null, null, null,
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("temp", "sensors/+/temp", "$.value", "C", null)));
 
         var samples = new ConcurrentLinkedQueue<Sample>();
@@ -61,6 +64,67 @@ class MqttTransportIT {
         } finally {
             transport.stop();
         }
+    }
+
+    @Test
+    @DisplayName("QoS 2 — 接收消息后通过 JsonPath 提取并推送 Sample")
+    void receivesAndExtractsViaJsonPath_qos2() throws Exception {
+        var resolver = noopResolver();
+        var url = "tcp://" + broker.getHost() + ":" + broker.getMappedPort(1883);
+        var cfg = new MqttConfig(url, "ems-test-qos2", null, null, null,
+            2, true, Duration.ofSeconds(60),
+            null, null, 0, false,
+            List.of(new MqttPoint("power", "sensors/+/power", "$.value", "kW", null)));
+
+        var samples = new ConcurrentLinkedQueue<Sample>();
+        var transport = new MqttTransport(resolver);
+        try {
+            transport.start(1L, cfg, samples::add);
+
+            var pub = new MqttClient(url, "publisher-qos2-" + System.nanoTime(), new MemoryPersistence());
+            pub.connect();
+            var msg = new MqttMessage("{\"value\":42.0}".getBytes());
+            msg.setQos(2);
+            pub.publish("sensors/factory1/power", msg);
+            pub.disconnect();
+            pub.close();
+
+            await().atMost(5, TimeUnit.SECONDS).until(() -> !samples.isEmpty());
+            var s = samples.peek();
+            assertThat(s.value()).isEqualTo(42.0);
+            assertThat(s.pointKey()).isEqualTo("power");
+            assertThat(s.tags()).containsEntry("topic", "sensors/factory1/power");
+        } finally {
+            transport.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("Last Will published on abnormal disconnect")
+    void lastWill_publishedOnAbnormalDisconnect() throws Exception {
+        var url = "tcp://" + broker.getHost() + ":" + broker.getMappedPort(1883);
+        var willTopic = "status/dead-" + System.nanoTime();
+        var receivedWills = new ConcurrentLinkedQueue<String>();
+
+        // A: subscriber waiting for the will
+        var sub = new MqttClient(url, "lwt-sub-" + System.nanoTime(), new MemoryPersistence());
+        sub.connect();
+        sub.subscribe(willTopic, 1, (t, m) -> receivedWills.offer(new String(m.getPayload(), StandardCharsets.UTF_8)));
+
+        // B: client with LWT, then forced disconnect (no DISCONNECT packet → broker triggers LWT)
+        var optsB = new MqttConnectOptions();
+        optsB.setWill(willTopic, "OFFLINE".getBytes(StandardCharsets.UTF_8), 1, false);
+        optsB.setCleanSession(true);
+        var pubB = new MqttClient(url, "lwt-pub-" + System.nanoTime(), new MemoryPersistence());
+        pubB.connect(optsB);
+        pubB.disconnectForcibly(0, 100, false);
+        pubB.close();
+
+        await().atMost(10, TimeUnit.SECONDS).until(() -> !receivedWills.isEmpty());
+        assertThat(receivedWills.poll()).isEqualTo("OFFLINE");
+
+        sub.disconnect();
+        sub.close();
     }
 
     private SecretResolver noopResolver() {
