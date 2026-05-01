@@ -2,11 +2,14 @@ package com.ems.collector.secret;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import java.nio.file.*;
 import java.nio.file.attribute.PosixFilePermission;
 import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 
 @DisplayName("FilesystemSecretResolver")
 class FilesystemSecretResolverTest {
@@ -94,5 +97,30 @@ class FilesystemSecretResolverTest {
             PosixFilePermission.OWNER_READ,
             PosixFilePermission.OWNER_WRITE,
             PosixFilePermission.OWNER_EXECUTE);
+    }
+
+    @Test
+    @DisplayName("init() 校验残留兜底：chmod 静默 no-op 时仍能检出松权限并抛 SecurityException")
+    void init_chmodSilentNoop_stillDetectsLoosePermsAndThrows(@TempDir Path loose) throws Exception {
+        // 实环境提前布置松权限，再进入 mockStatic 块。这样 mock 不会影响 setUp 的 Files 调用，
+        // 而 init() 内部对 Files.setPosixFilePermissions 的调用会被替换成 no-op，
+        // 模拟「FS 驱动接收 chmod 但未生效」这一回归类失效模式。
+        Files.setPosixFilePermissions(loose, Set.of(
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE,
+            PosixFilePermission.GROUP_READ,
+            PosixFilePermission.GROUP_EXECUTE));
+
+        var resolver = new FilesystemSecretResolver(loose);
+
+        try (MockedStatic<Files> mocked = Mockito.mockStatic(Files.class, Mockito.CALLS_REAL_METHODS)) {
+            mocked.when(() -> Files.setPosixFilePermissions(any(), any()))
+                  .thenAnswer(inv -> inv.getArgument(0));
+
+            assertThatThrownBy(resolver::init)
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("unsafe permission");
+        }
     }
 }
