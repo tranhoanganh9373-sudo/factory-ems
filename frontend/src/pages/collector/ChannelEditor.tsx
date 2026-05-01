@@ -80,15 +80,10 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
                   try {
                     payload.protocolConfig = {
                       ...v.protocolConfig,
-                      points: v.protocolConfig.points.map(
-                        (p: Record<string, unknown>) => ({
-                          ...p,
-                          params:
-                            typeof p.params === 'string'
-                              ? JSON.parse(p.params)
-                              : p.params,
-                        }),
-                      ),
+                      points: v.protocolConfig.points.map((p: Record<string, unknown>) => ({
+                        ...p,
+                        params: typeof p.params === 'string' ? JSON.parse(p.params) : p.params,
+                      })),
                     };
                   } catch {
                     message.error('测点 params 不是合法 JSON 对象');
