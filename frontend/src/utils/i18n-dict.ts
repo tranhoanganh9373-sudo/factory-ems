@@ -53,6 +53,29 @@ export const RESOURCE_TYPE_LABEL = {
 export const COLLECTOR_PROTOCOL_LABEL = {
   MODBUS_TCP: 'Modbus TCP',
   MODBUS_RTU: 'Modbus RTU',
+  OPC_UA: 'OPC UA',
+  MQTT: 'MQTT',
+  VIRTUAL: '虚拟（模拟）',
+} as const;
+
+export const VIRTUAL_MODE_LABEL = {
+  CONSTANT: '恒定值',
+  SINE: '正弦波',
+  RANDOM_WALK: '随机游走',
+  CALENDAR_CURVE: '日历曲线',
+} as const;
+
+export const OPCUA_SECURITY_MODE_LABEL = {
+  NONE: '无安全',
+  SIGN: '仅签名',
+  SIGN_AND_ENCRYPT: '签名 + 加密',
+} as const;
+
+export const CONNECTION_STATE_LABEL = {
+  CONNECTING: '连接中',
+  CONNECTED: '已连接',
+  DISCONNECTED: '已断开',
+  ERROR: '错误',
 } as const;
 
 export const NAV_LABEL = {
