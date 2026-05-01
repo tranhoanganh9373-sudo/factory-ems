@@ -49,8 +49,8 @@ public class ChannelDiagnosticsService {
     }
 
     public void reconnect(Long id) {
-        Channel ch = repo.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("channel not found: " + id));
-        channelService.update(id, ch);
+        // 不调用 channelService.update — update() 会重写 channel + 触发 updatedAt 变化。
+        // restart 只 stop+start transport，DB 不动。
+        channelService.restart(id);
     }
 }

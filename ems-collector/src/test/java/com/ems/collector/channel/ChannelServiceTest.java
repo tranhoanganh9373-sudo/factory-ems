@@ -125,6 +125,60 @@ class ChannelServiceTest {
     }
 
     @Test
+    void restartStopsOldStartsNewWithoutPersisting() {
+        Transport oldT = mock(Transport.class);
+        Transport newT = mock(Transport.class);
+        factoryMock.enqueue(oldT, newT);
+
+        Channel ch = newChannel(46L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+        when(repo.findById(46L)).thenReturn(java.util.Optional.of(ch));
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(ch);
+
+        svc.restart(46L);
+
+        verify(oldT).stop();
+        verify(newT).start(eq(46L), any(VirtualConfig.class), any());
+        // 关键：restart 不应调用 repo.save
+        verify(repo, org.mockito.Mockito.times(1)).save(any(Channel.class));
+    }
+
+    @Test
+    void restartDisabledChannelOnlyStops() {
+        Transport oldT = mock(Transport.class);
+        factoryMock.enqueue(oldT);
+
+        Channel enabled = newChannel(47L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(enabled);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(enabled);
+
+        // 模拟 channel 在 DB 已被 disabled
+        Channel disabled = newChannel(47L, "VIRTUAL", false);
+        when(repo.findById(47L)).thenReturn(java.util.Optional.of(disabled));
+
+        svc.restart(47L);
+
+        verify(oldT).stop();
+        // factory 没再次被调用
+        assertThat(factoryMock.createCount).isEqualTo(1);
+        assertThat(svc.activeTransport(47L)).isEmpty();
+    }
+
+    @Test
+    void restartUnknownChannelThrows() {
+        when(repo.findById(48L)).thenReturn(java.util.Optional.empty());
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.restart(48L))
+                .isInstanceOf(java.util.NoSuchElementException.class)
+                .hasMessageContaining("48");
+    }
+
+    @Test
     void updateStopsOldStartsNew() {
         Transport oldT = mock(Transport.class);
         Transport newT = mock(Transport.class);

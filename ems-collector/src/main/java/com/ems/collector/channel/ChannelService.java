@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Map.Entry;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -90,6 +91,16 @@ public class ChannelService {
         stopChannel(id);
         repo.deleteById(id);
         stateRegistry.unregister(id);
+    }
+
+    /** 强制 stop + 重新 start 已存在的 channel；不修改 DB（updated_at 不变）。 */
+    public void restart(Long id) {
+        Channel ch = repo.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("channel not found: " + id));
+        stopChannel(id);
+        if (ch.isEnabled()) {
+            startChannel(ch);
+        }
     }
 
     public Optional<Transport> activeTransport(Long id) {

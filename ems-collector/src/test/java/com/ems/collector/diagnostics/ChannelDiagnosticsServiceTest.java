@@ -100,13 +100,11 @@ class ChannelDiagnosticsServiceTest {
     }
 
     @Test
-    @DisplayName("reconnect 委托 channelService.update")
-    void reconnect_delegatesToChannelService() {
-        var ch = channel(1L);
-        when(repo.findById(1L)).thenReturn(Optional.of(ch));
+    @DisplayName("reconnect 委托 channelService.restart（不调 update，避免污染 updatedAt）")
+    void reconnect_delegatesToChannelServiceRestart() {
         svc.reconnect(1L);
-        assertThat(channelService.lastUpdateId).isEqualTo(1L);
-        assertThat(channelService.lastUpdateChannel).isSameAs(ch);
+        assertThat(channelService.lastRestartId).isEqualTo(1L);
+        assertThat(channelService.lastUpdateId).isNull();
     }
 
     @Test
@@ -122,6 +120,7 @@ class ChannelDiagnosticsServiceTest {
         Optional<Transport> activeTransport = Optional.empty();
         Long lastUpdateId;
         Channel lastUpdateChannel;
+        Long lastRestartId;
 
         RecordingChannelService() {
             super(null, null, null, null);
@@ -137,6 +136,11 @@ class ChannelDiagnosticsServiceTest {
             this.lastUpdateId = id;
             this.lastUpdateChannel = updated;
             return updated;
+        }
+
+        @Override
+        public void restart(Long id) {
+            this.lastRestartId = id;
         }
     }
 }
