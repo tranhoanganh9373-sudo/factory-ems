@@ -30,6 +30,9 @@ export function MqttForm() {
       <Form.Item name={['protocolConfig', 'passwordRef']} label="密码（凭据引用）">
         <SecretInput refPrefix="mqtt/password" placeholder="未设置（可空）" />
       </Form.Item>
+      <Form.Item name={['protocolConfig', 'tlsCaCertRef']} label="CA 证书（凭据引用）">
+        <SecretInput refPrefix="mqtt/tls-ca" placeholder="未设置（明文 broker 不填）" />
+      </Form.Item>
       <Form.Item name={['protocolConfig', 'qos']} label="QoS" initialValue={1}>
         <Select options={QOS_LEVELS} />
       </Form.Item>
