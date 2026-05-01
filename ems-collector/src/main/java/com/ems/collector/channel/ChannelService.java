@@ -56,9 +56,11 @@ public class ChannelService {
                 log.error("failed to start channel {} ({}): {}",
                         ch.getName(), ch.getProtocol(), e.getMessage());
                 // 标 ERROR 但不重抛 — 不影响其他 channel
+                // 注意：setState 必须在 recordFailure 之后，
+                // 否则 recordFailure 会把 ERROR 覆盖回 DISCONNECTED
                 stateRegistry.register(ch.getId(), ch.getProtocol());
-                stateRegistry.setState(ch.getId(), ConnectionState.ERROR);
                 stateRegistry.recordFailure(ch.getId(), e.getMessage());
+                stateRegistry.setState(ch.getId(), ConnectionState.ERROR);
             }
         }
         log.info("ChannelService started: active={}", active.size());

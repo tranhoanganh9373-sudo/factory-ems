@@ -155,10 +155,9 @@ class ChannelServiceTest {
         ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
         svc.startAllEnabled();
 
-        // bad channel: ERROR + recordFailure（验证真实状态）
-        assertThat(registry.snapshot(51L).connState()).isEqualTo(ConnectionState.DISCONNECTED);
-        // 注意：recordFailure 把状态置 DISCONNECTED；setState(ERROR) 在 recordFailure 之前调用，
-        // 但 recordFailure 又把它覆盖为 DISCONNECTED。我们只关心错误信息已记录。
+        // bad channel: ERROR + recordFailure
+        // setState(ERROR) 在 recordFailure 之后调用，最终状态为 ERROR，错误信息也已记录。
+        assertThat(registry.snapshot(51L).connState()).isEqualTo(ConnectionState.ERROR);
         assertThat(registry.snapshot(51L).lastErrorMessage()).contains("boom");
         // ok channel started
         verify(okT).start(eq(50L), any(VirtualConfig.class), any());

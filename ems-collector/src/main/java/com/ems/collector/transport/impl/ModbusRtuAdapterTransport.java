@@ -1,4 +1,4 @@
-package com.ems.collector.transport;
+package com.ems.collector.transport.impl;
 
 import com.ems.collector.codec.RegisterDecoder;
 import com.ems.collector.config.ByteOrder;

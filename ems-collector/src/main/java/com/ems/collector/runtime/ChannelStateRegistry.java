@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -89,7 +88,7 @@ public class ChannelStateRegistry {
         final long[] latencyWindow = new long[LATENCY_WINDOW];
         int latencyIdx = 0;
         int latencyCount = 0;
-        final Map<String, Object> protocolMeta = new HashMap<>();
+        final Map<String, Object> protocolMeta = new ConcurrentHashMap<>();
 
         MutableState(String protocol, Clock clock) {
             this.protocol = protocol;

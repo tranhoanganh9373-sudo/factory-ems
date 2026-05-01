@@ -1,4 +1,4 @@
-package com.ems.collector.transport;
+package com.ems.collector.transport.impl;
 
 import com.ems.collector.protocol.ModbusPoint;
 import com.ems.collector.protocol.ModbusTcpConfig;

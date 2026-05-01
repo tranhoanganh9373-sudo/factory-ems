@@ -1,5 +1,10 @@
 package com.ems.collector.transport;
 
+import com.ems.collector.transport.impl.ModbusRtuAdapterTransport;
+import com.ems.collector.transport.impl.ModbusTcpAdapterTransport;
+import com.ems.collector.transport.impl.MqttTransport;
+import com.ems.collector.transport.impl.OpcUaTransport;
+import com.ems.collector.transport.impl.VirtualTransport;
 import org.springframework.stereotype.Component;
 
 /**

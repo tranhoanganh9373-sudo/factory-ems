@@ -1,4 +1,4 @@
-package com.ems.collector.transport;
+package com.ems.collector.transport.impl;
 
 import com.ems.collector.protocol.ChannelConfig;
 import com.ems.collector.transport.SampleSink;
@@ -6,15 +6,13 @@ import com.ems.collector.transport.TestResult;
 import com.ems.collector.transport.Transport;
 
 /**
- * Stub — 由 Phase 4 实现完整 VIRTUAL 协议（信号生成器 + 调度）。
- *
- * <p>Phase 2 阶段仅提供占位以满足 sealed permits 列表。
+ * Stub — 由 Phase 6 实现（Paho MQTT v3/v5 Client + topic 订阅 + JSONPath 提取）。
  */
-public final class VirtualTransport implements Transport {
+public final class MqttTransport implements Transport {
 
     @Override
     public void start(Long channelId, ChannelConfig config, SampleSink sink) {
-        throw new UnsupportedOperationException("VirtualTransport not yet implemented in Phase 4");
+        throw new UnsupportedOperationException("MqttTransport not yet implemented in Phase 6");
     }
 
     @Override
@@ -29,6 +27,6 @@ public final class VirtualTransport implements Transport {
 
     @Override
     public TestResult testConnection(ChannelConfig config) {
-        return TestResult.fail("VirtualTransport stub — implement in Phase 4");
+        return TestResult.fail("MqttTransport stub — implement in Phase 6");
     }
 }

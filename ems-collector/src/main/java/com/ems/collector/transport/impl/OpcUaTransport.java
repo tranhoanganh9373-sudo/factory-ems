@@ -1,4 +1,4 @@
-package com.ems.collector.transport;
+package com.ems.collector.transport.impl;
 
 import com.ems.collector.protocol.ChannelConfig;
 import com.ems.collector.transport.SampleSink;
@@ -6,13 +6,13 @@ import com.ems.collector.transport.TestResult;
 import com.ems.collector.transport.Transport;
 
 /**
- * Stub — 由 Phase 6 实现（Paho MQTT v3/v5 Client + topic 订阅 + JSONPath 提取）。
+ * Stub — 由 Phase 5 实现（Eclipse Milo OPC UA Client + Subscription / Read 模式）。
  */
-public final class MqttTransport implements Transport {
+public final class OpcUaTransport implements Transport {
 
     @Override
     public void start(Long channelId, ChannelConfig config, SampleSink sink) {
-        throw new UnsupportedOperationException("MqttTransport not yet implemented in Phase 6");
+        throw new UnsupportedOperationException("OpcUaTransport not yet implemented in Phase 5");
     }
 
     @Override
@@ -27,6 +27,6 @@ public final class MqttTransport implements Transport {
 
     @Override
     public TestResult testConnection(ChannelConfig config) {
-        return TestResult.fail("MqttTransport stub — implement in Phase 6");
+        return TestResult.fail("OpcUaTransport stub — implement in Phase 5");
     }
 }
