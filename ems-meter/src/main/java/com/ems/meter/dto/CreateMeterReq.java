@@ -12,5 +12,6 @@ public record CreateMeterReq(
     @NotBlank @Size(max = 64) String influxMeasurement,
     @NotBlank @Size(max = 64) String influxTagKey,
     @NotBlank @Size(max = 128) String influxTagValue,
-    Boolean enabled
+    Boolean enabled,
+    Long channelId
 ) {}

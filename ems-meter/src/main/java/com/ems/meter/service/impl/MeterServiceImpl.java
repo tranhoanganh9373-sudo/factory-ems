@@ -64,6 +64,7 @@ public class MeterServiceImpl implements MeterService {
         m.setInfluxTagKey(req.influxTagKey());
         m.setInfluxTagValue(req.influxTagValue());
         m.setEnabled(req.enabled() == null ? Boolean.TRUE : req.enabled());
+        m.setChannelId(req.channelId());
         meters.save(m);
 
         return toDTO(m, type, null);
@@ -99,6 +100,7 @@ public class MeterServiceImpl implements MeterService {
         m.setInfluxTagKey(req.influxTagKey());
         m.setInfluxTagValue(req.influxTagValue());
         if (req.enabled() != null) m.setEnabled(req.enabled());
+        m.setChannelId(req.channelId());
         meters.save(m);
 
         Long parentId = topology.findByChildMeterId(id).map(MeterTopology::getParentMeterId).orElse(null);
@@ -155,7 +157,7 @@ public class MeterServiceImpl implements MeterService {
             type != null ? type.getUnit() : null,
             m.getOrgNodeId(),
             m.getInfluxMeasurement(), m.getInfluxTagKey(), m.getInfluxTagValue(),
-            m.getEnabled(), parentMeterId,
+            m.getEnabled(), m.getChannelId(), parentMeterId,
             m.getCreatedAt(), m.getUpdatedAt());
     }
 }

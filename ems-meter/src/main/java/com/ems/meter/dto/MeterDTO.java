@@ -15,6 +15,7 @@ public record MeterDTO(
     String influxTagKey,
     String influxTagValue,
     Boolean enabled,
+    Long channelId,
     Long parentMeterId,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt

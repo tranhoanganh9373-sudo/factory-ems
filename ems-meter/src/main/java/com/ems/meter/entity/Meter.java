@@ -35,6 +35,13 @@ public class Meter {
     @Column(nullable = false)
     private Boolean enabled = true;
 
+    /**
+     * 关联的 collector channel；nullable —— meter 不一定要绑 channel。
+     * 当设置时，{@code InfluxSampleWriter} 会按 (channelId, code) 反查并写入 InfluxDB。
+     */
+    @Column(name = "channel_id")
+    private Long channelId;
+
     @Version
     private Long version;
 
@@ -63,6 +70,7 @@ public class Meter {
     public String getInfluxTagKey() { return influxTagKey; }
     public String getInfluxTagValue() { return influxTagValue; }
     public Boolean getEnabled() { return enabled; }
+    public Long getChannelId() { return channelId; }
     public Long getVersion() { return version; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
@@ -76,4 +84,5 @@ public class Meter {
     public void setInfluxTagKey(String v) { this.influxTagKey = v; }
     public void setInfluxTagValue(String v) { this.influxTagValue = v; }
     public void setEnabled(Boolean v) { this.enabled = v; }
+    public void setChannelId(Long v) { this.channelId = v; }
 }
