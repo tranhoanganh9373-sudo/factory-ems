@@ -151,6 +151,32 @@ class ModbusRtuAdapterTransportTest {
     }
 
     @Test
+    @DisplayName("stop() during backoff sleep wakes promptly via Thread.interrupt")
+    void stop_duringBackoffSleep_wakesPromptly() throws Exception {
+        ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
+
+        RtuModbusMaster m1 = mock(RtuModbusMaster.class);
+        when(m1.isConnected()).thenReturn(false);
+
+        RtuModbusMaster failing = mock(RtuModbusMaster.class);
+        when(failing.isConnected()).thenReturn(false);
+        doThrow(new ModbusIoException("port busy", true)).when(failing).open();
+
+        AtomicInteger created = new AtomicInteger();
+        Supplier<RtuModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : failing;
+
+        ModbusRtuAdapterTransport t = new ModbusRtuAdapterTransport(registry, factory);
+        t.start(11L, fastPollCfg(), s -> {});
+        Thread.sleep(200);
+        long stopStart = System.nanoTime();
+        t.stop();
+        long stopElapsedMs = (System.nanoTime() - stopStart) / 1_000_000L;
+        assertThat(stopElapsedMs)
+                .as("stop() must wake the scheduler thread out of backoff sleep")
+                .isLessThan(500L);
+    }
+
+    @Test
     @DisplayName("all-point IOException force-closes master so next cycle reconnects")
     void pollAll_allPointsFail_forceClosesMaster() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);

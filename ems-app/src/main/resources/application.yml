@@ -44,6 +44,11 @@ ems:
     max-failed-attempts: 5
     lockout-minutes: 15
   security:
+    # IP resolution prefers the first segment of X-Forwarded-For. Operators
+    # MUST ensure the upstream proxy (nginx, load balancer) strips client-supplied
+    # XFF headers and rewrites them with the real source IP — otherwise attackers
+    # can rotate XFF values to bypass per-IP throttles. /login is exempt because
+    # ems.login.max-failed-attempts + lockout-minutes already throttles brute force.
     rate-limit:
       enabled: true
       read-per-minute: 600

@@ -7,15 +7,14 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -36,6 +35,7 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(RateLimitFilter.class);
     private static final int MAX_TRACKED_IPS = 50_000;
     private static final String OVER_LIMIT_BODY =
             "{\"success\":false,\"error\":\"Rate limit exceeded\"}";
@@ -71,6 +71,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         long retryAfterSec = Math.max(1L,
                 (probe.getNanosToWaitForRefill() + 999_999_999L) / 1_000_000_000L);
+        log.warn("Rate limit exceeded ip={} method={} uri={} retryAfterSec={}",
+                key, request.getMethod(), request.getRequestURI(), retryAfterSec);
         response.setStatus(429);
         response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(retryAfterSec));
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -125,103 +127,5 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static <K, V> ConcurrentMap<K, V> boundedMap() {
         return new BoundedConcurrentMap<>(MAX_TRACKED_IPS);
-    }
-
-    /**
-     * ConcurrentMap-shaped wrapper around an LRU LinkedHashMap. Mutating operations
-     * are guarded by the backing map's intrinsic lock — sufficient for low-contention
-     * lookup and bucket creation. Per-IP rate enforcement is lock-free inside Bucket4j
-     * once the bucket reference is obtained.
-     */
-    private static final class BoundedConcurrentMap<K, V>
-            extends java.util.AbstractMap<K, V>
-            implements ConcurrentMap<K, V> {
-
-        private final Map<K, V> backing;
-
-        BoundedConcurrentMap(int maxEntries) {
-            this.backing = Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
-                    return size() > maxEntries;
-                }
-            });
-        }
-
-        @Override
-        public java.util.Set<Entry<K, V>> entrySet() {
-            return backing.entrySet();
-        }
-
-        @Override
-        public V put(K key, V value) {
-            return backing.put(key, value);
-        }
-
-        @Override
-        public V get(Object key) {
-            return backing.get(key);
-        }
-
-        @Override
-        public V putIfAbsent(K key, V value) {
-            synchronized (backing) {
-                V existing = backing.get(key);
-                if (existing != null) {
-                    return existing;
-                }
-                backing.put(key, value);
-                return null;
-            }
-        }
-
-        @Override
-        public boolean remove(Object key, Object value) {
-            synchronized (backing) {
-                V existing = backing.get(key);
-                if (existing != null && existing.equals(value)) {
-                    backing.remove(key);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        @Override
-        public boolean replace(K key, V oldValue, V newValue) {
-            synchronized (backing) {
-                V existing = backing.get(key);
-                if (existing != null && existing.equals(oldValue)) {
-                    backing.put(key, newValue);
-                    return true;
-                }
-                return false;
-            }
-        }
-
-        @Override
-        public V replace(K key, V value) {
-            synchronized (backing) {
-                if (backing.containsKey(key)) {
-                    return backing.put(key, value);
-                }
-                return null;
-            }
-        }
-
-        @Override
-        public V computeIfAbsent(K key, java.util.function.Function<? super K, ? extends V> mappingFunction) {
-            synchronized (backing) {
-                V existing = backing.get(key);
-                if (existing != null) {
-                    return existing;
-                }
-                V created = mappingFunction.apply(key);
-                if (created != null) {
-                    backing.put(key, created);
-                }
-                return created;
-            }
-        }
     }
 }

@@ -217,6 +217,39 @@ class ModbusTcpAdapterTransportTest {
     }
 
     @Test
+    @DisplayName("stop() during backoff sleep wakes promptly via Thread.interrupt")
+    void stop_duringBackoffSleep_wakesPromptly() throws Exception {
+        ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
+
+        // Initial master fails its isConnected() check on cycle 1 → forces ensureReopened.
+        // The factory then returns a master whose open() always throws, so the scheduler
+        // thread enters the backoff Thread.sleep loop. We then call stop() and assert
+        // it returns well before the full 1s backoff completes.
+        TcpModbusMaster m1 = mock(TcpModbusMaster.class);
+        when(m1.isConnected()).thenReturn(false);
+
+        TcpModbusMaster failing = mock(TcpModbusMaster.class);
+        when(failing.isConnected()).thenReturn(false);
+        doThrow(new ModbusIoException("refused", true)).when(failing).open();
+
+        AtomicInteger created = new AtomicInteger();
+        Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : failing;
+
+        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
+        t.start(11L, fastPollCfg(), s -> {});
+        // Let the first reopen attempt fail and the scheduler enter backoff sleep.
+        Thread.sleep(200);
+        long stopStart = System.nanoTime();
+        t.stop();
+        long stopElapsedMs = (System.nanoTime() - stopStart) / 1_000_000L;
+        // Backoff sleep at attempt 1 is 1000 ms. If interrupt didn't propagate, stop()
+        // would block until the sleep finishes. 500 ms cap leaves comfortable headroom.
+        assertThat(stopElapsedMs)
+                .as("stop() must wake the scheduler thread out of backoff sleep")
+                .isLessThan(500L);
+    }
+
+    @Test
     @DisplayName("all-point IOException force-closes master so next cycle reconnects")
     void pollAll_allPointsFail_forceClosesMaster() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
