@@ -22,6 +22,11 @@
         <jjwt.version>0.12.6</jjwt.version>
         <mapstruct.version>1.6.0</mapstruct.version>
         <spotbugs.version>4.8.6</spotbugs.version>
+        <!-- JDK 25 toolchain compatibility: Spring Boot 3.3.4 pins mockito 5.11.0 / byte-buddy
+             1.14.19 which can't instrument classes loaded by JDK 25 ("Could not modify all
+             classes"). Override to versions that bundle JDK-25-aware byte-buddy 1.17.x. -->
+        <mockito.version>5.18.0</mockito.version>
+        <byte-buddy.version>1.17.5</byte-buddy.version>
     </properties>
 
     <modules>
