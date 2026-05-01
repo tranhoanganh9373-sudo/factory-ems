@@ -48,7 +48,7 @@
 | # | 严重度 | 问题 | 状态 |
 |---|---|---|---|
 | 1 | ~~LOW~~ | ~~`frontend/src/assets/logo.png` 尺寸为 **12864 × 7720** 像素（3.5 MB）~~ | **RESOLVED** (`156aea7`) — sips -Z 1024 → 1024×614 / 102 KB，dist 减 3.4 MB；BrandLockup 显示尺寸（240×144 login / 56-h header）下视觉无差 |
-| 2 | LOW | `main.tsx:27` `react-refresh/only-export-components` warning：`ThemedConfigProvider` 与 ReactDOM 渲染同文件 | OPEN — Vite HMR 优化提示，不影响生产；如需修可抽到 `src/styles/ThemedConfigProvider.tsx` |
+| 2 | ~~LOW~~ | ~~`main.tsx:27` `react-refresh/only-export-components` warning~~ | **RESOLVED** (`f08d4ce`) — 抽到 `src/styles/ThemedConfigProvider.tsx`；`npm run lint` 现 0 errors 0 warnings |
 | 3 | INFO | K2 计划列「`/home`」实为 `<Route index>` → `/dashboard`，并非独立页 | DOCUMENTED — 行为符合预期，仅文档措辞偏差 |
 
 ## 4. 待人工 / 后端就位后补做的项
