@@ -2,6 +2,7 @@ import { Modal, Form, Input, Select, Switch, message } from 'antd';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { meterApi, CreateMeterReq } from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
+import { channelApi } from '@/api/channel';
 
 function flattenTree(nodes: OrgNodeDTO[]): OrgNodeDTO[] {
   const result: OrgNodeDTO[] = [];
@@ -27,6 +28,11 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
   const { data: energyTypes = [] } = useQuery({
     queryKey: ['energyTypes'],
     queryFn: () => meterApi.listEnergyTypes(),
+  });
+
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channel', 'list'],
+    queryFn: () => channelApi.list(),
   });
 
   const mut = useMutation({
@@ -94,6 +100,15 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
         </Form.Item>
         <Form.Item name="influxTagValue" label="标签值" rules={[{ required: true, max: 128 }]}>
           <Input />
+        </Form.Item>
+        <Form.Item name="channelId" label="关联通道">
+          <Select
+            allowClear
+            placeholder="可选；不绑则该测点不接收 collector 数据"
+            options={channels
+              .filter((c) => c.enabled)
+              .map((c) => ({ value: c.id, label: `${c.name} (${c.protocol})` }))}
+          />
         </Form.Item>
         <Form.Item name="enabled" label="启用" valuePropName="checked">
           <Switch />
