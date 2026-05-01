@@ -17,11 +17,12 @@ spring:
     locations: classpath:db/migration
   servlet:
     multipart:
-      # Cap multipart uploads. Only `/api/v1/secrets/opcua/cert` accepts a file
-      # (the .pfx blob), and PFX 实际从来不会到 KB 级以上；controller 本身另
-      # 行 enforce 64KB hard cap (see SecretController.uploadPfx).
+      # 上传体积上限。当前仅 /api/v1/secrets/opcua/cert 接收文件（.pfx blob），
+      # PFX 文件实际不会超过几 KB；controller 内部另外 enforce 64KB 硬上限
+      # （见 SecretController.uploadPfx）。这里的 YAML 上限是请求到达 controller
+      # 之前的最早拦截点；max-request-size = max-file-size + 少量表单字段冗余。
       max-file-size: 256KB
-      max-request-size: 1MB
+      max-request-size: 512KB
 
 server:
   port: 8080

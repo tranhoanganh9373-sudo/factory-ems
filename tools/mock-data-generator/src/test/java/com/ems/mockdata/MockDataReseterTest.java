@@ -19,7 +19,7 @@ import static org.mockito.Mockito.verify;
 class MockDataReseterTest {
 
     @Test
-    @DisplayName("reset() issues DELETEs in FK-safe order matching the runbook")
+    @DisplayName("reset() issues each DELETE in MockDataReseter.RESET_SQL exactly, in order")
     void reset_emitsRunbookSqlSequence() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         var reseter = new MockDataReseter(jdbc);
@@ -27,30 +27,10 @@ class MockDataReseterTest {
         reseter.reset();
 
         var sqlCaptor = ArgumentCaptor.forClass(String.class);
-        verify(jdbc, times(13)).execute(sqlCaptor.capture());
-        List<String> issued = sqlCaptor.getAllValues();
-
-        // Order matters — children before parents to satisfy FK constraints.
-        assertThat(issued.get(0)).isEqualToIgnoringCase("DELETE FROM production_entries");
-        assertThat(issued.get(1)).isEqualToIgnoringCase("DELETE FROM ts_rollup_monthly");
-        assertThat(issued.get(2)).isEqualToIgnoringCase("DELETE FROM ts_rollup_daily");
-        assertThat(issued.get(3)).isEqualToIgnoringCase("DELETE FROM ts_rollup_hourly");
-        assertThat(issued.get(4)).isEqualToIgnoringCase("DELETE FROM meter_topology");
-        assertThat(issued.get(5)).containsIgnoringCase("DELETE FROM meters")
-                                  .containsIgnoringCase("MOCK-");
-        assertThat(issued.get(6)).isEqualToIgnoringCase("DELETE FROM tariff_periods");
-        assertThat(issued.get(7)).containsIgnoringCase("DELETE FROM tariff_plans")
-                                  .containsIgnoringCase("MOCK-");
-        assertThat(issued.get(8)).containsIgnoringCase("DELETE FROM shifts")
-                                  .containsIgnoringCase("MOCK-");
-        // closure children before org_nodes parents
-        assertThat(issued.get(9)).containsIgnoringCase("DELETE FROM org_node_closure");
-        assertThat(issued.get(10)).containsIgnoringCase("DELETE FROM org_nodes")
-                                   .containsIgnoringCase("MOCK-");
-        // user_roles before users (FK)
-        assertThat(issued.get(11)).containsIgnoringCase("DELETE FROM user_roles");
-        assertThat(issued.get(12)).containsIgnoringCase("DELETE FROM users")
-                                   .containsIgnoringCase("mock-");
+        verify(jdbc, times(MockDataReseter.RESET_SQL.size())).execute(sqlCaptor.capture());
+        // Single source of truth: production constant. Drift in either direction
+        // (typo, reorder, missing/extra entry) fails this assertion immediately.
+        assertThat(sqlCaptor.getAllValues()).containsExactlyElementsOf(MockDataReseter.RESET_SQL);
     }
 
     @Test

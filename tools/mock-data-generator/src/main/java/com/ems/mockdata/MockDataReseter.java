@@ -17,13 +17,28 @@ import java.util.List;
  * tables that only ever hold generated data (rollups, topology, production_entries)
  * are unconditional. Influx raw points are NOT cleared here — operators drop the
  * bucket via docker-compose.
+ *
+ * <p><b>If you change {@link #RESET_SQL}, also update:</b>
+ * <ol>
+ *   <li>{@code docs/ops/mock-data-runbook.md} §"Reset & re-seed" SQL block</li>
+ *   <li>{@code MockDataReseterTest} — the test reads {@code RESET_SQL} directly so
+ *       it auto-detects content drift, but verify the per-statement assertions still
+ *       cover any new MOCK- prefix scoping you add.</li>
+ * </ol>
+ *
+ * <p><b>Scale notes:</b> all 13 DELETEs run in a single {@link Transactional}
+ * boundary. For Plan 2.1 default ("medium" scale ≈ 262K hourly rollup rows) this
+ * holds locks briefly and is fine. For "large" scale (millions of rollup rows),
+ * consider running the SQL by hand in batches outside the application — see the
+ * runbook's manual SQL block for an equivalent script.
  */
 @Component
 public class MockDataReseter {
 
     private static final Logger log = LoggerFactory.getLogger(MockDataReseter.class);
 
-    private static final List<String> RESET_SQL = List.of(
+    /** Visible for testing — see class-level javadoc on drift discipline. */
+    static final List<String> RESET_SQL = List.of(
         "DELETE FROM production_entries",
         "DELETE FROM ts_rollup_monthly",
         "DELETE FROM ts_rollup_daily",

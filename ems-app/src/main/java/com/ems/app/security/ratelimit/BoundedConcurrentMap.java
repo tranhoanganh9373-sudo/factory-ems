@@ -19,6 +19,15 @@ import java.util.function.Function;
  * <p><b>Thread-safety contract:</b> single-method calls (get, put, putIfAbsent,
  * compute*) are atomic. External compound operations (e.g., manual get-then-put)
  * must use the provided atomic methods or hold the lock on the backing map.
+ *
+ * <p><b>Iteration contract:</b> {@link #entrySet()} returns the backing
+ * {@link Collections#synchronizedMap synchronized} map's entrySet. Per JDK
+ * Javadoc, callers MUST manually {@code synchronized (this)} around iteration
+ * to avoid {@link java.util.ConcurrentModificationException}. The default
+ * methods inherited from {@link AbstractMap} (containsValue, equals, hashCode)
+ * iterate entrySet and are NOT thread-safe — do not call them under contention.
+ * RateLimitFilter only uses {@link #computeIfAbsent} so this constraint is moot
+ * in production; documented here for any future caller.
  */
 final class BoundedConcurrentMap<K, V> extends AbstractMap<K, V> implements ConcurrentMap<K, V> {
 
