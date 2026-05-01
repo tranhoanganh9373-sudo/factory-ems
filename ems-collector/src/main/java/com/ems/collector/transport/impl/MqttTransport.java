@@ -24,7 +24,14 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyStore;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
@@ -82,6 +89,15 @@ public final class MqttTransport implements Transport {
             if (cfg.passwordRef() != null) {
                 opts.setPassword(secretResolver.resolve(cfg.passwordRef()).toCharArray());
             }
+        }
+        if (cfg.tlsCaCertRef() != null) {
+            if (secretResolver == null) {
+                throw new TransportException(
+                    "tlsCaCertRef configured but no SecretResolver injected (channelId=" + channelId + ")");
+            }
+            String pem = secretResolver.resolve(cfg.tlsCaCertRef());
+            opts.setSocketFactory(buildSslSocketFactory(pem));
+            log.info("mqtt tls enabled channel={}", channelId);
         }
         try {
             client = new MqttAsyncClient(cfg.brokerUrl(), cfg.clientId(), new MemoryPersistence());
@@ -170,6 +186,31 @@ public final class MqttTransport implements Transport {
             }
             sink.accept(new Sample(channelId, p.key(), ts, value, Quality.GOOD,
                 Map.of("topic", topic)));
+        }
+    }
+
+    /**
+     * 由 PEM 编码的 CA 证书构建一组单证书 KeyStore，并据此初始化 TLSv1.2 SSLContext，
+     * 返回可用于 broker 单向认证的 SSLSocketFactory。
+     *
+     * <p>仅支持单证书一向 TLS（验证 broker），不支持客户端证书 / mTLS。
+     * Package-private for testing.
+     */
+    static SSLSocketFactory buildSslSocketFactory(String pemCert) {
+        try {
+            var bytes = pemCert.getBytes(StandardCharsets.UTF_8);
+            var certFactory = CertificateFactory.getInstance("X.509");
+            var cert = (X509Certificate) certFactory.generateCertificate(new ByteArrayInputStream(bytes));
+            var keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            keyStore.load(null, null);
+            keyStore.setCertificateEntry("ca", cert);
+            var tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init(keyStore);
+            var ctx = SSLContext.getInstance("TLSv1.2");
+            ctx.init(null, tmf.getTrustManagers(), null);
+            return ctx.getSocketFactory();
+        } catch (Exception e) {
+            throw new TransportException("mqtt tls cert load failed: " + e.getMessage(), e);
         }
     }
 
