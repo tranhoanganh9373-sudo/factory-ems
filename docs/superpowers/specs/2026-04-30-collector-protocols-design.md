@@ -519,9 +519,9 @@ export const OPCUA_SECURITY_MODE_LABEL = {
 ├── opcua/
 │   ├── plc-line1.username
 │   ├── plc-line1.password
+│   ├── <name>.pem                  # 客户端证书 + encrypted PKCS#8 私钥（由 .pfx 上传转换而成）
+│   ├── <name>.pem.password         # 上述 PEM 私钥的解密密码
 │   └── certs/
-│       ├── client.pfx
-│       ├── client.pfx.password
 │       └── trusted/               # 受信任服务器证书白名单 (DER)
 │           ├── plc-line1.der
 │           └── plc-line2.der
@@ -589,6 +589,17 @@ class FilesystemSecretResolver implements SecretResolver {
 
 > **事件链同步性**：`ApplicationEventPublisher` 默认走 Spring 同步多播器；`@EnableAsync` 仅作用于 `@Async` 注解（如 webhook executor）。因此 pending 事件保存告警与 `addPending` 在同一线程完成，前端见到 cert 时告警必已存在；不存在「approve 早于 pending listener」的竞态。
 
+### 8.3.bis 客户端 .pfx 上传 → PEM 服务端转换（已实现）
+
+ADMIN 把客户端身份用 `.pfx` (PKCS#12) 上传到 `POST /api/v1/secrets/opcua/cert`，后端用 `KeyStore.getInstance("PKCS12")` 解析后再以 encrypted PKCS#8 PEM 形式写到 `secret://opcua/<name>.pem`，密码写到 `secret://opcua/<name>.pem.password`。OPC UA Transport 仍由 `OpcUaCertificateLoader` 读 PEM——零代码改动。
+
+- 关键 invariant：磁盘只保留 PEM，不保留原 .pfx（已解析过；保留二进制只增加攻击面）。
+- 也允许运维直接走 `POST /api/v1/secrets` 写 PEM 文本——两条路径产出的 secret 可被 channel 配置同等消费。
+- 多 alias keystore 必须显式提供 `alias` 表单字段；否则 400。
+- 文件大小硬上限 64KB；name 必须匹配 `^[a-zA-Z0-9._-]+$` 且 ≤ 100 字符（防路径遍历）。
+- 审计事件 action `SECRET_PFX_UPLOAD`、targetId `secret://opcua/<name>.pem`，包含 cert SHA-256 指纹。
+- PEM 私钥再加密用 PBE-SHA1-3DES（OID 1.2.840.113549.1.12.1.3，stock JDK 唯一能 OID-roundtrip 的常见 PBE 算法；强度等同上传的原 .pfx）。
+
 ### 8.4 REST 端点（仅 ADMIN）
 
 | 端点 | 方法 | 说明 |
@@ -596,7 +607,7 @@ class FilesystemSecretResolver implements SecretResolver {
 | `/api/v1/secrets` | POST | `{ ref, value }` 写入 |
 | `/api/v1/secrets/{ref}` | DELETE | 删除 |
 | `/api/v1/secrets` | GET | 仅返回 ref 列表 |
-| `/api/v1/secrets/opcua/cert` | POST | multipart 上传 .pfx |
+| `/api/v1/secrets/opcua/cert` | POST | multipart 上传 .pfx — 后端解析 PKCS12 并转存为 PEM (encrypted PKCS#8)（已实现） |
 | `/api/v1/collector/cert-pending` | GET | 列出待审批 OPC UA 服务器证书（已实现） |
 | `/api/v1/collector/{channelId}/trust-cert` | POST | 批准 OPC UA 服务器证书（已实现，body `{ thumbprint }`） |
 | `/api/v1/collector/cert-pending/{thumbprint}` | DELETE | 拒绝 OPC UA 服务器证书（已实现） |

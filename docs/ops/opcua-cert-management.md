@@ -32,9 +32,9 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | 服务端证书审批 REST API | ✅ 已实装：`GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` |
 | 前端证书审批页 | ✅ `/admin/cert-approval`（ADMIN-only） |
 | `OPC_UA_CERT_PENDING` 告警自动联动 | ✅ pending 时创建 ACTIVE 告警，approve 时自动 RESOLVE |
-| `.pfx` 客户端证书 multipart 上传 | ❌ spec §8.3 描述的 `POST /api/v1/secrets/opcua/cert` **未实装**——需手工放置 .pfx 后通过 `POST /api/v1/secrets` 写引用 |
+| `.pfx` 客户端证书 multipart 上传 | ✅ `POST /api/v1/secrets/opcua/cert`（ADMIN）— 后端解析 PKCS#12 → 落盘成 PEM (encrypted PKCS#8) — 见 §5.2 |
 
-> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维通过 §3 信任目录约定 + §4 审批 SOP 工作；当前唯一手工流程是 `.pfx` 客户端证书上传（见 §6 临时方案）。
+> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维通过 §3 信任目录约定 + §4 审批 SOP 工作；客户端 `.pfx` 直接走 §5.2 的 multipart 上传端点即可。
 
 ---
 
@@ -128,13 +128,42 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
   http://localhost:8888/api/v1/collector/cert-pending/<hex64>
 ```
 
-### 5.2 客户端 `.pfx` / PEM 私钥上传（手工，待 v2 multipart）
+### 5.2 客户端 `.pfx` / PEM 私钥上传
 
-v1.1 没有 multipart `.pfx` 上传端点（spec §8.3 列入 v2）。当前流程：
+#### 5.2.1 推荐：multipart 上传 `.pfx`（ADMIN）
 
-1. 运维侧 SSH 到 collector 主机，把 PEM 私钥与证书放到 `${ems.secrets.dir}/opcua/clients/<channelId>.pem`，权限 `600`
-2. 通过 `POST /api/v1/secrets` 写入文本 secret（如证书密码）
-3. 在 ChannelEditor 把 `certRef` 字段填 `secret://opcua/clients/<channelId>.pem`，密码引用同理
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "file=@client.pfx" \
+  -F "name=plc-line1" \
+  -F "password=<pfx-password>" \
+  http://localhost:8888/api/v1/secrets/opcua/cert
+```
+
+后端 `KeyStore.getInstance("PKCS12")` 解析 .pfx，把证书 + 加密 PKCS#8 私钥拼成 PEM，落盘成两个 secret：
+
+- `secret://opcua/<name>.pem` — 证书 + encrypted PKCS#8 私钥
+- `secret://opcua/<name>.pem.password` — PEM 私钥密码（同表单 `password`）
+
+ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRef` 填 `secret://opcua/plc-line1.pem.password` 即可。
+
+约束：
+
+- 文件大小硬上限 64KB；超过返回 400
+- `name` 必须匹配 `^[a-zA-Z0-9._-]+$` 且 ≤ 100 字符（防路径遍历）
+- 多 alias 的 keystore 需额外传 `-F alias=<alias-name>`；否则返回 400
+- 错误密码返回 400 `{ "error": "invalid keystore password" }`
+- 写审计事件 `SECRET_PFX_UPLOAD`，包含 cert SHA-256 指纹
+
+#### 5.2.2 备用：直接写 PEM 文本
+
+如果手头已经是 PEM 而非 .pfx，可走通用 `POST /api/v1/secrets` 写文本 secret：
+
+1. 把 PEM 内容（`CERTIFICATE` + `ENCRYPTED PRIVATE KEY` 拼接）通过 `POST /api/v1/secrets` 写到 `secret://opcua/<name>.pem`
+2. 把私钥密码通过同一接口写到 `secret://opcua/<name>.pem.password`
+3. 在 ChannelEditor 把 `certRef` / `certPasswordRef` 指向上述 ref
+
+这条路径与 5.2.1 产出完全等价，OPC UA Transport 同样消费 PEM。
 
 ### 5.3 证书撤销 / 不再信任
 
