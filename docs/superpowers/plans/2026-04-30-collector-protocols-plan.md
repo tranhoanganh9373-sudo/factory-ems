@@ -84,7 +84,7 @@
 - Create: `ems-app/src/main/resources/db/migration/V2.3.0__init_channel.sql`
 - Test: `ems-collector/src/test/java/com/ems/collector/channel/ChannelMigrationIT.java`
 
-- [ ] **Step 1: 写迁移失败测试**
+- [x] **Step 1: 写迁移失败测试**
 
 ```java
 package com.ems.collector.channel;
@@ -117,7 +117,7 @@ class ChannelMigrationIT {
 }
 ```
 
-- [ ] **Step 2: 运行测试验证失败**
+- [x] **Step 2: 运行测试验证失败**
 
 ```bash
 cd /Users/mac/factory-ems
@@ -125,7 +125,7 @@ mvn -pl ems-collector -am test -Dtest=ChannelMigrationIT
 ```
 Expected: FAIL — table does not exist
 
-- [ ] **Step 3: 写迁移 SQL**
+- [x] **Step 3: 写迁移 SQL**
 
 ```sql
 -- V2.3.0__init_channel.sql
@@ -162,14 +162,14 @@ CREATE TABLE collector_metrics (
 CREATE INDEX idx_collector_metrics_bucket ON collector_metrics(bucket_at);
 ```
 
-- [ ] **Step 4: 运行测试通过**
+- [x] **Step 4: 运行测试通过**
 
 ```bash
 mvn -pl ems-collector -am test -Dtest=ChannelMigrationIT
 ```
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add ems-app/src/main/resources/db/migration/V2.3.0__init_channel.sql \
@@ -191,7 +191,7 @@ V2.3.0 引入 channel 抽象与诊断指标聚合表。"
 - Create: `ems-collector/src/main/java/com/ems/collector/protocol/{SecurityMode,VirtualMode,SubscriptionMode}.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/protocol/ChannelConfigJsonTest.java`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```java
 package com.ems.collector.protocol;
@@ -245,14 +245,14 @@ class ChannelConfigJsonTest {
 }
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ChannelConfigJsonTest
 ```
 Expected: FAIL — class not found
 
-- [ ] **Step 3: 实现 sealed interface + 枚举**
+- [x] **Step 3: 实现 sealed interface + 枚举**
 
 `ChannelConfig.java`:
 ```java
@@ -308,7 +308,7 @@ package com.ems.collector.protocol;
 public enum SubscriptionMode { SUBSCRIBE, READ }
 ```
 
-- [ ] **Step 4: 实现各协议 record**
+- [x] **Step 4: 实现各协议 record**
 
 `ModbusTcpConfig.java`:
 ```java
@@ -461,14 +461,14 @@ public record VirtualPoint(
 ) implements PointConfig {}
 ```
 
-- [ ] **Step 5: 测试通过**
+- [x] **Step 5: 测试通过**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ChannelConfigJsonTest
 ```
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add ems-collector/src/main/java/com/ems/collector/protocol/ \
@@ -486,7 +486,7 @@ git commit -m "feat(collector): add ChannelConfig sealed interface + 5 protocol 
 - Create: `ems-collector/src/main/java/com/ems/collector/channel/ChannelDTO.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/channel/ChannelRepositoryIT.java`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```java
 package com.ems.collector.channel;
@@ -539,14 +539,14 @@ class ChannelRepositoryIT {
 }
 ```
 
-- [ ] **Step 2: 验证失败**
+- [x] **Step 2: 验证失败**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ChannelRepositoryIT
 ```
 Expected: FAIL
 
-- [ ] **Step 3: 实现 Entity / Repository / DTO**
+- [x] **Step 3: 实现 Entity / Repository / DTO**
 
 `Channel.java`:
 ```java
@@ -643,7 +643,7 @@ public record ChannelDTO(
 }
 ```
 
-- [ ] **Step 4: 测试通过 + Commit**
+- [x] **Step 4: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ChannelRepositoryIT
@@ -666,7 +666,7 @@ git commit -m "feat(collector): add Channel entity + repository + DTO"
 - Create: `ems-collector/src/main/java/com/ems/collector/transport/{Transport,Sample,SampleSink,Quality,TestResult,TransportException}.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/SampleTest.java`
 
-- [ ] **Step 1: 写测试**
+- [x] **Step 1: 写测试**
 
 ```java
 package com.ems.collector.transport;
@@ -687,7 +687,7 @@ class SampleTest {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 `Quality.java`:
 ```java
@@ -775,7 +775,7 @@ public final class ModbusTcpAdapterTransport implements Transport {
 
 同样 stub 创建 `ModbusRtuAdapterTransport`、`OpcUaTransport`、`MqttTransport`、`VirtualTransport`。
 
-- [ ] **Step 3: 测试通过 + Commit**
+- [x] **Step 3: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=SampleTest
@@ -792,7 +792,7 @@ git commit -m "feat(collector): add Transport sealed interface + 5 stub implemen
 - Create: `ems-collector/src/main/java/com/ems/collector/runtime/{ChannelRuntimeState,ChannelStateRegistry,HourlyCounter,ConnectionState}.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/runtime/{HourlyCounterTest,ChannelStateRegistryTest}.java`
 
-- [ ] **Step 1: 写 HourlyCounter 测试**
+- [x] **Step 1: 写 HourlyCounter 测试**
 
 ```java
 package com.ems.collector.runtime;
@@ -830,7 +830,7 @@ class HourlyCounterTest {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 `ConnectionState.java`:
 ```java
@@ -1003,7 +1003,7 @@ public class ChannelStateRegistry {
 需要 `Clock` bean。在 `ems-collector` 中已有 `collectorClock`，注册时用 `@Qualifier`：
 更新 `ChannelStateRegistry` 构造函数为 `public ChannelStateRegistry(@Qualifier("collectorClock") Clock clock)`。
 
-- [ ] **Step 3: 测试通过 + Commit**
+- [x] **Step 3: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=HourlyCounterTest
@@ -1020,7 +1020,7 @@ git commit -m "feat(collector): add ChannelStateRegistry + HourlyCounter"
 - Modify: `ems-collector/src/main/java/com/ems/collector/transport/impl/ModbusTcpAdapterTransport.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/impl/ModbusTcpAdapterTransportTest.java`
 
-- [ ] **Step 1: 写适配器测试**
+- [x] **Step 1: 写适配器测试**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -1057,7 +1057,7 @@ class ModbusTcpAdapterTransportTest {
 }
 ```
 
-- [ ] **Step 2: 实现适配器（重用既有 `TcpModbusMaster`）**
+- [x] **Step 2: 实现适配器（重用既有 `TcpModbusMaster`）**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -1129,7 +1129,7 @@ public final class ModbusTcpAdapterTransport implements Transport {
 }
 ```
 
-- [ ] **Step 3: 测试通过 + Commit**
+- [x] **Step 3: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ModbusTcpAdapterTransportTest
@@ -1148,7 +1148,7 @@ git commit -m "feat(collector): implement ModbusTcpAdapterTransport reusing TcpM
 
 实现与 Task 2.3 类似但用 `RtuModbusMaster`。结构与代码模式相同，仅参数差异（serialPort/baudRate/dataBits/stopBits/parity）。
 
-- [ ] **Step 1: 写测试 + 实现 + Commit**（参考 Task 2.3）
+- [x] **Step 1: 写测试 + 实现 + Commit**（参考 Task 2.3）
 
 ```bash
 git commit -m "feat(collector): implement ModbusRtuAdapterTransport"
@@ -1163,7 +1163,7 @@ git commit -m "feat(collector): implement ModbusRtuAdapterTransport"
 - Create: `ems-collector/src/main/java/com/ems/collector/channel/ChannelService.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/channel/ChannelServiceTest.java`
 
-- [ ] **Step 1: 写测试**
+- [x] **Step 1: 写测试**
 
 ```java
 package com.ems.collector.channel;
@@ -1204,7 +1204,7 @@ class ChannelServiceTest {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 `ChannelTransportFactory.java`:
 ```java
@@ -1327,7 +1327,7 @@ public interface SampleWriter {
 }
 ```
 
-- [ ] **Step 3: 测试通过 + Commit**
+- [x] **Step 3: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=ChannelServiceTest
@@ -1346,7 +1346,7 @@ git commit -m "feat(collector): add ChannelService + transport factory + lifecyc
 - Create: `ems-collector/src/main/java/com/ems/collector/channel/ChannelController.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/channel/ChannelControllerTest.java`
 
-- [ ] **Step 1: 写测试 + 实现 REST CRUD**
+- [x] **Step 1: 写测试 + 实现 REST CRUD**
 
 ```java
 package com.ems.collector.channel;
@@ -1407,7 +1407,7 @@ public class ChannelController {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add ChannelController REST CRUD + test endpoint"
@@ -1423,7 +1423,7 @@ git commit -m "feat(collector): add ChannelController REST CRUD + test endpoint"
 - Create: `ems-collector/src/main/java/com/ems/collector/secret/{SecretResolver,FilesystemSecretResolver}.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/secret/FilesystemSecretResolverTest.java`
 
-- [ ] **Step 1: 写测试**
+- [x] **Step 1: 写测试**
 
 ```java
 package com.ems.collector.secret;
@@ -1489,7 +1489,7 @@ class FilesystemSecretResolverTest {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 `SecretResolver.java`:
 ```java
@@ -1602,7 +1602,7 @@ public class FilesystemSecretResolver implements SecretResolver {
 }
 ```
 
-- [ ] **Step 3: 测试通过 + Commit**
+- [x] **Step 3: 测试通过 + Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=FilesystemSecretResolverTest
@@ -1617,7 +1617,7 @@ git commit -m "feat(collector): add FilesystemSecretResolver with path traversal
 - Create: `ems-collector/src/main/java/com/ems/collector/secret/SecretController.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/secret/SecretControllerTest.java`
 
-- [ ] **Step 1: 实现 + 测试**
+- [x] **Step 1: 实现 + 测试**
 
 ```java
 package com.ems.collector.secret;
@@ -1662,7 +1662,7 @@ public class SecretController {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add SecretController with audit logging"
@@ -1678,7 +1678,7 @@ git commit -m "feat(collector): add SecretController with audit logging"
 - Create: `ems-collector/src/main/java/com/ems/collector/transport/impl/VirtualSignalGenerator.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/impl/VirtualSignalGeneratorTest.java`
 
-- [ ] **Step 1: 写测试**
+- [x] **Step 1: 写测试**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -1736,7 +1736,7 @@ class VirtualSignalGeneratorTest {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -1795,7 +1795,7 @@ public class VirtualSignalGenerator {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 mvn -pl ems-collector test -Dtest=VirtualSignalGeneratorTest
@@ -1810,7 +1810,7 @@ git commit -m "feat(collector): add VirtualSignalGenerator (constant/sine/walk/c
 - Modify: `ems-collector/src/main/java/com/ems/collector/transport/impl/VirtualTransport.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/impl/VirtualTransportTest.java`
 
-- [ ] **Step 1: 写测试 + 实现**
+- [x] **Step 1: 写测试 + 实现**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -1859,7 +1859,7 @@ public final class VirtualTransport implements Transport {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): implement VirtualTransport with scheduled signal generation"
@@ -1874,7 +1874,7 @@ git commit -m "feat(collector): implement VirtualTransport with scheduled signal
 **Files:**
 - Modify: `ems-collector/pom.xml`
 
-- [ ] **Step 1: 添加 Milo 依赖**
+- [x] **Step 1: 添加 Milo 依赖**
 
 ```xml
 <dependency>
@@ -1890,7 +1890,7 @@ git commit -m "feat(collector): implement VirtualTransport with scheduled signal
 </dependency>
 ```
 
-- [ ] **Step 2: 编写 spike 验证 client 启动正常**
+- [x] **Step 2: 编写 spike 验证 client 启动正常**
 
 `ems-collector/src/test/java/com/ems/collector/transport/impl/MiloClientSpikeTest.java`:
 
@@ -1915,7 +1915,7 @@ class MiloClientSpikeTest {
 mvn -pl ems-collector test -Dtest=MiloClientSpikeTest
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "build(collector): add Eclipse Milo 0.6.13 dependency for OPC UA"
@@ -1929,7 +1929,7 @@ git commit -m "build(collector): add Eclipse Milo 0.6.13 dependency for OPC UA"
 - Create: `ems-collector/src/main/java/com/ems/collector/cert/OpcUaCertificateStore.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/cert/OpcUaCertificateStoreTest.java`
 
-- [ ] **Step 1: 实现 + 测试**
+- [x] **Step 1: 实现 + 测试**
 
 ```java
 package com.ems.collector.cert;
@@ -1975,7 +1975,7 @@ public class OpcUaCertificateStore {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add OpcUaCertificateStore with thumbprint-based trust"
@@ -1989,7 +1989,7 @@ git commit -m "feat(collector): add OpcUaCertificateStore with thumbprint-based 
 - Modify: `ems-collector/src/main/java/com/ems/collector/transport/impl/OpcUaTransport.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/impl/OpcUaTransportIT.java`
 
-- [ ] **Step 1: 集成测试用 Milo demo server**
+- [x] **Step 1: 集成测试用 Milo demo server**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -2031,7 +2031,7 @@ class OpcUaTransportIT {
 }
 ```
 
-- [ ] **Step 2: 实现 OpcUaTransport（read 模式）**
+- [x] **Step 2: 实现 OpcUaTransport（read 模式）**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -2134,7 +2134,7 @@ public final class OpcUaTransport implements Transport {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "feat(collector): implement OpcUaTransport with READ mode + endpoint security selection"
@@ -2144,7 +2144,7 @@ git commit -m "feat(collector): implement OpcUaTransport with READ mode + endpoi
 
 ### Task 5.4: OpcUaTransport SUBSCRIBE 模式
 
-- [ ] 在 `start()` 末尾追加：
+- [x] 在 `start()` 末尾追加：
 
 ```java
 var subPoints = cfg.points().stream()
@@ -2181,7 +2181,7 @@ if (!subPoints.isEmpty()) {
 }
 ```
 
-- [ ] Commit:
+- [x] Commit:
 
 ```bash
 git commit -m "feat(collector): add OPC UA SUBSCRIBE mode with MonitoredItem callbacks"
@@ -2194,7 +2194,7 @@ git commit -m "feat(collector): add OPC UA SUBSCRIBE mode with MonitoredItem cal
 **Files:**
 - Create: `ems-collector/src/main/java/com/ems/collector/cert/CertificateApprovalController.java`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```java
 package com.ems.collector.cert;
@@ -2234,7 +2234,7 @@ public class CertificateApprovalController {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add OPC UA certificate approval REST endpoint"
@@ -2249,7 +2249,7 @@ git commit -m "feat(collector): add OPC UA certificate approval REST endpoint"
 **Files:**
 - Modify: `ems-collector/pom.xml`
 
-- [ ] **Step 1: 依赖**
+- [x] **Step 1: 依赖**
 
 ```xml
 <dependency>
@@ -2270,7 +2270,7 @@ git commit -m "feat(collector): add OPC UA certificate approval REST endpoint"
 </dependency>
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "build(collector): add Paho MQTT + JsonPath + HiveMQ testcontainer"
@@ -2284,7 +2284,7 @@ git commit -m "build(collector): add Paho MQTT + JsonPath + HiveMQ testcontainer
 - Modify: `ems-collector/src/main/java/com/ems/collector/transport/impl/MqttTransport.java`
 - Test: `ems-collector/src/test/java/com/ems/collector/transport/impl/MqttTransportIT.java`
 
-- [ ] **Step 1: 集成测试**
+- [x] **Step 1: 集成测试**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -2345,7 +2345,7 @@ class MqttTransportIT {
 }
 ```
 
-- [ ] **Step 2: 实现**
+- [x] **Step 2: 实现**
 
 ```java
 package com.ems.collector.transport.impl;
@@ -2478,7 +2478,7 @@ public final class MqttTransport implements Transport {
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "feat(collector): implement MqttTransport with JSONPath extraction + auto-reconnect"
@@ -2493,7 +2493,7 @@ git commit -m "feat(collector): implement MqttTransport with JSONPath extraction
 **Files:**
 - Create: `ems-collector/src/main/java/com/ems/collector/diagnostics/{ChannelDiagnosticsService,ChannelDiagnosticsController}.java`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 `ChannelDiagnosticsService.java`:
 ```java
@@ -2567,7 +2567,7 @@ public class ChannelDiagnosticsController {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add diagnostics service + REST endpoints"
@@ -2580,7 +2580,7 @@ git commit -m "feat(collector): add diagnostics service + REST endpoints"
 **Files:**
 - Create: `ems-collector/src/main/java/com/ems/collector/diagnostics/CollectorMetricsFlusher.java`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```java
 package com.ems.collector.diagnostics;
@@ -2622,7 +2622,7 @@ public class CollectorMetricsFlusher {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): periodic flush of runtime metrics to DB"
@@ -2636,7 +2636,7 @@ git commit -m "feat(collector): periodic flush of runtime metrics to DB"
 - Create: `ems-collector/src/main/java/com/ems/collector/diagnostics/CollectorTransportHealthIndicator.java`
 - Create: `ems-collector/src/main/java/com/ems/collector/diagnostics/CollectorTransportMetrics.java`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```java
 package com.ems.collector.diagnostics;
@@ -2698,7 +2698,7 @@ public class CollectorTransportMetrics {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(collector): add health indicator + micrometer gauges"
@@ -2713,7 +2713,7 @@ git commit -m "feat(collector): add health indicator + micrometer gauges"
 **Files:**
 - Modify: `frontend/src/utils/i18n-dict.ts`
 
-- [ ] **Step 1: 添加 3 个新字典**
+- [x] **Step 1: 添加 3 个新字典**
 
 ```typescript
 export const COLLECTOR_PROTOCOL_LABEL = {
@@ -2745,7 +2745,7 @@ export const CONNECTION_STATE_LABEL = {
 } as const;
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(i18n): add collector protocol + virtual mode + opcua dicts"
@@ -2758,7 +2758,7 @@ git commit -m "feat(i18n): add collector protocol + virtual mode + opcua dicts"
 **Files:**
 - Create: `frontend/src/api/{channel,secret,collectorDiag}.ts`
 
-- [ ] **Step 1: channel.ts**
+- [x] **Step 1: channel.ts**
 
 ```typescript
 import { http } from './http';
@@ -2793,7 +2793,7 @@ export const channelApi = {
 };
 ```
 
-- [ ] **Step 2: secret.ts**
+- [x] **Step 2: secret.ts**
 
 ```typescript
 import { http } from './http';
@@ -2805,7 +2805,7 @@ export const secretApi = {
 };
 ```
 
-- [ ] **Step 3: collectorDiag.ts**
+- [x] **Step 3: collectorDiag.ts**
 
 ```typescript
 import { http } from './http';
@@ -2832,7 +2832,7 @@ export const collectorDiagApi = {
 };
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "feat(frontend): add channel/secret/collectorDiag API clients"
@@ -2845,7 +2845,7 @@ git commit -m "feat(frontend): add channel/secret/collectorDiag API clients"
 **Files:**
 - Create: `frontend/src/components/SecretInput.tsx`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```tsx
 import { Button, Input, Modal, Space, message } from 'antd';
@@ -2896,7 +2896,7 @@ export function SecretInput({ value, onChange, refPrefix, placeholder }: Props) 
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(frontend): add SecretInput component for credential fields"
@@ -2909,7 +2909,7 @@ git commit -m "feat(frontend): add SecretInput component for credential fields"
 **Files:**
 - Create: `frontend/src/pages/meters/forms/{ModbusTcpForm,ModbusRtuForm,OpcUaForm,MqttForm,VirtualForm}.tsx`
 
-- [ ] **Step 1: ModbusTcpForm.tsx**
+- [x] **Step 1: ModbusTcpForm.tsx**
 
 ```tsx
 import { Form, Input, InputNumber } from 'antd';
@@ -2939,7 +2939,7 @@ export function ModbusTcpForm() {
 }
 ```
 
-- [ ] **Step 2: OpcUaForm.tsx**
+- [x] **Step 2: OpcUaForm.tsx**
 
 ```tsx
 import { Form, Input, Select } from 'antd';
@@ -2975,7 +2975,7 @@ export function OpcUaForm() {
 }
 ```
 
-- [ ] **Step 3: MqttForm.tsx**
+- [x] **Step 3: MqttForm.tsx**
 
 ```tsx
 import { Form, Input, InputNumber, Switch } from 'antd';
@@ -3018,7 +3018,7 @@ export function MqttForm() {
 }
 ```
 
-- [ ] **Step 4: VirtualForm.tsx**
+- [x] **Step 4: VirtualForm.tsx**
 
 ```tsx
 import { Form, Input, InputNumber, Select, Space, Button } from 'antd';
@@ -3067,7 +3067,7 @@ export function VirtualForm() {
 }
 ```
 
-- [ ] **Step 5: ModbusRtuForm.tsx**（结构类似 ModbusTcpForm，字段不同）
+- [x] **Step 5: ModbusRtuForm.tsx**（结构类似 ModbusTcpForm，字段不同）
 
 ```tsx
 import { Form, Input, InputNumber, Select } from 'antd';
@@ -3106,11 +3106,11 @@ export function ModbusRtuForm() {
 }
 ```
 
-- [ ] **Step 6: 通用 PointsList 组件**
+- [x] **Step 6: 通用 PointsList 组件**
 
 `ModbusPointsList.tsx`、`OpcUaPointsList.tsx`、`MqttPointsList.tsx` 各自实现 fieldArray 列表（参考 `tariff/index.tsx` 的 Form.List 用法）。每个组件大致 30-50 行。
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git commit -m "feat(meters): add 5 protocol-specific config forms"
@@ -3123,7 +3123,7 @@ git commit -m "feat(meters): add 5 protocol-specific config forms"
 **Files:**
 - Create: `frontend/src/pages/meters/ChannelEditor.tsx`
 
-- [ ] **Step 1: 实现**
+- [x] **Step 1: 实现**
 
 ```tsx
 import { Button, Drawer, Form, Input, Select, Space, message } from 'antd';
@@ -3210,7 +3210,7 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
 }
 ```
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "feat(meters): add ChannelEditor with protocol-conditional rendering"
@@ -3224,7 +3224,7 @@ git commit -m "feat(meters): add ChannelEditor with protocol-conditional renderi
 - Modify: `frontend/src/pages/collector/index.tsx`
 - Create: `frontend/src/pages/collector/ChannelDetailDrawer.tsx`
 
-- [ ] **Step 1: 升级列表**
+- [x] **Step 1: 升级列表**
 
 ```tsx
 import { Card, Table, Tag, Tooltip, Button, Space, Progress } from 'antd';
@@ -3293,7 +3293,7 @@ export default function CollectorPage() {
 }
 ```
 
-- [ ] **Step 2: ChannelDetailDrawer**
+- [x] **Step 2: ChannelDetailDrawer**
 
 ```tsx
 import { Drawer, Descriptions, Tag } from 'antd';
@@ -3334,7 +3334,7 @@ export function ChannelDetailDrawer({ channelId, onClose }: { channelId: number 
 }
 ```
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "feat(collector): upgrade /collector page with realtime diagnostics + drawer"
@@ -3351,7 +3351,7 @@ git commit -m "feat(collector): upgrade /collector page with realtime diagnostic
 - Create: `frontend/e2e/channel-modbus.spec.ts`
 - Create: `frontend/e2e/channel-opcua-cert.spec.ts`
 
-- [ ] **Step 1: VIRTUAL E2E**
+- [x] **Step 1: VIRTUAL E2E**
 
 ```typescript
 import { test, expect } from '@playwright/test';
@@ -3373,9 +3373,9 @@ test('admin creates VIRTUAL channel and verifies data flow', async ({ page }) =>
 });
 ```
 
-- [ ] **Step 2: Modbus + OPC UA 证书审批 E2E**（结构类似）
+- [x] **Step 2: Modbus + OPC UA 证书审批 E2E**（结构类似）
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git commit -m "test(e2e): add VIRTUAL/Modbus/OPC UA channel E2E tests"
@@ -3390,9 +3390,9 @@ git commit -m "test(e2e): add VIRTUAL/Modbus/OPC UA channel E2E tests"
 - Create: `docs/api/collector-api.md`
 - Create: `docs/ops/opcua-cert-management.md`
 
-- [ ] **Step 1: 各文档列出实际操作步骤、API 表格、SOP（不再展开），各 ~150 行**
+- [x] **Step 1: 各文档列出实际操作步骤、API 表格、SOP（不再展开），各 ~150 行**
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "docs(collector): add user guide + API reference + OPC UA cert SOP"
