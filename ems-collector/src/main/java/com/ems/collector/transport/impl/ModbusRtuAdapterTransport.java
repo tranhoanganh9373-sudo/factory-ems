@@ -52,8 +52,8 @@ public final class ModbusRtuAdapterTransport implements Transport {
     private RtuModbusMaster master;
     private ScheduledExecutorService scheduler;
     private volatile boolean connected = false;
-    private int reconnectAttempts = 0;
-    private Supplier<RtuModbusMaster> masterFactory;
+    private volatile int reconnectAttempts = 0;
+    private volatile Supplier<RtuModbusMaster> masterFactory;
 
     /** Convenience for legacy fixture-based tests; registry null and recordSuccess/Failure no-op. */
     public ModbusRtuAdapterTransport() {

@@ -145,8 +145,10 @@ class ModbusTcpAdapterTransportTest {
     void pollAll_reopenSucceeds_resetsAttemptCounterAndProceedsToPoll() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
+        // m1: start()'s open() succeeds, but pollAll's isConnected() check fails on
+        // cycle 1 → triggers reopen path → m2 takes over within the same cycle.
         TcpModbusMaster m1 = mock(TcpModbusMaster.class);
-        when(m1.isConnected()).thenReturn(true, false);
+        when(m1.isConnected()).thenReturn(false);
         when(m1.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x05});
 
         TcpModbusMaster m2 = mock(TcpModbusMaster.class);
@@ -156,12 +158,30 @@ class ModbusTcpAdapterTransportTest {
         AtomicInteger created = new AtomicInteger();
         Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
 
+        // Long pollInterval (5s) — if recovery + GOOD sample don't both happen in cycle 1
+        // (which fires immediately at t=0 due to scheduleWithFixedDelay initialDelay=0),
+        // we'd wait another 5s for cycle 2. Asserting the GOOD sample arrives well under
+        // 5s proves polling happened in the same cycle as the reopen.
+        Duration longInterval = Duration.ofSeconds(5);
+        ModbusTcpConfig cfg = new ModbusTcpConfig(
+                "127.0.0.1", 1, 1,
+                longInterval, Duration.ofMillis(500),
+                List.of(new ModbusPoint("p1", "HOLDING", 0, 1, "INT16",
+                        "ABCD", null, "kW")));
+
         ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
+        long startNs = System.nanoTime();
         try {
-            t.start(8L, fastPollCfg(), samples::add);
-            Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() ->
-                    samples.stream().filter(s -> s.quality() == Quality.GOOD).count() >= 2);
+            t.start(8L, cfg, samples::add);
+            // First reopen attempt sleeps backoff (1s); GOOD sample should arrive shortly after.
+            // Cap at 3s — well under one pollInterval (5s) — to prove same-cycle polling.
+            Awaitility.await().atMost(3, TimeUnit.SECONDS).until(() ->
+                    samples.stream().anyMatch(s -> s.quality() == Quality.GOOD));
+            long elapsedMs = (System.nanoTime() - startNs) / 1_000_000L;
+            assertThat(elapsedMs)
+                    .as("first GOOD sample must arrive within first poll cycle (proves same-cycle polling)")
+                    .isLessThan(longInterval.toMillis());
             verify(registry, atLeastOnce()).recordSuccess(eq(8L), anyLong());
         } finally {
             t.stop();

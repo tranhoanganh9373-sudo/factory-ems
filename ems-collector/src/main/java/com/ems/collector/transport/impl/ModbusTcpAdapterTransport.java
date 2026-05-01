@@ -55,8 +55,8 @@ public final class ModbusTcpAdapterTransport implements Transport {
     private TcpModbusMaster master;
     private ScheduledExecutorService scheduler;
     private volatile boolean connected = false;
-    private int reconnectAttempts = 0;
-    private Supplier<TcpModbusMaster> masterFactory;
+    private volatile int reconnectAttempts = 0;
+    private volatile Supplier<TcpModbusMaster> masterFactory;
 
     /** Convenience for legacy fixture-based tests; registry is null and recordSuccess/Failure no-op. */
     public ModbusTcpAdapterTransport() {
