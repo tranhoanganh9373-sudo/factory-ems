@@ -56,6 +56,7 @@ public class MockDataApplication implements ApplicationRunner {
     private final RollupBatchWriter rollupBatchWriter;
     private final ProductionEntryGenerator productionEntryGenerator;
     private final SanityChecker sanityChecker;
+    private final MockDataReseter reseter;
 
     public MockDataApplication(OrgTreeSeeder orgTreeSeeder,
                                MeterSeeder meterSeeder,
@@ -67,7 +68,8 @@ public class MockDataApplication implements ApplicationRunner {
                                InfluxBatchWriter influxBatchWriter,
                                RollupBatchWriter rollupBatchWriter,
                                ProductionEntryGenerator productionEntryGenerator,
-                               SanityChecker sanityChecker) {
+                               SanityChecker sanityChecker,
+                               MockDataReseter reseter) {
         this.orgTreeSeeder = orgTreeSeeder;
         this.meterSeeder = meterSeeder;
         this.meterTopologySeeder = meterTopologySeeder;
@@ -79,6 +81,7 @@ public class MockDataApplication implements ApplicationRunner {
         this.rollupBatchWriter = rollupBatchWriter;
         this.productionEntryGenerator = productionEntryGenerator;
         this.sanityChecker = sanityChecker;
+        this.reseter = reseter;
     }
 
     public static void main(String[] args) {
@@ -118,6 +121,10 @@ public class MockDataApplication implements ApplicationRunner {
             boolean ok = sanityChecker.check(startDate, endDate);
             System.exit(ok ? 0 : 2);
             return;
+        }
+
+        if (reset) {
+            reseter.reset();
         }
 
         boolean doMaster = "all".equals(seedOnly) || "master".equals(seedOnly);

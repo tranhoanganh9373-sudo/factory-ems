@@ -80,8 +80,22 @@ This is the dataset Plan 2.1 (cost backend) needs to start.
 
 ## Reset & re-seed
 
-`--reset=true` is parsed but not yet implemented (TODO in Plan 2.1 prep).
-For now, manually:
+Pass `--reset=true` to truncate all `MOCK-`/`mock-` prefixed seed rows in PG before re-seeding:
+
+```bash
+./mvnw -pl tools/mock-data-generator spring-boot:run -Dspring-boot.run.arguments="--reset=true --scale=medium"
+```
+
+The reseter (`com.ems.mockdata.MockDataReseter`) issues 13 DELETEs in FK-safe
+order, scoped by prefix on tables that hold mixed real+mock rows
+(`meters`/`users`/`org_nodes`/`tariff_plans`/`shifts`) and unconditional on
+mock-only tables (rollups / topology / production_entries). All within one
+transaction.
+
+Influx raw points: drop the bucket and re-init via docker-compose
+(`MockDataReseter` does not touch Influx).
+
+If you'd rather run the SQL by hand (e.g. dry-run), the equivalent statements are:
 
 ```sql
 -- in factory_ems
@@ -100,8 +114,6 @@ DELETE FROM user_roles WHERE user_id IN (SELECT id FROM users WHERE username LIK
 DELETE FROM users WHERE username LIKE 'mock-%';
 ```
 
-Influx raw points: drop the bucket and re-init via docker-compose.
-
 ## CLI flags
 
 | Flag | Default | Meaning |
@@ -113,6 +125,7 @@ Influx raw points: drop the bucket and re-init via docker-compose.
 | `--seed-only` | `all` | `master` / `timeseries` / `all` |
 | `--no-influx` | `false` | skip raw Influx writes (PG rollups only) |
 | `--verify-only` | `false` | run SanityChecker without seeding |
+| `--reset` | `false` | truncate `MOCK-`/`mock-` prefixed seed rows before re-seeding |
 
 ## Troubleshooting
 
