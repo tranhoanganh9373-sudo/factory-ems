@@ -14,15 +14,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
- * SampleWriter 默认实装：写日志 + 内存 ring buffer。
+ * SampleWriter fallback 实装：写日志 + 内存 ring buffer。
  *
  * <p>每个 channel 保留最近 {@value #BUFFER_PER_CHANNEL} 条 sample，供诊断/调试。
- * 真正的下游持久化（InfluxDB）由后续迭代接入（依赖 meter.channel_id 映射）。
+ *
+ * <p>{@link InfluxSampleWriter}（@ConditionalOnBean(InfluxDBClient)）优先注册；
+ * 本类通过 {@link ConditionalOnMissingBean} 仅在 InfluxDB 不可用时作为 fallback，
+ * 保证 collector 在没有时序库的环境（开发 / 单元测试 / Influx 离线）也能跑通。
  *
  * <p>线程安全：底层 {@link ConcurrentHashMap} + {@link ConcurrentLinkedDeque}；
  * size 维护用 deque 自身的 size + 头尾原子操作（read 端容忍偶发 over-trim）。
- *
- * <p>{@link ConditionalOnMissingBean}：测试或运维可注册自己的 SampleWriter 实装替换。
  */
 @Component
 @ConditionalOnMissingBean(SampleWriter.class)
