@@ -7,6 +7,9 @@ import com.ems.collector.protocol.VirtualConfig;
 import com.ems.collector.protocol.VirtualMode;
 import com.ems.collector.protocol.VirtualPoint;
 import com.ems.collector.runtime.ChannelStateRegistry;
+import com.ems.collector.sink.LoggingSampleWriter;
+import com.ems.collector.transport.Quality;
+import com.ems.collector.transport.Sample;
 import com.ems.collector.transport.TestResult;
 import com.ems.collector.transport.Transport;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +42,7 @@ class ChannelDiagnosticsServiceTest {
     private ChannelStateRegistry registry;
     private RecordingChannelService channelService;
     private ChannelRepository repo;
+    private LoggingSampleWriter sampleWriter;
     private ChannelDiagnosticsService svc;
 
     private static Channel channel(Long id) {
@@ -58,7 +62,8 @@ class ChannelDiagnosticsServiceTest {
         registry = new ChannelStateRegistry(clock);
         channelService = new RecordingChannelService();
         repo = mock(ChannelRepository.class);
-        svc = new ChannelDiagnosticsService(registry, channelService, repo);
+        sampleWriter = new LoggingSampleWriter();
+        svc = new ChannelDiagnosticsService(registry, channelService, repo, Optional.of(sampleWriter));
     }
 
     @Test
@@ -113,6 +118,75 @@ class ChannelDiagnosticsServiceTest {
         registry.register(7L, "VIRTUAL");
         var all = svc.snapshotAll();
         assertThat(all).extracting("channelId").containsExactly(7L);
+    }
+
+    @Test
+    @DisplayName("getRecentSamples 无 LoggingSampleWriter bean 时返回空列表（生产环境）")
+    void getRecentSamples_noWriter_returnsEmpty() {
+        var prodSvc = new ChannelDiagnosticsService(registry, channelService, repo, Optional.empty());
+
+        var result = prodSvc.getRecentSamples(1L, 20);
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("getRecentSamples 映射 Sample → SampleDTO（最新在前）")
+    void getRecentSamples_mapsAndOrdersNewestFirst() {
+        var t1 = Instant.parse("2026-04-30T10:00:00Z");
+        var t2 = Instant.parse("2026-04-30T10:00:01Z");
+        sampleWriter.write(new Sample(1L, "p1", t1, 1.5, Quality.GOOD, Map.of("topic", "a")));
+        sampleWriter.write(new Sample(1L, "p2", t2, 2.5, Quality.UNCERTAIN, Map.of("topic", "b")));
+
+        var result = svc.getRecentSamples(1L, 20);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).pointKey()).isEqualTo("p2");
+        assertThat(result.get(0).timestamp()).isEqualTo("2026-04-30T10:00:01Z");
+        assertThat(result.get(0).value()).isEqualTo(2.5);
+        assertThat(result.get(0).quality()).isEqualTo("UNCERTAIN");
+        assertThat(result.get(0).tags()).containsEntry("topic", "b");
+        assertThat(result.get(1).pointKey()).isEqualTo("p1");
+        assertThat(result.get(1).quality()).isEqualTo("GOOD");
+    }
+
+    @Test
+    @DisplayName("getRecentSamples limit<=0 → 默认 20")
+    void getRecentSamples_nonPositiveLimit_clampsTo20() {
+        for (int i = 0; i < 30; i++) {
+            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+                (double) i, Quality.GOOD, Map.of()));
+        }
+
+        var result = svc.getRecentSamples(1L, 0);
+
+        assertThat(result).hasSize(20);
+    }
+
+    @Test
+    @DisplayName("getRecentSamples limit>100 → 截断到 100")
+    void getRecentSamples_limitOver100_clampsTo100() {
+        for (int i = 0; i < 100; i++) {
+            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+                (double) i, Quality.GOOD, Map.of()));
+        }
+
+        var result = svc.getRecentSamples(1L, 9999);
+
+        assertThat(result).hasSize(100);
+    }
+
+    @Test
+    @DisplayName("getRecentSamples 尊重显式 limit")
+    void getRecentSamples_explicitLimit_respected() {
+        for (int i = 0; i < 10; i++) {
+            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+                (double) i, Quality.GOOD, Map.of()));
+        }
+
+        var result = svc.getRecentSamples(1L, 5);
+
+        assertThat(result).hasSize(5);
     }
 
     /** Java 25 下 mock(ChannelService) 失败，用真子类 stub。 */
