@@ -73,9 +73,12 @@ public class SecretController {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("file is empty");
         }
+        // The binding upload size gate is `spring.servlet.multipart.max-file-size`
+        // (servlet container rejects oversized parts before this controller runs).
+        // The check below is defense-in-depth — if the YAML cap is misconfigured
+        // or removed, this still blocks oversized payloads from being parsed.
         if (file.getSize() > MAX_PFX_BYTES) {
-            throw new IllegalArgumentException(
-                "file too large: " + file.getSize() + " bytes (max " + MAX_PFX_BYTES + ")");
+            throw new IllegalArgumentException("file too large (max 64KB)");
         }
         validateName(name);
         if (password == null || password.isBlank()) {
@@ -86,7 +89,7 @@ public class SecretController {
         try {
             pfxBytes = file.getBytes();
         } catch (IOException e) {
-            throw new IllegalArgumentException("cannot read uploaded file: " + e.getMessage(), e);
+            throw new IllegalArgumentException("cannot read uploaded file", e);
         }
 
         var result = Pkcs12CertificateImporter.importPfx(pfxBytes, password, alias);
@@ -94,9 +97,12 @@ public class SecretController {
         String pemRef = "secret://opcua/" + name + ".pem";
         String pwdRef = "secret://opcua/" + name + ".pem.password";
 
-        // 写入顺序：先 pem，再 pem.password（与审计事件 targetId 一致）
-        resolver.write(pemRef, result.certificatePem() + "\n" + result.encryptedKeyPem());
+        // Write password first, then PEM. Rationale: a dangling password file is
+        // harmless (nothing references it until the PEM is also present), whereas
+        // a PEM without its password is an unrecoverable cert that breaks the
+        // OPC UA transport on next startup with a cryptic decryption error.
         resolver.write(pwdRef, password);
+        resolver.write(pemRef, result.certificatePem() + "\n" + result.encryptedKeyPem());
 
         auditService.record(new AuditEvent(
             auditContext.currentUserId(), auditContext.currentUsername(),
@@ -120,7 +126,7 @@ public class SecretController {
         }
         if (!NAME_PATTERN.matcher(name).matches()) {
             throw new IllegalArgumentException(
-                "name must match " + NAME_PATTERN.pattern() + "; got: " + name);
+                "name must match " + NAME_PATTERN.pattern());
         }
     }
 }

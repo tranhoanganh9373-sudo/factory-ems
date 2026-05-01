@@ -11,7 +11,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +29,7 @@ import java.util.Date;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +38,7 @@ import static org.mockito.Mockito.when;
  * SecretController PFX 上传单测——直接构造 controller，不用 Spring context。
  */
 @DisplayName("SecretController.uploadPfx")
+@ExtendWith(MockitoExtension.class)
 class SecretControllerPfxUploadTest {
 
     private static final String PASSWORD = "test-pass-123";
@@ -69,10 +73,12 @@ class SecretControllerPfxUploadTest {
         resolver = mock(SecretResolver.class);
         auditService = mock(AuditService.class);
         auditContext = mock(AuditContext.class);
-        when(auditContext.currentUserId()).thenReturn(1L);
-        when(auditContext.currentUsername()).thenReturn("admin");
-        when(auditContext.currentIp()).thenReturn("127.0.0.1");
-        when(auditContext.currentUserAgent()).thenReturn("test-agent");
+        // Lenient — only success-path tests reach the audit-record call;
+        // negative-path tests short-circuit before auditContext is queried.
+        lenient().when(auditContext.currentUserId()).thenReturn(1L);
+        lenient().when(auditContext.currentUsername()).thenReturn("admin");
+        lenient().when(auditContext.currentIp()).thenReturn("127.0.0.1");
+        lenient().when(auditContext.currentUserAgent()).thenReturn("test-agent");
 
         controller = new SecretController(resolver, auditService, auditContext);
     }
@@ -92,12 +98,14 @@ class SecretControllerPfxUploadTest {
         verify(resolver, org.mockito.Mockito.times(2))
             .write(refCaptor.capture(), valCaptor.capture());
 
+        // Write order: password first, PEM second. A dangling password file is
+        // harmless if PEM write fails; a PEM without its password is unrecoverable.
         assertThat(refCaptor.getAllValues())
-            .containsExactly("secret://opcua/client.pem", "secret://opcua/client.pem.password");
-        assertThat(valCaptor.getAllValues().get(0))
+            .containsExactly("secret://opcua/client.pem.password", "secret://opcua/client.pem");
+        assertThat(valCaptor.getAllValues().get(0)).isEqualTo(PASSWORD);
+        assertThat(valCaptor.getAllValues().get(1))
             .contains("-----BEGIN CERTIFICATE-----")
             .contains("-----BEGIN ENCRYPTED PRIVATE KEY-----");
-        assertThat(valCaptor.getAllValues().get(1)).isEqualTo(PASSWORD);
 
         verify(auditService).record(any(AuditEvent.class));
     }

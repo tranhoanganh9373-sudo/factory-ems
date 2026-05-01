@@ -91,9 +91,12 @@ public final class Pkcs12CertificateImporter {
                         && cause.getMessage().toLowerCase().contains("password"))) {
                     throw new IllegalArgumentException("invalid keystore password", e);
                 }
-                throw new IllegalArgumentException("invalid pfx bytes: " + e.getMessage(), e);
+                // Don't reflect e.getMessage() — JDK PKCS#12 parse errors leak
+                // DER offsets and OIDs that are useless to the API caller.
+                // The cause chain still carries detail to the server log.
+                throw new IllegalArgumentException("invalid pfx file", e);
             } catch (Exception e) {
-                throw new IllegalArgumentException("invalid pfx bytes: " + e.getMessage(), e);
+                throw new IllegalArgumentException("invalid pfx file", e);
             }
 
             String alias = pickAlias(ks, aliasOrNull);
