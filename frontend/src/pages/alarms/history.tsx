@@ -109,7 +109,16 @@ export default function AlarmHistoryPage() {
     return <StatusTag tone={tone}>{label}</StatusTag>;
   };
 
-  const typeText = (t: AlarmType) => (t === 'SILENT_TIMEOUT' ? '采集中断' : '连续失败');
+  const typeText = (t: AlarmType) => {
+    switch (t) {
+      case 'SILENT_TIMEOUT':
+        return '采集中断';
+      case 'CONSECUTIVE_FAIL':
+        return '连续失败';
+      case 'COMMUNICATION_FAULT':
+        return '通讯故障';
+    }
+  };
 
   const durationOf = (a: AlarmListItemDTO) => {
     const start = dayjs(a.triggeredAt);
@@ -152,6 +161,7 @@ export default function AlarmHistoryPage() {
               options={[
                 { value: 'SILENT_TIMEOUT', label: '采集中断' },
                 { value: 'CONSECUTIVE_FAIL', label: '连续失败' },
+                { value: 'COMMUNICATION_FAULT', label: '通讯故障' },
               ]}
               placeholder="全部"
             />

@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 // ───── 枚举类型 ─────
 export type AlarmStatus = 'ACTIVE' | 'ACKED' | 'RESOLVED';
-export type AlarmType = 'SILENT_TIMEOUT' | 'CONSECUTIVE_FAIL';
+export type AlarmType = 'SILENT_TIMEOUT' | 'CONSECUTIVE_FAIL' | 'COMMUNICATION_FAULT';
 export type DeliveryStatus = 'SUCCESS' | 'FAILED';
 export type ResolvedReason = 'AUTO' | 'MANUAL';
 
@@ -10,6 +10,7 @@ export type ResolvedReason = 'AUTO' | 'MANUAL';
 export interface AlarmListItemDTO {
   id: number;
   deviceId: number;
+  deviceType: string;
   deviceCode: string;
   deviceName: string;
   alarmType: AlarmType;
