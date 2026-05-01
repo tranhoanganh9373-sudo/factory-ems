@@ -26,7 +26,7 @@ class CollectorTransportDiagnosticsTest {
     @BeforeEach
     void setUp() {
         Clock clock = Clock.fixed(Instant.parse("2026-04-30T10:00:00Z"), ZoneOffset.UTC);
-        registry = new ChannelStateRegistry(clock);
+        registry = new ChannelStateRegistry(clock, event -> {});
     }
 
     @Test

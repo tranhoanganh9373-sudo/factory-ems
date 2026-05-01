@@ -1,6 +1,9 @@
 package com.ems.collector.runtime;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -16,18 +19,29 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>所有 mutator 由 {@link com.ems.collector.transport.SampleSink} 回调线程调用，
  * 故采用 ConcurrentHashMap + per-state 字段 volatile 即可（非强一致快照，监控用）。
+ *
+ * <p>连续失败到达 {@link #FAILURE_THRESHOLD} 时发布一次 {@link ChannelFailureEvent}；
+ * 故障期间收到首次成功时发布 {@link ChannelRecoveredEvent}。每 channel 各发一次，幂等。
  */
 @Component
 public class ChannelStateRegistry {
 
+    private static final Logger log = LoggerFactory.getLogger(ChannelStateRegistry.class);
+
     private static final int LATENCY_WINDOW = 100;
     private static final int ERROR_MSG_MAX = 200;
 
+    /** 连续失败达到该阈值时发布 {@link ChannelFailureEvent}。 */
+    static final int FAILURE_THRESHOLD = 5;
+
     private final Map<Long, MutableState> states = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final ApplicationEventPublisher publisher;
 
-    public ChannelStateRegistry(@Qualifier("collectorClock") Clock clock) {
+    public ChannelStateRegistry(@Qualifier("collectorClock") Clock clock,
+                                ApplicationEventPublisher publisher) {
         this.clock = clock;
+        this.publisher = publisher;
     }
 
     public void register(Long id, String protocol) {
@@ -45,6 +59,16 @@ public class ChannelStateRegistry {
         s.lastSuccessAt = clock.instant();
         s.counter.recordSuccess();
         s.recordLatency(latencyMs);
+
+        boolean wasFault;
+        synchronized (s) {
+            wasFault = s.faultRaised;
+            s.consecutiveFailures = 0;
+            s.faultRaised = false;
+        }
+        if (wasFault) {
+            safePublish(new ChannelRecoveredEvent(id, clock.instant()));
+        }
     }
 
     public void recordFailure(Long id, String error) {
@@ -54,6 +78,35 @@ public class ChannelStateRegistry {
         s.lastFailureAt = clock.instant();
         s.lastErrorMessage = truncate(error);
         s.counter.recordFailure();
+
+        boolean transitioned;
+        int consecutiveSnapshot;
+        String protocolSnapshot;
+        String errorSnapshot;
+        synchronized (s) {
+            s.consecutiveFailures++;
+            transitioned = s.consecutiveFailures == FAILURE_THRESHOLD && !s.faultRaised;
+            if (transitioned) s.faultRaised = true;
+            consecutiveSnapshot = s.consecutiveFailures;
+            protocolSnapshot = s.protocol;
+            errorSnapshot = s.lastErrorMessage;
+        }
+        if (transitioned) {
+            safePublish(new ChannelFailureEvent(
+                    id, protocolSnapshot, errorSnapshot, consecutiveSnapshot, clock.instant()));
+        }
+    }
+
+    /**
+     * 包裹 {@link ApplicationEventPublisher#publishEvent}：listener 抛出异常不能传回采集线程。
+     * Spring 同步事件分发会把 listener 异常重新抛回 publisher，故此处必须 catch。
+     */
+    private void safePublish(Object event) {
+        try {
+            publisher.publishEvent(event);
+        } catch (Throwable t) {
+            log.warn("publishEvent failed for {}: {}", event.getClass().getSimpleName(), t.toString());
+        }
     }
 
     public void setState(Long id, ConnectionState state) {
@@ -88,6 +141,10 @@ public class ChannelStateRegistry {
         final long[] latencyWindow = new long[LATENCY_WINDOW];
         int latencyIdx = 0;
         int latencyCount = 0;
+        /** 连续失败计数 — 由 synchronized(this) 保护。 */
+        int consecutiveFailures = 0;
+        /** 当前是否已发布 fault 事件 — 由 synchronized(this) 保护，确保只发一次。 */
+        boolean faultRaised = false;
         final Map<String, Object> protocolMeta = new ConcurrentHashMap<>();
 
         MutableState(String protocol, Clock clock) {
