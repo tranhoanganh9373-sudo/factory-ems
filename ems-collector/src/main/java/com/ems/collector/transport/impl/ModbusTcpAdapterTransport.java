@@ -6,6 +6,7 @@ import com.ems.collector.config.DataType;
 import com.ems.collector.protocol.ChannelConfig;
 import com.ems.collector.protocol.ModbusPoint;
 import com.ems.collector.protocol.ModbusTcpConfig;
+import com.ems.collector.runtime.ChannelStateRegistry;
 import com.ems.collector.transport.ModbusIoException;
 import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.Sample;
@@ -23,6 +24,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Modbus TCP Transport — 复用既有 {@link TcpModbusMaster}（j2mod 包装）+ {@link RegisterDecoder}。
@@ -35,7 +37,10 @@ import java.util.concurrent.TimeUnit;
  *   <li>{@link #stop} shutdownNow + close master，幂等</li>
  * </ul>
  *
- * <p>不在本类内做指数退避重连（CP-Phase 7 由 ChannelService + ChannelStateRegistry 上层管理）。
+ * <p>自动重连退避（Phase 1）：每个 cycle 起头若 {@code master == null || !master.isConnected()}，
+ * 按 {@link ModbusBackoff} 序列 1s→2s→4s→8s→16s→32s→60s 睡眠后重开 master。重开成功 reset
+ * {@code reconnectAttempts} 并继续本周期 polling；重开失败仅记账并退出本周期。每周期所有点
+ * 都 IOException 时强制 close master，让下个周期走重连分支。
  */
 public final class ModbusTcpAdapterTransport implements Transport {
 
@@ -44,9 +49,31 @@ public final class ModbusTcpAdapterTransport implements Transport {
     private static final int TEST_TIMEOUT_MS = 2000;
     private static final int TEST_TIMEOUT_CAP_MS = 10_000;
 
+    private final ChannelStateRegistry registry;
+    private final Supplier<TcpModbusMaster> masterFactoryOverride;
+
     private TcpModbusMaster master;
     private ScheduledExecutorService scheduler;
     private volatile boolean connected = false;
+    private volatile int reconnectAttempts = 0;
+    private volatile Supplier<TcpModbusMaster> masterFactory;
+
+    /** Convenience for legacy fixture-based tests; registry is null and recordSuccess/Failure no-op. */
+    public ModbusTcpAdapterTransport() {
+        this(null, null);
+    }
+
+    /** Production constructor wired by {@code ChannelTransportFactory}. */
+    public ModbusTcpAdapterTransport(ChannelStateRegistry registry) {
+        this(registry, null);
+    }
+
+    /** Package-private for test injection of a controllable {@link TcpModbusMaster} supplier. */
+    ModbusTcpAdapterTransport(ChannelStateRegistry registry,
+                              Supplier<TcpModbusMaster> masterFactory) {
+        this.registry = registry;
+        this.masterFactoryOverride = masterFactory;
+    }
 
     @Override
     public void start(Long channelId, ChannelConfig config, SampleSink sink) {
@@ -54,7 +81,11 @@ public final class ModbusTcpAdapterTransport implements Transport {
             throw new TransportException("expected ModbusTcpConfig, got " + config.getClass().getSimpleName());
         }
         int timeoutMs = cfg.timeout() != null ? (int) cfg.timeout().toMillis() : DEFAULT_TIMEOUT_MS;
-        master = new TcpModbusMaster(cfg.host(), cfg.port(), timeoutMs);
+        masterFactory = masterFactoryOverride != null
+                ? masterFactoryOverride
+                : () -> new TcpModbusMaster(cfg.host(), cfg.port(), timeoutMs);
+
+        master = masterFactory.get();
         try {
             master.open();
             connected = true;
@@ -69,7 +100,7 @@ public final class ModbusTcpAdapterTransport implements Transport {
             return t;
         });
         long periodMs = cfg.pollInterval().toMillis();
-        scheduler.scheduleAtFixedRate(
+        scheduler.scheduleWithFixedDelay(
                 () -> pollAll(channelId, cfg, sink),
                 0L, periodMs, TimeUnit.MILLISECONDS);
         log.info("Modbus TCP transport started: channel={} {}:{} unitId={} interval={}ms points={}",
@@ -77,6 +108,13 @@ public final class ModbusTcpAdapterTransport implements Transport {
     }
 
     private void pollAll(Long channelId, ModbusTcpConfig cfg, SampleSink sink) {
+        if (master == null || !master.isConnected()) {
+            if (!ensureReopened(channelId)) {
+                return;
+            }
+        }
+
+        int ioFailureCount = 0;
         for (ModbusPoint p : cfg.points()) {
             try {
                 Object value = readPoint(cfg.unitId(), p);
@@ -87,7 +125,78 @@ public final class ModbusTcpAdapterTransport implements Transport {
                 log.warn("Modbus read failed for channel={} point={}: {}", channelId, p.key(), msg);
                 sink.accept(new Sample(channelId, p.key(), Instant.now(),
                         null, Quality.BAD, Map.of("error", msg)));
+                if (e instanceof ModbusIoException) {
+                    ioFailureCount++;
+                }
             }
+        }
+
+        if (!cfg.points().isEmpty() && ioFailureCount == cfg.points().size()) {
+            log.warn("Modbus channel={} all {} points failed — force-closing master to trigger reconnect",
+                    channelId, ioFailureCount);
+            forceCloseMaster();
+        }
+    }
+
+    /**
+     * 重连分支：sleep backoff → 关闭旧 master → new master → open()。
+     * 成功 → reset attempts、log INFO、{@link ChannelStateRegistry#recordSuccess}、return true（继续 polling）。
+     * 失败 → 增加 attempts、log WARN、{@link ChannelStateRegistry#recordFailure}、return false（退出本周期）。
+     */
+    private boolean ensureReopened(Long channelId) {
+        long sleepMs = ModbusBackoff.nextDelayMs(reconnectAttempts);
+        try {
+            Thread.sleep(sleepMs);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+
+        if (master != null) {
+            try {
+                master.close();
+            } catch (Exception e) {
+                log.debug("Modbus TCP stale master close ignored: {}", e.toString());
+            }
+        }
+
+        long openStart = System.currentTimeMillis();
+        try {
+            master = masterFactory.get();
+            master.open();
+            long elapsed = System.currentTimeMillis() - openStart;
+            connected = true;
+            int prevAttempts = reconnectAttempts;
+            reconnectAttempts = 0;
+            log.info("Modbus TCP reopened channel={} after {} attempt(s) in {}ms",
+                    channelId, prevAttempts + 1, elapsed);
+            if (registry != null) {
+                registry.recordSuccess(channelId, elapsed);
+            }
+            return true;
+        } catch (Exception e) {
+            int attempt = ++reconnectAttempts;
+            long nextDelay = ModbusBackoff.nextDelayMs(attempt);
+            String msg = e.getMessage() == null ? e.toString() : e.getMessage();
+            log.warn("Modbus TCP reopen channel={} failed (attempt#{}, next backoff={}ms): {}",
+                    channelId, attempt, nextDelay, msg);
+            connected = false;
+            if (registry != null) {
+                registry.recordFailure(channelId, msg);
+            }
+            return false;
+        }
+    }
+
+    private void forceCloseMaster() {
+        connected = false;
+        if (master != null) {
+            try {
+                master.close();
+            } catch (Exception e) {
+                log.warn("Modbus TCP master close error during force-close: {}", e.toString());
+            }
+            master = null;
         }
     }
 

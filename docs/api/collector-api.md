@@ -228,7 +228,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 → `200 OK`（无 body）。后台先 `stop()` 当前 transport，立即用现有 channel 配置重启。
 
-> **v1.1 限制**：Modbus 连接失败后**不会**自动退避重连；MQTT / OPC UA 由底层 SDK 处理。需要手工触发请调本端点。
+> **行为说明**：Modbus 连接失败后会自动指数退避重连（1s→2s→4s→8s→16s→32s→60s 封顶），无需手工干预；本端点仍可用于强制立刻重启。MQTT / OPC UA 由底层 SDK 处理重连。
 
 ### §2.5 列出待审批 OPC UA 证书
 
@@ -440,11 +440,11 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 ## §6 已知 v1.1 限制（与 spec 偏差）
 
 - **未实装**：`POST /api/v1/secrets/opcua/cert`（multipart .pfx 上传）— 见 §3.3 备注
-- **未实装**：Modbus 自动 reconnect 退避 — 失败后需调 §2.4
 
 > 已在 v1.1 落地（先前文档曾标记为未实装，现已交付）：
 > - `GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` — OPC UA 服务器证书审批
 > - OPC UA `SecurityMode = SIGN` 客户端 PEM 私钥加载（见 `OpcUaCertificateLoader`）
+> - Modbus TCP / RTU 指数退避自动重连（`ModbusBackoff`：1s→2s→4s→8s→16s→32s→60s 封顶）
 
 ---
 
