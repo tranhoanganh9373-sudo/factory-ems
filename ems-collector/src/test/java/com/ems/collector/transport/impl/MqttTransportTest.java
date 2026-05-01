@@ -9,6 +9,7 @@ import com.ems.collector.transport.TransportException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -200,7 +201,7 @@ class MqttTransportTest {
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var opts = MqttTransport.buildConnectOptions(cfg, null, 1L);
         assertThat(opts.getWillDestination()).isEqualTo("status/dead");
-        assertThat(new String(opts.getWillMessage().getPayload())).isEqualTo("OFFLINE");
+        assertThat(new String(opts.getWillMessage().getPayload(), StandardCharsets.UTF_8)).isEqualTo("OFFLINE");
         assertThat(opts.getWillMessage().getQos()).isEqualTo(1);
         assertThat(opts.getWillMessage().isRetained()).isTrue();
     }

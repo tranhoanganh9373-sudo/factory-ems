@@ -31,7 +31,7 @@ public record MqttConfig(
     @AssertTrue(message = "lastWillTopic and lastWillPayload must both be set or both be null")
     public boolean isLastWillConfigConsistent() {
         boolean topicSet = lastWillTopic != null && !lastWillTopic.isBlank();
-        boolean payloadSet = lastWillPayload != null && !lastWillPayload.isEmpty();
+        boolean payloadSet = lastWillPayload != null && !lastWillPayload.isBlank();
         return topicSet == payloadSet;
     }
 }

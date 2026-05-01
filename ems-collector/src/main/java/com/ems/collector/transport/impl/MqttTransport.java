@@ -97,7 +97,8 @@ public final class MqttTransport implements Transport {
             opts.setSocketFactory(buildSslSocketFactory(pem));
             log.info("mqtt tls enabled channel={}", channelId);
         }
-        if (cfg.lastWillTopic() != null && !cfg.lastWillTopic().isBlank()) {
+        if (cfg.lastWillTopic() != null && !cfg.lastWillTopic().isBlank()
+            && cfg.lastWillPayload() != null) {
             opts.setWill(
                 cfg.lastWillTopic(),
                 cfg.lastWillPayload().getBytes(StandardCharsets.UTF_8),
