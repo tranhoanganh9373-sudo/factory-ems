@@ -11,6 +11,7 @@ import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import org.springframework.data.jpa.domain.Specification;
 import com.ems.alarm.service.impl.AlarmServiceImpl;
+import com.ems.collector.channel.ChannelRepository;
 import com.ems.collector.service.CollectorService;
 import com.ems.core.dto.PageDTO;
 import com.ems.meter.entity.Meter;
@@ -36,11 +37,12 @@ class AlarmServiceImplTest {
     private final AlarmRepository alarmRepo = mock(AlarmRepository.class);
     private final AlarmStateMachine stateMachine = mock(AlarmStateMachine.class);
     private final MeterRepository meterRepo = mock(MeterRepository.class);
+    private final ChannelRepository channelRepo = mock(ChannelRepository.class);
     private final CollectorService collectorService = mock(CollectorService.class);
     private final ThresholdResolver thresholds = mock(ThresholdResolver.class);
 
     private final AlarmServiceImpl service = new AlarmServiceImpl(
-            alarmRepo, stateMachine, meterRepo, collectorService, thresholds,
+            alarmRepo, stateMachine, meterRepo, channelRepo, collectorService, thresholds,
             AlarmMetrics.NOOP);
 
     // ── getById ──────────────────────────────────────────────────────────────

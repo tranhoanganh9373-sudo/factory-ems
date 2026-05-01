@@ -14,6 +14,8 @@ import com.ems.alarm.repository.AlarmSpecifications;
 import com.ems.alarm.service.AlarmService;
 import com.ems.alarm.service.AlarmStateMachine;
 import com.ems.alarm.service.ThresholdResolver;
+import com.ems.collector.channel.Channel;
+import com.ems.collector.channel.ChannelRepository;
 import com.ems.collector.poller.DeviceSnapshot;
 import com.ems.collector.service.CollectorService;
 import com.ems.core.dto.PageDTO;
@@ -37,6 +39,7 @@ public class AlarmServiceImpl implements AlarmService {
     private final AlarmRepository alarmRepo;
     private final AlarmStateMachine stateMachine;
     private final MeterRepository meterRepo;
+    private final ChannelRepository channelRepo;
     private final CollectorService collectorService;
     private final ThresholdResolver thresholds;
     private final AlarmMetrics metrics;
@@ -44,12 +47,14 @@ public class AlarmServiceImpl implements AlarmService {
     public AlarmServiceImpl(AlarmRepository alarmRepo,
                             AlarmStateMachine stateMachine,
                             MeterRepository meterRepo,
+                            ChannelRepository channelRepo,
                             CollectorService collectorService,
                             ThresholdResolver thresholds,
                             AlarmMetrics metrics) {
         this.alarmRepo = alarmRepo;
         this.stateMachine = stateMachine;
         this.meterRepo = meterRepo;
+        this.channelRepo = channelRepo;
         this.collectorService = collectorService;
         this.thresholds = thresholds;
         this.metrics = metrics == null ? AlarmMetrics.NOOP : metrics;
@@ -68,11 +73,9 @@ public class AlarmServiceImpl implements AlarmService {
     @Override
     public AlarmDTO getById(Long id) {
         Alarm a = alarmRepo.findById(id).orElseThrow(() -> new AlarmNotFoundException(id));
-        Meter m = meterRepo.findById(a.getDeviceId()).orElse(null);
-        String code = m != null ? m.getCode() : "unknown";
-        String name = m != null ? m.getName() : "";
+        DeviceLabel label = resolveDeviceLabel(a);
         return new AlarmDTO(
-                a.getId(), a.getDeviceId(), code, name,
+                a.getId(), a.getDeviceId(), a.getDeviceType(), label.code, label.name,
                 a.getAlarmType(), a.getSeverity(), a.getStatus(),
                 a.getTriggeredAt(), a.getAckedAt(), a.getAckedBy(),
                 a.getResolvedAt(), a.getResolvedReason(),
@@ -159,13 +162,28 @@ public class AlarmServiceImpl implements AlarmService {
     }
 
     private AlarmListItemDTO toListItem(Alarm a) {
-        Meter m = meterRepo.findById(a.getDeviceId()).orElse(null);
-        String code = m != null ? m.getCode() : "unknown";
-        String name = m != null ? m.getName() : "";
+        DeviceLabel label = resolveDeviceLabel(a);
         return new AlarmListItemDTO(
-                a.getId(), a.getDeviceId(), code, name,
+                a.getId(), a.getDeviceId(), a.getDeviceType(), label.code, label.name,
                 a.getAlarmType(), a.getSeverity(), a.getStatus(),
                 a.getTriggeredAt(), a.getLastSeenAt(), a.getAckedAt()
         );
     }
+
+    /**
+     * 按 deviceType 分支查询 device 元数据。
+     * <p>"CHANNEL" → 查 channel.name 作为 code（channel 表无 code 列，name 已是 unique 业务键）。
+     * 其他（缺省/"METER"）→ 查 meter.code / meter.name。
+     */
+    private DeviceLabel resolveDeviceLabel(Alarm a) {
+        if ("CHANNEL".equals(a.getDeviceType())) {
+            Channel ch = channelRepo.findById(a.getDeviceId()).orElse(null);
+            return new DeviceLabel(ch != null ? ch.getName() : "unknown", "");
+        }
+        Meter m = meterRepo.findById(a.getDeviceId()).orElse(null);
+        return new DeviceLabel(m != null ? m.getCode() : "unknown",
+                               m != null ? m.getName() : "");
+    }
+
+    private record DeviceLabel(String code, String name) {}
 }
