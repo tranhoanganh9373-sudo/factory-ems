@@ -4,6 +4,7 @@ import com.ems.collector.runtime.ChannelStateRegistry;
 import com.ems.collector.runtime.ConnectionState;
 import com.ems.collector.sink.SampleWriter;
 import com.ems.collector.transport.ChannelTransportFactory;
+import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.Transport;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -106,8 +107,15 @@ public class ChannelService {
                 log.warn("sampleWriter.write failed for channel={} point={}: {}",
                         sample.channelId(), sample.pointKey(), e.getMessage());
             }
-            stateRegistry.recordSuccess(sample.channelId(),
-                    System.currentTimeMillis() - startedAt);
+            if (sample.quality() == Quality.GOOD) {
+                stateRegistry.recordSuccess(sample.channelId(),
+                        System.currentTimeMillis() - startedAt);
+            } else {
+                // BAD / UNCERTAIN — 视为失败，避免 §9.6 5-strike 通信故障告警永远无法触发。
+                String err = sample.tags().getOrDefault("error",
+                        "quality=" + sample.quality());
+                stateRegistry.recordFailure(sample.channelId(), err);
+            }
         });
         active.put(ch.getId(), t);
         log.info("channel {} ({}) started", ch.getName(), ch.getProtocol());

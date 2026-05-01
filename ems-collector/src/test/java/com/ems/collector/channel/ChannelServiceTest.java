@@ -192,6 +192,56 @@ class ChannelServiceTest {
         assertThat(snap.successCount24h()).isEqualTo(1L);
     }
 
+    @Test
+    void badSampleRecordsFailureNotSuccess() {
+        Transport transport = mock(Transport.class);
+        factoryMock.enqueue(transport);
+        Channel ch = newChannel(61L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(ch);
+
+        ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
+        verify(transport).start(eq(61L), any(VirtualConfig.class), sinkCaptor.capture());
+
+        Sample bad = new Sample(61L, "p1",
+                Instant.parse("2026-04-30T10:00:00Z"),
+                null, Quality.BAD, Map.of("error", "modbus timeout"));
+        sinkCaptor.getValue().accept(bad);
+
+        var snap = registry.snapshot(61L);
+        assertThat(snap.connState()).isEqualTo(ConnectionState.DISCONNECTED);
+        assertThat(snap.successCount24h()).isZero();
+        assertThat(snap.failureCount24h()).isEqualTo(1L);
+        assertThat(snap.lastErrorMessage()).contains("modbus timeout");
+    }
+
+    @Test
+    void uncertainSampleRecordsFailureWithFallbackError() {
+        Transport transport = mock(Transport.class);
+        factoryMock.enqueue(transport);
+        Channel ch = newChannel(62L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(ch);
+
+        ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
+        verify(transport).start(eq(62L), any(VirtualConfig.class), sinkCaptor.capture());
+
+        // 没有 error tag — fallback 用 "quality=UNCERTAIN"
+        Sample uncertain = new Sample(62L, "p1",
+                Instant.parse("2026-04-30T10:00:00Z"),
+                null, Quality.UNCERTAIN, Map.of());
+        sinkCaptor.getValue().accept(uncertain);
+
+        var snap = registry.snapshot(62L);
+        assertThat(snap.successCount24h()).isZero();
+        assertThat(snap.failureCount24h()).isEqualTo(1L);
+        assertThat(snap.lastErrorMessage()).isEqualTo("quality=UNCERTAIN");
+    }
+
     private static Channel newChannel(Long id, String protocol, boolean enabled) {
         Channel ch = new Channel();
         ch.setId(id);
