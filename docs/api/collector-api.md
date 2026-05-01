@@ -228,7 +228,50 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 → `200 OK`（无 body）。后台先 `stop()` 当前 transport，立即用现有 channel 配置重启。
 
-> **v1.1 限制**：连接失败后**不会**自动重连；唯有调用本端点或重启服务才能恢复。
+> **v1.1 限制**：Modbus 连接失败后**不会**自动退避重连；MQTT / OPC UA 由底层 SDK 处理。需要手工触发请调本端点。
+
+### §2.5 列出待审批 OPC UA 证书
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8888/api/v1/collector/cert-pending
+```
+
+→ `200 OK`，body 是 `PendingCertificate[]`：
+
+```json
+[
+  {
+    "thumbprint": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+    "channelId": 7,
+    "endpointUrl": "opc.tcp://192.168.10.30:4840",
+    "firstSeenAt": "2026-04-30T08:15:33Z",
+    "subjectDn": "CN=PLC-Line1,O=Acme"
+  }
+]
+```
+
+ADMIN-only。当 OPC UA channel 在 SIGN/SIGN_AND_ENCRYPT 模式下连接到信任库未收录的服务端时，证书会落入 `pending/`，同时触发 `OPC_UA_CERT_PENDING` 告警。
+
+### §2.6 批准服务端证书
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"thumbprint":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}' \
+  http://localhost:8888/api/v1/collector/7/trust-cert
+```
+
+→ `204 No Content`。后端将 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，自动解除关联告警。下次重连周期到达即恢复。
+
+### §2.7 拒绝服务端证书
+
+```bash
+curl -X DELETE -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8888/api/v1/collector/cert-pending/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+```
+
+→ `204 No Content`。`.der` 移到 `rejected/` 留证；不再触发告警，但允许后续审计。
 
 ---
 
@@ -396,10 +439,12 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 
 ## §6 已知 v1.1 限制（与 spec 偏差）
 
-- **未实装**：`POST /api/v1/collector/{id}/trust-cert`（OPC UA 服务器证书审批）— 需手工管理 `~/.ems/secrets/opcua/certs/trusted/` 目录
 - **未实装**：`POST /api/v1/secrets/opcua/cert`（multipart .pfx 上传）— 见 §3.3 备注
 - **未实装**：Modbus 自动 reconnect 退避 — 失败后需调 §2.4
-- **部分实装**：OPC UA `SecurityMode` 非 NONE 模式后端 transport 启动期对客户端证书加载未完整接入
+
+> 已在 v1.1 落地（先前文档曾标记为未实装，现已交付）：
+> - `GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` — OPC UA 服务器证书审批
+> - OPC UA `SecurityMode = SIGN` 客户端 PEM 私钥加载（见 `OpcUaCertificateLoader`）
 
 ---
 
