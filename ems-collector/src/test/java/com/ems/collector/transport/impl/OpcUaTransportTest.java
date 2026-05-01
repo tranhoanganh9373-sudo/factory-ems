@@ -81,6 +81,45 @@ class OpcUaTransportTest {
     }
 
     @Test
+    @DisplayName("start SecurityMode.SIGN 抛 TransportException")
+    void start_securityModeSign_throws() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:99999", SecurityMode.SIGN,
+            null, null, null, null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
+
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageContaining("not implemented");
+    }
+
+    @Test
+    @DisplayName("start SecurityMode.SIGN_AND_ENCRYPT 抛 TransportException")
+    void start_securityModeSignAndEncrypt_throws() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:99999", SecurityMode.SIGN_AND_ENCRYPT,
+            null, null, null, null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
+
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageContaining("not implemented");
+    }
+
+    @Test
+    @DisplayName("start usernameRef 配但无 SecretResolver 抛 TransportException")
+    void start_usernameRefWithoutResolver_throws() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:99999", SecurityMode.NONE,
+            null, null, "secret://opcua/u", null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
+
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageContaining("SecretResolver");
+    }
+
+    @Test
     @DisplayName("isConnected 初始为 false")
     void isConnected_initial_returnsFalse() {
         assertThat(new OpcUaTransport().isConnected()).isFalse();

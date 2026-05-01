@@ -29,7 +29,7 @@ public class ChannelTransportFactory {
         return switch (protocol) {
             case "MODBUS_TCP" -> new ModbusTcpAdapterTransport();
             case "MODBUS_RTU" -> new ModbusRtuAdapterTransport();
-            case "OPC_UA"     -> new OpcUaTransport();
+            case "OPC_UA"     -> new OpcUaTransport(secretResolver);
             case "MQTT"       -> new MqttTransport(secretResolver);
             case "VIRTUAL"    -> new VirtualTransport();
             default -> throw new IllegalArgumentException("unknown protocol: " + protocol);
