@@ -568,14 +568,26 @@ class FilesystemSecretResolver implements SecretResolver {
 }
 ```
 
-### 8.3 OPC UA 证书审批流
+### 8.3 OPC UA 证书审批流（已实现）
 
-1. 客户端连接服务器 → 拉取服务器证书指纹
-2. 检查 `~/.ems/secrets/opcua/certs/trusted/` 中是否存在
-3. 不存在：拒绝连接 + `lastErrorMessage = "Untrusted: SHA-256: xx:xx..."` + 触发告警
-4. 管理员在前端诊断页点"批准证书" → `POST /api/v1/collector/{id}/trust-cert { thumbprint }`
-5. 后端将服务器证书拷贝到 `trusted/` 目录 + 审计日志 `CERT_TRUST`
-6. Channel 自动重连成功
+1. 客户端连接服务器 → `OpcUaTransport.buildCertificateValidator` 拉取服务器证书指纹（`HexFormat` 小写无分隔）
+2. 校验 `~/.ems/secrets/opcua/certs/trusted/` 中是否存在
+3. 不存在：
+   - 调用 `OpcUaCertificateStore.addPending(cert, channelId, endpointUrl)` 把 `.der` + `.json` 元数据写入 `pending/`（POSIX `rw-------`，幂等）
+   - 发布 `ChannelCertificatePendingEvent` → `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 告警（同 channel 同时只有一条 ACTIVE）
+   - 抛出 `TransportException` 拒绝连接
+4. 管理员在 `/admin/cert-approval` 页面（`<PageHeader title="证书审批" />`）查看待审批证书列表
+   - 后端 `GET /api/v1/collector/cert-pending` 列出 `PendingCertificate(thumbprint, channelId, endpointUrl, firstSeenAt, subjectDn)`
+   - react-query 10 秒自动刷新
+5. 批准 → `POST /api/v1/collector/{channelId}/trust-cert { thumbprint }`：
+   - `OpcUaCertificateStore.approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，同步删除 `.json`
+   - 审计日志 `CERT_TRUST`
+   - 发布 `ChannelCertificateApprovedEvent` → 同步自动解除告警（`AUTO` 原因）
+6. 拒绝 → `DELETE /api/v1/collector/cert-pending/{thumbprint}`：
+   - `OpcUaCertificateStore.reject(thumbprint)` 把 `.der` 移到 `rejected/` 留证（不再触发告警，但允许后续审计）
+7. Channel 重连周期到达后自动重试连接
+
+> **事件链同步性**：`ApplicationEventPublisher` 默认走 Spring 同步多播器；`@EnableAsync` 仅作用于 `@Async` 注解（如 webhook executor）。因此 pending 事件保存告警与 `addPending` 在同一线程完成，前端见到 cert 时告警必已存在；不存在「approve 早于 pending listener」的竞态。
 
 ### 8.4 REST 端点（仅 ADMIN）
 
@@ -585,7 +597,9 @@ class FilesystemSecretResolver implements SecretResolver {
 | `/api/v1/secrets/{ref}` | DELETE | 删除 |
 | `/api/v1/secrets` | GET | 仅返回 ref 列表 |
 | `/api/v1/secrets/opcua/cert` | POST | multipart 上传 .pfx |
-| `/api/v1/collector/{id}/trust-cert` | POST | 批准 OPC UA 服务器证书 |
+| `/api/v1/collector/cert-pending` | GET | 列出待审批 OPC UA 服务器证书（已实现） |
+| `/api/v1/collector/{channelId}/trust-cert` | POST | 批准 OPC UA 服务器证书（已实现，body `{ thumbprint }`） |
+| `/api/v1/collector/cert-pending/{thumbprint}` | DELETE | 拒绝 OPC UA 服务器证书（已实现） |
 
 ### 8.5 与现有 .env 集成
 
