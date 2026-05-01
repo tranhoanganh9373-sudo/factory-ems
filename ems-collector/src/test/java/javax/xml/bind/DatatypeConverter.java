@@ -11,6 +11,10 @@ import java.util.GregorianCalendar;
  * to run under JDK 17+ without JAXB on the classpath.
  *
  * Only the methods actually invoked by Milo's OpcUaXmlStreamDecoder are implemented.
+ *
+ * TODO: Delete this stub when ems-collector upgrades to a Milo release that
+ *       no longer references javax.xml.bind.DatatypeConverter (Milo 0.6.14+
+ *       drops the JAXB dependency).
  */
 public final class DatatypeConverter {
 

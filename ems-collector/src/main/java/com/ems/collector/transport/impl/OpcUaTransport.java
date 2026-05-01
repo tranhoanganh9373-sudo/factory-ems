@@ -43,7 +43,8 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  *
  * <p>v1 限制：
  * <ul>
- *   <li>支持 {@link SecurityMode#NONE}、{@link SecurityMode#SIGN}（需配置 certRef）。
+ *   <li>支持 {@link SecurityMode#NONE}、{@link SecurityMode#SIGN}、
+ *       {@link SecurityMode#SIGN_AND_ENCRYPT}（后两者需配置 certRef + OpcUaCertificateStore）。
  *   <li>仅支持 {@link SubscriptionMode#READ}；SUBSCRIBE 留 v2。
  * </ul>
  *

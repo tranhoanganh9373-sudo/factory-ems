@@ -29,6 +29,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
 import org.mockito.Mockito;
 
@@ -58,6 +59,7 @@ import static org.awaitility.Awaitility.await;
  * <p>不依赖 Docker；命名为 *IT.java 与项目集成测试惯例一致。
  */
 @DisplayName("OpcUaTransportIT (in-process Milo SIGN)")
+@Timeout(value = 40, unit = TimeUnit.SECONDS)
 class OpcUaTransportIT {
 
     private OpcUaServer server;
