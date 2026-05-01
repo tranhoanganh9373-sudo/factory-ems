@@ -21,12 +21,9 @@ export interface DiagTestResult {
 }
 
 export const collectorDiagApi = {
-  list: () =>
-    apiClient.get<ChannelRuntimeState[]>('/collector/state').then((r) => r.data),
+  list: () => apiClient.get<ChannelRuntimeState[]>('/collector/state').then((r) => r.data),
   get: (id: number) =>
     apiClient.get<ChannelRuntimeState>(`/collector/${id}/state`).then((r) => r.data),
-  test: (id: number) =>
-    apiClient.post<DiagTestResult>(`/collector/${id}/test`).then((r) => r.data),
-  reconnect: (id: number) =>
-    apiClient.post(`/collector/${id}/reconnect`).then((r) => r.data),
+  test: (id: number) => apiClient.post<DiagTestResult>(`/collector/${id}/test`).then((r) => r.data),
+  reconnect: (id: number) => apiClient.post(`/collector/${id}/reconnect`).then((r) => r.data),
 };

@@ -38,7 +38,7 @@ function renderPage() {
           <CollectorPage />
         </MemoryRouter>
       </AntApp>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 

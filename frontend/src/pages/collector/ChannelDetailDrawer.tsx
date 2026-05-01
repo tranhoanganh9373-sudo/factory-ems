@@ -2,11 +2,7 @@ import { Drawer, Descriptions, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { collectorDiagApi } from '@/api/collectorDiag';
-import {
-  translate,
-  CONNECTION_STATE_LABEL,
-  COLLECTOR_PROTOCOL_LABEL,
-} from '@/utils/i18n-dict';
+import { translate, CONNECTION_STATE_LABEL, COLLECTOR_PROTOCOL_LABEL } from '@/utils/i18n-dict';
 
 interface Props {
   channelId: number | null;

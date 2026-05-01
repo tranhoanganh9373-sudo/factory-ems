@@ -14,7 +14,11 @@ export function MqttForm() {
       >
         <Input placeholder="tcp://broker.example.com:1883" />
       </Form.Item>
-      <Form.Item name={['protocolConfig', 'clientId']} label="Client ID" rules={[{ required: true }]}>
+      <Form.Item
+        name={['protocolConfig', 'clientId']}
+        label="Client ID"
+        rules={[{ required: true }]}
+      >
         <Input />
       </Form.Item>
       <Form.Item name={['protocolConfig', 'usernameRef']} label="用户名（凭据引用）">

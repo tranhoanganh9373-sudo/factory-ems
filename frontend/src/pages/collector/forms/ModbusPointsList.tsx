@@ -40,11 +40,7 @@ export function ModbusPointsList({ fields, ops }: Props) {
           </Button>
         </Space>
       ))}
-      <Button
-        type="dashed"
-        onClick={() => ops.add({ dataType: 'F32', scale: 1, offset: 0 })}
-        block
-      >
+      <Button type="dashed" onClick={() => ops.add({ dataType: 'F32', scale: 1, offset: 0 })} block>
         + 新增测点
       </Button>
     </>

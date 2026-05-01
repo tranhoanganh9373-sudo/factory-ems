@@ -6,11 +6,7 @@ import 'dayjs/locale/zh-cn';
 import { useState } from 'react';
 import { collectorDiagApi, type ChannelRuntimeState } from '@/api/collectorDiag';
 import { channelApi, type ChannelDTO } from '@/api/channel';
-import {
-  translate,
-  COLLECTOR_PROTOCOL_LABEL,
-  CONNECTION_STATE_LABEL,
-} from '@/utils/i18n-dict';
+import { translate, COLLECTOR_PROTOCOL_LABEL, CONNECTION_STATE_LABEL } from '@/utils/i18n-dict';
 import { ChannelDetailDrawer } from './ChannelDetailDrawer';
 import { ChannelEditor } from './ChannelEditor';
 import { PageHeader } from '@/components/PageHeader';
@@ -85,9 +81,7 @@ export default function CollectorPage() {
             {
               title: '协议',
               dataIndex: 'protocol',
-              render: (p: string) => (
-                <Tag>{translate(COLLECTOR_PROTOCOL_LABEL, p)}</Tag>
-              ),
+              render: (p: string) => <Tag>{translate(COLLECTOR_PROTOCOL_LABEL, p)}</Tag>,
             },
             { title: '通道 ID', dataIndex: 'channelId', width: 80 },
             {
@@ -134,13 +128,7 @@ export default function CollectorPage() {
               title: '最后错误',
               dataIndex: 'lastErrorMessage',
               render: (m?: string) =>
-                m ? (
-                  <Tooltip title={m}>
-                    {m.length > 30 ? `${m.slice(0, 30)}…` : m}
-                  </Tooltip>
-                ) : (
-                  '-'
-                ),
+                m ? <Tooltip title={m}>{m.length > 30 ? `${m.slice(0, 30)}…` : m}</Tooltip> : '-',
             },
             {
               title: '操作',

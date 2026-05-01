@@ -13,11 +13,7 @@ export function OpcUaForm() {
       >
         <Input placeholder="opc.tcp://host:4840" />
       </Form.Item>
-      <Form.Item
-        name={['protocolConfig', 'securityMode']}
-        label="安全模式"
-        initialValue="NONE"
-      >
+      <Form.Item name={['protocolConfig', 'securityMode']} label="安全模式" initialValue="NONE">
         <Select
           options={Object.entries(OPCUA_SECURITY_MODE_LABEL).map(([v, l]) => ({
             value: v,

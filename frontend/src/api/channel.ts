@@ -28,6 +28,5 @@ export const channelApi = {
   update: (id: number, body: Partial<ChannelDTO>) =>
     apiClient.put<ChannelDTO>(`/channel/${id}`, body).then((r) => r.data),
   delete: (id: number) => apiClient.delete(`/channel/${id}`).then((r) => r.data),
-  test: (id: number) =>
-    apiClient.post<TestResult>(`/channel/${id}/test`).then((r) => r.data),
+  test: (id: number) => apiClient.post<TestResult>(`/channel/${id}/test`).then((r) => r.data),
 };

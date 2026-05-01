@@ -6,11 +6,7 @@ const PARITIES = ['NONE', 'EVEN', 'ODD'];
 export function ModbusRtuForm() {
   return (
     <>
-      <Form.Item
-        name={['protocolConfig', 'serialPort']}
-        label="串口"
-        rules={[{ required: true }]}
-      >
+      <Form.Item name={['protocolConfig', 'serialPort']} label="串口" rules={[{ required: true }]}>
         <Input placeholder="/dev/ttyUSB0" />
       </Form.Item>
       <Form.Item name={['protocolConfig', 'baudRate']} label="波特率" initialValue={9600}>
