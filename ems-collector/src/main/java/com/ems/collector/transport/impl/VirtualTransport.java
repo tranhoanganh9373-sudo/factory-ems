@@ -1,34 +1,49 @@
 package com.ems.collector.transport.impl;
 
-import com.ems.collector.protocol.ChannelConfig;
-import com.ems.collector.transport.SampleSink;
-import com.ems.collector.transport.TestResult;
-import com.ems.collector.transport.Transport;
+import com.ems.collector.protocol.*;
+import com.ems.collector.transport.*;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.*;
 
-/**
- * Stub — 由 Phase 4 实现完整 VIRTUAL 协议（信号生成器 + 调度）。
- *
- * <p>Phase 2 阶段仅提供占位以满足 sealed permits 列表。
- */
 public final class VirtualTransport implements Transport {
+    private final VirtualSignalGenerator generator = new VirtualSignalGenerator();
+    private ScheduledExecutorService scheduler;
+    private volatile boolean connected = false;
 
     @Override
     public void start(Long channelId, ChannelConfig config, SampleSink sink) {
-        throw new UnsupportedOperationException("VirtualTransport not yet implemented in Phase 4");
+        var cfg = (VirtualConfig) config;
+        scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            var t = new Thread(r, "virtual-" + channelId);
+            t.setDaemon(true);
+            return t;
+        });
+        connected = true;
+        scheduler.scheduleAtFixedRate(() -> tick(channelId, cfg, sink),
+            0, cfg.pollInterval().toMillis(), TimeUnit.MILLISECONDS);
+    }
+
+    private void tick(Long channelId, VirtualConfig cfg, SampleSink sink) {
+        var now = Instant.now();
+        for (var p : cfg.points()) {
+            sink.accept(new Sample(channelId, p.key(), now,
+                generator.generate(p, now), Quality.GOOD,
+                Map.of("virtual", "true")));
+        }
     }
 
     @Override
     public void stop() {
-        // no-op
+        connected = false;
+        if (scheduler != null) scheduler.shutdownNow();
     }
 
     @Override
-    public boolean isConnected() {
-        return false;
-    }
+    public boolean isConnected() { return connected; }
 
     @Override
     public TestResult testConnection(ChannelConfig config) {
-        return TestResult.fail("VirtualTransport stub — implement in Phase 4");
+        return TestResult.ok(0L);
     }
 }
