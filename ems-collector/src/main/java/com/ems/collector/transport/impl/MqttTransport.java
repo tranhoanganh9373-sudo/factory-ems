@@ -69,13 +69,11 @@ public final class MqttTransport implements Transport {
         this(null);
     }
 
-    @Override
-    public void start(Long channelId, ChannelConfig config, SampleSink sink) {
-        if (!(config instanceof MqttConfig cfg)) {
-            throw new TransportException("expected MqttConfig, got "
-                + (config == null ? "null" : config.getClass().getSimpleName()));
-        }
-        this.channelId = channelId;
+    /**
+     * 根据 MqttConfig 构建 MqttConnectOptions，包含 LWT 设置（若已配置）。
+     * Package-private for testing.
+     */
+    static MqttConnectOptions buildConnectOptions(MqttConfig cfg, SecretResolver secretResolver, Long channelId) {
         var opts = new MqttConnectOptions();
         opts.setCleanSession(cfg.cleanSession());
         opts.setKeepAliveInterval((int) cfg.keepAlive().toSeconds());
@@ -99,6 +97,25 @@ public final class MqttTransport implements Transport {
             opts.setSocketFactory(buildSslSocketFactory(pem));
             log.info("mqtt tls enabled channel={}", channelId);
         }
+        if (cfg.lastWillTopic() != null && !cfg.lastWillTopic().isBlank()) {
+            opts.setWill(
+                cfg.lastWillTopic(),
+                cfg.lastWillPayload().getBytes(StandardCharsets.UTF_8),
+                cfg.lastWillQos(),
+                cfg.lastWillRetained()
+            );
+        }
+        return opts;
+    }
+
+    @Override
+    public void start(Long channelId, ChannelConfig config, SampleSink sink) {
+        if (!(config instanceof MqttConfig cfg)) {
+            throw new TransportException("expected MqttConfig, got "
+                + (config == null ? "null" : config.getClass().getSimpleName()));
+        }
+        this.channelId = channelId;
+        var opts = buildConnectOptions(cfg, secretResolver, channelId);
         try {
             client = new MqttAsyncClient(cfg.brokerUrl(), cfg.clientId(), new MemoryPersistence());
             client.setCallback(new MqttCallbackExtended() {

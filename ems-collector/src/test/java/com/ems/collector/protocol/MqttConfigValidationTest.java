@@ -37,6 +37,7 @@ class MqttConfigValidationTest {
             "tcp://broker:1883", "ems-test",
             null, null, null,
             qos, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("temp", "sensors/+/temp", "$.value", null, null))
         );
     }
@@ -76,5 +77,76 @@ class MqttConfigValidationTest {
         Set<ConstraintViolation<MqttConfig>> violations = validator.validate(validBase(-1));
         assertThat(violations).hasSize(1);
         assertThat(violations.iterator().next().getPropertyPath().toString()).isEqualTo("qos");
+    }
+
+    // ---- LWT 校验测试 ----
+
+    private MqttConfig validWithLwt(String topic, String payload, int lwtQos, boolean retained) {
+        return new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            null, null, null,
+            1, true, Duration.ofSeconds(60),
+            topic, payload, lwtQos, retained,
+            List.of(new MqttPoint("temp", "sensors/+/temp", "$.value", null, null))
+        );
+    }
+
+    @Test
+    @DisplayName("LWT 未配置（全默认）— 通过校验")
+    void lastWillNotConfigured_passesValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations = validator.validate(validBase(1));
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("LWT topic + payload 都设 — 通过校验")
+    void lastWillFullyConfigured_passesValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations =
+            validator.validate(validWithLwt("status/dead", "OFFLINE", 1, false));
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("LWT topic 设 + payload 空 — 校验失败（部分配置）")
+    void lastWillTopicOnly_failsValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations =
+            validator.validate(validWithLwt("status/dead", null, 0, false));
+        assertThat(violations).isNotEmpty();
+        assertThat(violations.stream()
+            .map(v -> v.getPropertyPath().toString())
+            .anyMatch(p -> p.contains("lastWillConfigConsistent"))
+        ).isTrue();
+    }
+
+    @Test
+    @DisplayName("LWT topic 空 + payload 设 — 校验失败（部分配置）")
+    void lastWillPayloadOnly_failsValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations =
+            validator.validate(validWithLwt(null, "OFFLINE", 0, false));
+        assertThat(violations).isNotEmpty();
+        assertThat(violations.stream()
+            .map(v -> v.getPropertyPath().toString())
+            .anyMatch(p -> p.contains("lastWillConfigConsistent"))
+        ).isTrue();
+    }
+
+    @Test
+    @DisplayName("LWT qos=2 + 完整配置 — 通过校验")
+    void lastWillQos2_passesValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations =
+            validator.validate(validWithLwt("status/dead", "OFFLINE", 2, true));
+        assertThat(violations).isEmpty();
+    }
+
+    @Test
+    @DisplayName("LWT lastWillQos=3 — 校验失败（超出范围）")
+    void lastWillQos3_failsValidation() {
+        Set<ConstraintViolation<MqttConfig>> violations =
+            validator.validate(validWithLwt("status/dead", "OFFLINE", 3, false));
+        assertThat(violations).isNotEmpty();
+        assertThat(violations.stream()
+            .map(v -> v.getPropertyPath().toString())
+            .anyMatch(p -> p.equals("lastWillQos"))
+        ).isTrue();
     }
 }

@@ -47,6 +47,7 @@ class ChannelConfigJsonTest {
             "tcp://broker:1883", "ems-collector-1",
             "secret://mqtt/u", "secret://mqtt/p",
             null, 1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("temp", "sensors/+/t", "$.value", "C", null))
         );
         var parsed = om.readValue(om.writeValueAsString(cfg), ChannelConfig.class);

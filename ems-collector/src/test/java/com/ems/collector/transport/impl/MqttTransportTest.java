@@ -70,6 +70,7 @@ class MqttTransportTest {
         var cfg = new MqttConfig(
             "tcp://192.0.2.1:1883", "ems-test", null, null, null,
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var result = new MqttTransport().testConnection(cfg);
         assertThat(result.success()).isFalse();
@@ -94,6 +95,7 @@ class MqttTransportTest {
             "tcp://broker:1883", "ems-test",
             "secret://mqtt/u", null, null,
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var transport = new MqttTransport();  // 无 secretResolver
         assertThatThrownBy(() -> transport.start(1L, cfg, s -> {}))
@@ -148,6 +150,7 @@ class MqttTransportTest {
         var cfg = new MqttConfig(
             "tcp://broker:1883", "ems-test", null, null, null,
             2, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(
                 new MqttPoint("p1", "a/b", "$.v", null, null),
                 new MqttPoint("p2", "c/d", "$.v", null, null)
@@ -163,10 +166,42 @@ class MqttTransportTest {
             "ssl://broker:8883", "ems-test",
             null, null, "secret://mqtt/tls-ca-1",
             1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
             List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
         var transport = new MqttTransport();  // 无 secretResolver
         assertThatThrownBy(() -> transport.start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
             .hasMessageContaining("tlsCaCertRef configured but no SecretResolver");
+    }
+
+    // ---- buildConnectOptions LWT 单测 ----
+
+    @Test
+    @DisplayName("buildConnectOptions — 无 LWT 时 getWillDestination 为 null")
+    void buildConnectOptions_withoutLastWill_doesNotSetWill() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            null, null, null,
+            1, true, Duration.ofSeconds(60),
+            null, null, 0, false,
+            List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
+        var opts = MqttTransport.buildConnectOptions(cfg, null, 1L);
+        assertThat(opts.getWillDestination()).isNull();
+    }
+
+    @Test
+    @DisplayName("buildConnectOptions — 配 LWT 时 setWill 参数正确")
+    void buildConnectOptions_withLastWill_setsWillCorrectly() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test",
+            null, null, null,
+            1, true, Duration.ofSeconds(60),
+            "status/dead", "OFFLINE", 1, true,
+            List.of(new MqttPoint("p", "x/y", "$.v", null, null)));
+        var opts = MqttTransport.buildConnectOptions(cfg, null, 1L);
+        assertThat(opts.getWillDestination()).isEqualTo("status/dead");
+        assertThat(new String(opts.getWillMessage().getPayload())).isEqualTo("OFFLINE");
+        assertThat(opts.getWillMessage().getQos()).isEqualTo(1);
+        assertThat(opts.getWillMessage().isRetained()).isTrue();
     }
 }
