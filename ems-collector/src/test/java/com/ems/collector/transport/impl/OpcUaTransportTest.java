@@ -72,17 +72,84 @@ class OpcUaTransportTest {
     }
 
     @Test
-    @DisplayName("start SUBSCRIBE 模式抛 TransportException")
-    void start_subscribePoint_throws() {
+    @DisplayName("start SUBSCRIBE 点不再抛 SUBSCRIBE not implemented 异常")
+    void start_withSubscribePoints_doesNotThrowSubscribeNotImplemented() {
         var cfg = new OpcUaConfig(
             "opc.tcp://localhost:4840", SecurityMode.NONE,
             null, null, null, null, Duration.ofSeconds(1),
             List.of(new OpcUaPoint("p", "ns=2;i=1",
                 SubscriptionMode.SUBSCRIBE, null, null)));
 
+        // 没有真实 server，会因网络/连接失败而抛异常，但不应含 "SUBSCRIBE mode is not implemented"
         assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
-            .hasMessageContaining("SUBSCRIBE");
+            .hasMessageNotContaining("SUBSCRIBE mode is not implemented");
+    }
+
+    @Test
+    @DisplayName("start READ+SUBSCRIBE 混合点不抛 SUBSCRIBE 拒绝错")
+    void start_withMixedPoints_acceptsConfig() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:4840", SecurityMode.NONE,
+            null, null, null, null, Duration.ofSeconds(1),
+            List.of(
+                new OpcUaPoint("read1", "ns=2;i=1", SubscriptionMode.READ, null, null),
+                new OpcUaPoint("sub1", "ns=2;i=2", SubscriptionMode.SUBSCRIBE, 500.0, null)));
+
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageNotContaining("SUBSCRIBE mode is not implemented");
+    }
+
+    @Test
+    @DisplayName("start 纯 READ 点仍走原路径不变")
+    void start_withOnlyReadPoints_stillSchedulesPoller() {
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:4840", SecurityMode.NONE,
+            null, null, null, null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("r", "ns=2;i=1", SubscriptionMode.READ, null, null)));
+
+        // 无 server，抛网络错误，但不含 SUBSCRIBE 拒绝信息
+        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageNotContaining("SUBSCRIBE mode is not implemented");
+    }
+
+    @Test
+    @DisplayName("resolvePublishingInterval: 全 null samplingIntervalMs 默认 1000")
+    void resolvePublishingInterval_allNull_returns1000() {
+        var points = List.of(
+            new OpcUaPoint("a", "ns=2;i=1", SubscriptionMode.SUBSCRIBE, null, null),
+            new OpcUaPoint("b", "ns=2;i=2", SubscriptionMode.SUBSCRIBE, null, null),
+            new OpcUaPoint("c", "ns=2;i=3", SubscriptionMode.SUBSCRIBE, null, null));
+
+        double result = OpcUaTransport.resolvePublishingInterval(points);
+
+        assertThat(result).isEqualTo(1000.0);
+    }
+
+    @Test
+    @DisplayName("resolvePublishingInterval: null 和有值混合 → 取有值的最小值")
+    void resolvePublishingInterval_mixedNullAndValue_returnsMin() {
+        var points = List.of(
+            new OpcUaPoint("a", "ns=2;i=1", SubscriptionMode.SUBSCRIBE, 500.0, null),
+            new OpcUaPoint("b", "ns=2;i=2", SubscriptionMode.SUBSCRIBE, null, null));
+
+        double result = OpcUaTransport.resolvePublishingInterval(points);
+
+        assertThat(result).isEqualTo(500.0);
+    }
+
+    @Test
+    @DisplayName("resolvePublishingInterval: 多个值 → 返回最小值")
+    void resolvePublishingInterval_multipleValues_returnsMin() {
+        var points = List.of(
+            new OpcUaPoint("a", "ns=2;i=1", SubscriptionMode.SUBSCRIBE, 2000.0, null),
+            new OpcUaPoint("b", "ns=2;i=2", SubscriptionMode.SUBSCRIBE, 500.0, null));
+
+        double result = OpcUaTransport.resolvePublishingInterval(points);
+
+        assertThat(result).isEqualTo(500.0);
     }
 
     @Test

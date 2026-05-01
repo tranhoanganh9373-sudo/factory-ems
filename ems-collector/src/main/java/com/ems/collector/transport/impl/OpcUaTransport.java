@@ -17,9 +17,11 @@ import com.ems.collector.transport.TransportException;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
+import org.eclipse.milo.opcua.sdk.client.subscriptions.ManagedSubscription;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
 import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
 import org.eclipse.milo.opcua.stack.core.UaException;
+import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
@@ -39,13 +41,14 @@ import java.util.concurrent.TimeUnit;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 
 /**
- * OPC UA Transport — Phase 5 Task 5.3：READ 模式实现。
+ * OPC UA Transport — Phase 5 Task 5.3 + SUBSCRIBE 扩展。
  *
- * <p>v1 限制：
+ * <p>支持：
  * <ul>
- *   <li>支持 {@link SecurityMode#NONE}、{@link SecurityMode#SIGN}、
- *       {@link SecurityMode#SIGN_AND_ENCRYPT}（后两者需配置 certRef + OpcUaCertificateStore）。
- *   <li>仅支持 {@link SubscriptionMode#READ}；SUBSCRIBE 留 v2。
+ *   <li>SecurityMode：NONE、SIGN、SIGN_AND_ENCRYPT（后两者需配置 certRef + OpcUaCertificateStore）。
+ *   <li>SubscriptionMode.READ：轮询模式，按 pollInterval 调度。
+ *   <li>SubscriptionMode.SUBSCRIBE：订阅模式，使用 {@link ManagedSubscription} 推送。
+ *   <li>同一 channel 可混合 READ + SUBSCRIBE 测点。
  * </ul>
  *
  * <p>用户名密码通过 {@link SecretResolver} 解析；缺失 SecretResolver 但配置了 usernameRef
@@ -59,6 +62,7 @@ public final class OpcUaTransport implements Transport {
     private final OpcUaCertificateStore certStore;
 
     private OpcUaClient client;
+    private volatile ManagedSubscription subscription;
     private ScheduledExecutorService poller;
     private volatile boolean connected = false;
     private Long channelId;
@@ -91,15 +95,6 @@ public final class OpcUaTransport implements Transport {
                 + (config == null ? "null" : config.getClass().getSimpleName()));
         }
         this.channelId = channelId;
-
-        // v1 仅实现 READ 模式；SUBSCRIBE 留待 v2。早 fail 比静默丢数据更安全。
-        boolean hasSubscribe = cfg.points().stream()
-            .anyMatch(p -> p.mode() == SubscriptionMode.SUBSCRIBE);
-        if (hasSubscribe) {
-            throw new TransportException(
-                "OPC UA SUBSCRIBE mode is not implemented in v1; "
-                    + "configure all points with mode=READ (channelId=" + channelId + ")");
-        }
 
         // SIGN / SIGN_AND_ENCRYPT 需要 certRef。
         if (cfg.securityMode() != SecurityMode.NONE && cfg.certRef() == null) {
@@ -171,14 +166,73 @@ public final class OpcUaTransport implements Transport {
             throw new TransportException("opcua connect failed: " + e.getMessage(), e);
         }
 
-        poller = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "opcua-" + channelId);
-            t.setDaemon(true);
-            return t;
-        });
-        if (cfg.pollInterval() != null) {
-            poller.scheduleAtFixedRate(() -> tick(cfg, sink),
-                0, cfg.pollInterval().toMillis(), TimeUnit.MILLISECONDS);
+        try {
+            setupSubscription(cfg, sink);
+            poller = Executors.newSingleThreadScheduledExecutor(r -> {
+                var t = new Thread(r, "opcua-" + channelId);
+                t.setDaemon(true);
+                return t;
+            });
+            boolean hasReadPoints = cfg.points().stream()
+                .anyMatch(p -> p.mode() == SubscriptionMode.READ);
+            if (hasReadPoints && cfg.pollInterval() != null) {
+                poller.scheduleAtFixedRate(() -> tick(cfg, sink),
+                    0, cfg.pollInterval().toMillis(), TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            // setupSubscription 或 poller 初始化失败：client 已连接，必须清理
+            try { client.disconnect().get(); } catch (Exception ignored) {}
+            if (poller != null) poller.shutdownNow();
+            if (e instanceof TransportException te) throw te;
+            throw new TransportException("opcua start failed after connect: " + e.getMessage(), e);
+        }
+    }
+
+    private void setupSubscription(OpcUaConfig cfg, SampleSink sink) {
+        var subscribePoints = cfg.points().stream()
+            .filter(p -> p.mode() == SubscriptionMode.SUBSCRIBE)
+            .toList();
+        if (subscribePoints.isEmpty()) return;
+
+        double publishingMs = resolvePublishingInterval(subscribePoints);
+        try {
+            subscription = ManagedSubscription.create(client, publishingMs);
+            for (var p : subscribePoints) {
+                var nodeId = NodeId.parse(p.nodeId());
+                var item = subscription.createDataItem(nodeId);
+                item.addDataValueListener(dv -> handleSubscriptionValue(p, dv, sink));
+            }
+            log.info("opcua subscription created channel={} items={} publishingMs={}",
+                channelId, subscribePoints.size(), publishingMs);
+        } catch (UaException e) {
+            throw new TransportException("opcua subscription setup failed: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 计算 SUBSCRIBE 测点集合的 publishing interval（毫秒）。
+     * 取所有 samplingIntervalMs 中的最小值；null 视为默认 1000 ms。
+     */
+    static double resolvePublishingInterval(List<OpcUaPoint> subscribePoints) {
+        return subscribePoints.stream()
+            .map(p -> p.samplingIntervalMs() != null ? p.samplingIntervalMs() : 1000.0)
+            .min(Double::compare)
+            .orElse(1000.0);
+    }
+
+    private void handleSubscriptionValue(OpcUaPoint p, DataValue dv, SampleSink sink) {
+        try {
+            var variant = dv.getValue();
+            Object value = (variant != null) ? variant.getValue() : null;
+            // TODO: READ 路径 (pollOne) 也硬编码 GOOD；待统一改造时与此处一并处理
+            Quality q = (dv.getStatusCode() != null && dv.getStatusCode().isGood())
+                ? Quality.GOOD
+                : Quality.BAD;
+            sink.accept(new Sample(channelId, p.key(), Instant.now(),
+                value, q, Map.of("source", "subscription")));
+        } catch (Throwable t) {
+            log.warn("opcua subscription value handle failed channel={} key={}: {}",
+                channelId, p.key(), t.toString());
         }
     }
 
@@ -259,6 +313,13 @@ public final class OpcUaTransport implements Transport {
     @Override
     public void stop() {
         connected = false;
+        if (subscription != null) {
+            try {
+                subscription.delete();
+            } catch (Exception e) {
+                log.warn("opcua subscription delete channel={} error: {}", channelId, e.toString());
+            }
+        }
         if (poller != null) poller.shutdownNow();
         if (client != null) {
             try {
