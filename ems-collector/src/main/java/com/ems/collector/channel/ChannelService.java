@@ -6,6 +6,7 @@ import com.ems.collector.sink.SampleWriter;
 import com.ems.collector.transport.ChannelTransportFactory;
 import com.ems.collector.transport.Transport;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -124,6 +125,7 @@ public class ChannelService {
     }
 
     /** Spring shutdown 钩子：停掉所有 active transport（保证测试 / 优雅停机）。 */
+    @PreDestroy
     public void stopAll() {
         for (Entry<Long, Transport> e : active.entrySet()) {
             try {
