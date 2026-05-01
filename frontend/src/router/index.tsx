@@ -12,6 +12,7 @@ import UserEditPage from '@/pages/admin/users/edit';
 import UserPermissionPage from '@/pages/admin/users/permissions';
 import RoleListPage from '@/pages/admin/roles/list';
 import AuditListPage from '@/pages/admin/audit/list';
+import CertApprovalPage from '@/pages/admin/cert-approval';
 import DashboardPage from '@/pages/dashboard';
 import ReportPage from '@/pages/report';
 import TariffPage from '@/pages/tariff';
@@ -102,6 +103,7 @@ export function AppRouter() {
           <Route path="users/:id/permissions" element={<UserPermissionPage />} />
           <Route path="roles" element={<RoleListPage />} />
           <Route path="audit" element={<AuditListPage />} />
+          <Route path="cert-approval" element={<CertApprovalPage />} />
         </Route>
         <Route
           path="collector"
