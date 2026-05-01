@@ -62,7 +62,7 @@ public final class OpcUaTransport implements Transport {
     private final OpcUaCertificateStore certStore;
 
     private OpcUaClient client;
-    private ManagedSubscription subscription;
+    private volatile ManagedSubscription subscription;
     private ScheduledExecutorService poller;
     private volatile boolean connected = false;
     private Long channelId;
@@ -166,18 +166,25 @@ public final class OpcUaTransport implements Transport {
             throw new TransportException("opcua connect failed: " + e.getMessage(), e);
         }
 
-        setupSubscription(cfg, sink);
-
-        poller = Executors.newSingleThreadScheduledExecutor(r -> {
-            var t = new Thread(r, "opcua-" + channelId);
-            t.setDaemon(true);
-            return t;
-        });
-        boolean hasReadPoints = cfg.points().stream()
-            .anyMatch(p -> p.mode() == SubscriptionMode.READ);
-        if (hasReadPoints && cfg.pollInterval() != null) {
-            poller.scheduleAtFixedRate(() -> tick(cfg, sink),
-                0, cfg.pollInterval().toMillis(), TimeUnit.MILLISECONDS);
+        try {
+            setupSubscription(cfg, sink);
+            poller = Executors.newSingleThreadScheduledExecutor(r -> {
+                var t = new Thread(r, "opcua-" + channelId);
+                t.setDaemon(true);
+                return t;
+            });
+            boolean hasReadPoints = cfg.points().stream()
+                .anyMatch(p -> p.mode() == SubscriptionMode.READ);
+            if (hasReadPoints && cfg.pollInterval() != null) {
+                poller.scheduleAtFixedRate(() -> tick(cfg, sink),
+                    0, cfg.pollInterval().toMillis(), TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            // setupSubscription 或 poller 初始化失败：client 已连接，必须清理
+            try { client.disconnect().get(); } catch (Exception ignored) {}
+            if (poller != null) poller.shutdownNow();
+            if (e instanceof TransportException te) throw te;
+            throw new TransportException("opcua start failed after connect: " + e.getMessage(), e);
         }
     }
 
@@ -215,9 +222,14 @@ public final class OpcUaTransport implements Transport {
 
     private void handleSubscriptionValue(OpcUaPoint p, DataValue dv, SampleSink sink) {
         try {
+            var variant = dv.getValue();
+            Object value = (variant != null) ? variant.getValue() : null;
+            // TODO: READ 路径 (pollOne) 也硬编码 GOOD；待统一改造时与此处一并处理
+            Quality q = (dv.getStatusCode() != null && dv.getStatusCode().isGood())
+                ? Quality.GOOD
+                : Quality.BAD;
             sink.accept(new Sample(channelId, p.key(), Instant.now(),
-                dv.getValue().getValue(), Quality.GOOD,
-                Map.of("source", "subscription")));
+                value, q, Map.of("source", "subscription")));
         } catch (Throwable t) {
             log.warn("opcua subscription value handle failed channel={} key={}: {}",
                 channelId, p.key(), t.toString());
