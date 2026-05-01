@@ -70,7 +70,32 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
             onClick={async () => {
               try {
                 const v = await form.validateFields();
-                save.mutate({ ...v, protocol, isVirtual: protocol === 'VIRTUAL' });
+                const payload: Partial<ChannelDTO> = {
+                  ...v,
+                  protocol,
+                  isVirtual: protocol === 'VIRTUAL',
+                };
+                // VIRTUAL points.params 在表单里是 JSON 字符串 → 后端要 Map<String,Double>
+                if (protocol === 'VIRTUAL' && v.protocolConfig?.points) {
+                  try {
+                    payload.protocolConfig = {
+                      ...v.protocolConfig,
+                      points: v.protocolConfig.points.map(
+                        (p: Record<string, unknown>) => ({
+                          ...p,
+                          params:
+                            typeof p.params === 'string'
+                              ? JSON.parse(p.params)
+                              : p.params,
+                        }),
+                      ),
+                    };
+                  } catch {
+                    message.error('测点 params 不是合法 JSON 对象');
+                    return;
+                  }
+                }
+                save.mutate(payload);
               } catch {
                 // validation error: AntD 已显示
               }

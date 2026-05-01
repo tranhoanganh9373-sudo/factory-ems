@@ -1,8 +1,11 @@
-import { Form, Input, InputNumber, Select, Switch } from 'antd';
+import { Form, Input, Select, Switch } from 'antd';
 import { SecretInput } from '@/components/SecretInput';
 import { MqttPointsList } from './MqttPointsList';
 
-const QOS_LEVELS = [0, 1, 2];
+const QOS_LEVELS = [
+  { value: 0, label: 'QoS 0 (at most once)' },
+  { value: 1, label: 'QoS 1 (at least once)' },
+];
 
 export function MqttForm() {
   return (
@@ -28,7 +31,7 @@ export function MqttForm() {
         <SecretInput refPrefix="mqtt/password" placeholder="未设置（可空）" />
       </Form.Item>
       <Form.Item name={['protocolConfig', 'qos']} label="QoS" initialValue={1}>
-        <Select options={QOS_LEVELS.map((v) => ({ value: v, label: `Qos ${v}` }))} />
+        <Select options={QOS_LEVELS} />
       </Form.Item>
       <Form.Item
         name={['protocolConfig', 'cleanSession']}
@@ -38,8 +41,13 @@ export function MqttForm() {
       >
         <Switch />
       </Form.Item>
-      <Form.Item name={['protocolConfig', 'keepAlive']} label="保活时长（秒）" initialValue={60}>
-        <InputNumber min={1} />
+      <Form.Item
+        name={['protocolConfig', 'keepAlive']}
+        label="KeepAlive（ISO-8601，例 PT60S）"
+        rules={[{ required: true }]}
+        initialValue="PT60S"
+      >
+        <Input />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <MqttPointsList fields={fields} ops={ops} />}
