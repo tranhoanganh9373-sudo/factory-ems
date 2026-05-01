@@ -115,6 +115,17 @@ class ChannelAlarmListenerTest {
     }
 
     @Test
+    void onChannelFailure_virtualProtocol_skipsAlarm() {
+        ChannelFailureEvent ev = new ChannelFailureEvent(
+                42L, "VIRTUAL", "simulated fail", 5, fixed.instant());
+
+        listener.onChannelFailure(ev);
+
+        assertThat(alarms.saved).isEmpty();
+        assertThat(dispatcher.dispatched).isEmpty();
+    }
+
+    @Test
     void onChannelFailure_repositoryThrows_doesNotPropagate() {
         alarms.findActiveError = new RuntimeException("db down");
 

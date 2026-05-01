@@ -42,6 +42,8 @@ public class ChannelAlarmListener {
     private static final String DEVICE_TYPE_CHANNEL = "CHANNEL";
     private static final String SEVERITY_WARNING = "WARNING";
     private static final String METRIC_TYPE = "communication_fault";
+    /** Spec §9.6: VIRTUAL channels are simulators and never raise communication alarms. */
+    private static final String PROTOCOL_VIRTUAL = "VIRTUAL";
 
     private final AlarmRepository alarms;
     private final AlarmStateMachine sm;
@@ -63,6 +65,7 @@ public class ChannelAlarmListener {
 
     @EventListener
     public void onChannelFailure(ChannelFailureEvent ev) {
+        if (PROTOCOL_VIRTUAL.equals(ev.protocol())) return;
         try {
             Optional<Alarm> existing = alarms.findActive(ev.channelId(), AlarmType.COMMUNICATION_FAULT);
             if (existing.isPresent()) return;
