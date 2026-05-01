@@ -1,6 +1,7 @@
 package com.ems.collector.transport;
 
 import com.ems.collector.cert.OpcUaCertificateStore;
+import com.ems.collector.runtime.ChannelStateRegistry;
 import com.ems.collector.secret.SecretResolver;
 import com.ems.collector.transport.impl.ModbusRtuAdapterTransport;
 import com.ems.collector.transport.impl.ModbusTcpAdapterTransport;
@@ -21,12 +22,15 @@ public class ChannelTransportFactory {
     private final SecretResolver secretResolver;
     private final OpcUaCertificateStore certStore;
     private final ApplicationEventPublisher eventPublisher;
+    private final ChannelStateRegistry stateRegistry;
 
     public ChannelTransportFactory(SecretResolver secretResolver, OpcUaCertificateStore certStore,
-                                   ApplicationEventPublisher eventPublisher) {
+                                   ApplicationEventPublisher eventPublisher,
+                                   ChannelStateRegistry stateRegistry) {
         this.secretResolver = secretResolver;
         this.certStore = certStore;
         this.eventPublisher = eventPublisher;
+        this.stateRegistry = stateRegistry;
     }
 
     public Transport create(String protocol) {
@@ -34,8 +38,8 @@ public class ChannelTransportFactory {
             throw new IllegalArgumentException("protocol must not be null");
         }
         return switch (protocol) {
-            case "MODBUS_TCP" -> new ModbusTcpAdapterTransport();
-            case "MODBUS_RTU" -> new ModbusRtuAdapterTransport();
+            case "MODBUS_TCP" -> new ModbusTcpAdapterTransport(stateRegistry);
+            case "MODBUS_RTU" -> new ModbusRtuAdapterTransport(stateRegistry);
             case "OPC_UA"     -> new OpcUaTransport(secretResolver, certStore, eventPublisher);
             case "MQTT"       -> new MqttTransport(secretResolver);
             case "VIRTUAL"    -> new VirtualTransport();

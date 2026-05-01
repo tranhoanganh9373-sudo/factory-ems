@@ -1,19 +1,16 @@
 package com.ems.collector.transport.impl;
 
 import com.ems.collector.protocol.ModbusPoint;
-import com.ems.collector.protocol.ModbusTcpConfig;
+import com.ems.collector.protocol.ModbusRtuConfig;
 import com.ems.collector.runtime.ChannelStateRegistry;
 import com.ems.collector.transport.ModbusIoException;
-import com.ems.collector.transport.ModbusSlaveTestFixture;
 import com.ems.collector.transport.Quality;
+import com.ems.collector.transport.RtuModbusMaster;
 import com.ems.collector.transport.Sample;
-import com.ems.collector.transport.TcpModbusMaster;
-import com.ems.collector.transport.TestResult;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -34,78 +30,16 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 使用进程内 j2mod ModbusSlaveTestFixture，避免 Docker testcontainers 依赖（CP-1.1 已确认本地不兼容）。
+ * Reconnect/backoff TDD for {@link ModbusRtuAdapterTransport}. Mirrors the TCP test
+ * but injects mocked {@link RtuModbusMaster} via the package-private supplier ctor —
+ * we have no in-process serial fixture.
  */
-class ModbusTcpAdapterTransportTest {
+@DisplayName("ModbusRtuAdapterTransport — auto reconnect with backoff")
+class ModbusRtuAdapterTransportTest {
 
-    @Test
-    void readsHoldingRegisterAndPushesSample() throws Exception {
-        try (ModbusSlaveTestFixture slave = ModbusSlaveTestFixture.start(1)) {
-            slave.setHoldingRegister(0, (short) 0x1234);
-
-            ModbusTcpConfig cfg = new ModbusTcpConfig(
-                    "127.0.0.1", slave.port(), slave.unitId(),
-                    Duration.ofMillis(200), Duration.ofMillis(1000),
-                    List.of(new ModbusPoint("p1", "HOLDING", 0, 1, "INT16",
-                            "ABCD", null, "kW")));
-
-            ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
-            ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport();
-            try {
-                t.start(99L, cfg, samples::add);
-                Awaitility.await().atMost(3, TimeUnit.SECONDS)
-                        .until(() -> !samples.isEmpty());
-
-                Sample s = samples.peek();
-                assertThat(s).isNotNull();
-                assertThat(s.channelId()).isEqualTo(99L);
-                assertThat(s.pointKey()).isEqualTo("p1");
-                assertThat(s.quality()).isEqualTo(Quality.GOOD);
-                assertThat(((BigDecimal) s.value()).intValueExact()).isEqualTo(0x1234);
-                assertThat(t.isConnected()).isTrue();
-            } finally {
-                t.stop();
-            }
-        }
-    }
-
-    @Test
-    void testConnectionSucceedsAgainstFixture() throws Exception {
-        try (ModbusSlaveTestFixture slave = ModbusSlaveTestFixture.start(1)) {
-            ModbusTcpConfig cfg = new ModbusTcpConfig(
-                    "127.0.0.1", slave.port(), slave.unitId(),
-                    Duration.ofSeconds(1), Duration.ofMillis(1000),
-                    List.of(new ModbusPoint("p1", "HOLDING", 0, 1, "INT16",
-                            "ABCD", null, null)));
-
-            ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport();
-            TestResult r = t.testConnection(cfg);
-
-            assertThat(r.success()).isTrue();
-            assertThat(r.latencyMs()).isNotNull();
-        }
-    }
-
-    @Test
-    void testConnectionReportsFailureForUnreachableHost() {
-        ModbusTcpConfig cfg = new ModbusTcpConfig(
-                "127.0.0.1", 1, 1,
-                Duration.ofSeconds(1), Duration.ofMillis(500),
-                List.of(new ModbusPoint("p1", "HOLDING", 0, 1, "INT16",
-                        "ABCD", null, null)));
-
-        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport();
-        TestResult r = t.testConnection(cfg);
-
-        assertThat(r.success()).isFalse();
-        assertThat(r.message()).isNotBlank();
-    }
-
-    // -------- Reconnect / backoff (Phase 1: 自动重连退避) ---------------------------
-
-    private static ModbusTcpConfig fastPollCfg() {
-        return new ModbusTcpConfig(
-                "127.0.0.1", 1, 1,
+    private static ModbusRtuConfig fastPollCfg() {
+        return new ModbusRtuConfig(
+                "/dev/null", 9600, 8, 1, "NONE", 1,
                 Duration.ofMillis(100), Duration.ofMillis(500),
                 List.of(new ModbusPoint("p1", "HOLDING", 0, 1, "INT16",
                         "ABCD", null, "kW")));
@@ -116,19 +50,18 @@ class ModbusTcpAdapterTransportTest {
     void pollAll_masterDisconnected_attemptsReopen() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
-        TcpModbusMaster m1 = mock(TcpModbusMaster.class);
-        // m1 is "connected" at start() (open path) then drops on next isConnected() check.
+        RtuModbusMaster m1 = mock(RtuModbusMaster.class);
         when(m1.isConnected()).thenReturn(true, false);
         when(m1.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x01});
 
-        TcpModbusMaster m2 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m2 = mock(RtuModbusMaster.class);
         when(m2.isConnected()).thenReturn(true);
         when(m2.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x02});
 
         AtomicInteger created = new AtomicInteger();
-        Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
+        Supplier<RtuModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
 
-        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
+        ModbusRtuAdapterTransport t = new ModbusRtuAdapterTransport(registry, factory);
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(7L, fastPollCfg(), samples::add);
@@ -145,18 +78,18 @@ class ModbusTcpAdapterTransportTest {
     void pollAll_reopenSucceeds_resetsAttemptCounterAndProceedsToPoll() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
-        TcpModbusMaster m1 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m1 = mock(RtuModbusMaster.class);
         when(m1.isConnected()).thenReturn(true, false);
         when(m1.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x05});
 
-        TcpModbusMaster m2 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m2 = mock(RtuModbusMaster.class);
         when(m2.isConnected()).thenReturn(true);
         when(m2.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x06});
 
         AtomicInteger created = new AtomicInteger();
-        Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
+        Supplier<RtuModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
 
-        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
+        ModbusRtuAdapterTransport t = new ModbusRtuAdapterTransport(registry, factory);
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(8L, fastPollCfg(), samples::add);
@@ -173,18 +106,18 @@ class ModbusTcpAdapterTransportTest {
     void pollAll_reopenFails_incrementsAttemptsAndReturnsThisCycle() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
-        TcpModbusMaster m1 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m1 = mock(RtuModbusMaster.class);
         when(m1.isConnected()).thenReturn(true, false, false);
         when(m1.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x01});
 
-        TcpModbusMaster failing = mock(TcpModbusMaster.class);
+        RtuModbusMaster failing = mock(RtuModbusMaster.class);
         when(failing.isConnected()).thenReturn(false);
-        doThrow(new ModbusIoException("connect refused", true)).when(failing).open();
+        doThrow(new ModbusIoException("port busy", true)).when(failing).open();
 
         AtomicInteger created = new AtomicInteger();
-        Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : failing;
+        Supplier<RtuModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : failing;
 
-        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
+        ModbusRtuAdapterTransport t = new ModbusRtuAdapterTransport(registry, factory);
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(9L, fastPollCfg(), samples::add);
@@ -201,19 +134,19 @@ class ModbusTcpAdapterTransportTest {
     void pollAll_allPointsFail_forceClosesMaster() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
-        TcpModbusMaster m1 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m1 = mock(RtuModbusMaster.class);
         when(m1.isConnected()).thenReturn(true);
         when(m1.readHolding(anyInt(), anyInt(), anyInt()))
                 .thenThrow(new ModbusIoException("read failed", true));
 
-        TcpModbusMaster m2 = mock(TcpModbusMaster.class);
+        RtuModbusMaster m2 = mock(RtuModbusMaster.class);
         when(m2.isConnected()).thenReturn(true);
         when(m2.readHolding(anyInt(), anyInt(), anyInt())).thenReturn(new byte[]{0x00, 0x01});
 
         AtomicInteger created = new AtomicInteger();
-        Supplier<TcpModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
+        Supplier<RtuModbusMaster> factory = () -> created.incrementAndGet() == 1 ? m1 : m2;
 
-        ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport(registry, factory);
+        ModbusRtuAdapterTransport t = new ModbusRtuAdapterTransport(registry, factory);
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(10L, fastPollCfg(), samples::add);
