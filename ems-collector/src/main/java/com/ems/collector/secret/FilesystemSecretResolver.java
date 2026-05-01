@@ -36,20 +36,23 @@ public class FilesystemSecretResolver implements SecretResolver {
     public void init() throws IOException {
         if (!Files.exists(secretsDir)) {
             Files.createDirectories(secretsDir);
-            try { Files.setPosixFilePermissions(secretsDir, ALLOWED_DIR_PERMS); }
-            catch (UnsupportedOperationException ignored) {}
         }
+        // Heal-on-init: 无论 dir 是新建还是已存在，每次启动都尝试收紧到 0700。
+        // 之前只在「新建」分支 chmod，导致容器升级/重建时若 dir 已存在（umask 0022
+        // 创建为 0755），后续校验直接抛 SecurityException，阻塞启动。
         try {
-            var perms = Files.getPosixFilePermissions(secretsDir);
-            for (var p : perms) {
-                if (!ALLOWED_DIR_PERMS.contains(p)) {
-                    throw new SecurityException(
-                        "secrets dir " + secretsDir + " has unsafe permission " + p +
-                        "; must be <= 700 (rwx------)");
-                }
+            Files.setPosixFilePermissions(secretsDir, ALLOWED_DIR_PERMS);
+        } catch (UnsupportedOperationException e) {
+            log.warn("filesystem does not support POSIX permissions; skipping strict perm enforcement on {}", secretsDir);
+            return;
+        }
+        var perms = Files.getPosixFilePermissions(secretsDir);
+        for (var p : perms) {
+            if (!ALLOWED_DIR_PERMS.contains(p)) {
+                throw new SecurityException(
+                    "secrets dir " + secretsDir + " has unsafe permission " + p +
+                    "; must be <= 700 (rwx------)");
             }
-        } catch (UnsupportedOperationException ignored) {
-            // POSIX 不支持的 FS（如 Windows）跳过权限校验
         }
         log.info("SecretResolver initialized at {}", secretsDir);
     }

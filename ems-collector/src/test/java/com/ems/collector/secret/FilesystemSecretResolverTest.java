@@ -77,17 +77,22 @@ class FilesystemSecretResolverTest {
     }
 
     @Test
-    @DisplayName("init() 检测到不安全权限（含 GROUP/OTHER 位）抛 SecurityException")
-    void init_unsafePermissions_throwsSecurityException(@TempDir Path unsafe) throws Exception {
-        Files.setPosixFilePermissions(unsafe, Set.of(
+    @DisplayName("init() heal-on-init：dir 已存在且 perms 松（含 GROUP/OTHER 位）会被收紧到 0700")
+    void init_existingDirWithLoosePerms_isHealedTo700(@TempDir Path loose) throws Exception {
+        Files.setPosixFilePermissions(loose, Set.of(
             PosixFilePermission.OWNER_READ,
             PosixFilePermission.OWNER_WRITE,
             PosixFilePermission.OWNER_EXECUTE,
             PosixFilePermission.GROUP_READ,
             PosixFilePermission.GROUP_EXECUTE));
-        var resolver = new FilesystemSecretResolver(unsafe);
-        assertThatThrownBy(resolver::init)
-            .isInstanceOf(SecurityException.class)
-            .hasMessageContaining("unsafe permission");
+
+        var resolver = new FilesystemSecretResolver(loose);
+        resolver.init();
+
+        // Heal 后 perms 必须仅为 OWNER_*；不再含 GROUP/OTHER 位。
+        assertThat(Files.getPosixFilePermissions(loose)).containsExactlyInAnyOrder(
+            PosixFilePermission.OWNER_READ,
+            PosixFilePermission.OWNER_WRITE,
+            PosixFilePermission.OWNER_EXECUTE);
     }
 }
