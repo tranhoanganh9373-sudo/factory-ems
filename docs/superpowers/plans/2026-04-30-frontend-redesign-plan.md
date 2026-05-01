@@ -27,7 +27,7 @@
 - Create: `frontend/src/stores/themeStore.ts`
 - Test: `frontend/src/stores/themeStore.test.ts`
 
-- [ ] **Step 1：从 feat/ems-observability 切出新分支**
+- [x] **Step 1：从 feat/ems-observability 切出新分支**
 
 ```bash
 cd /Users/mac/factory-ems
@@ -35,7 +35,7 @@ git switch feat/ems-observability
 git switch -c feat/frontend-redesign
 ```
 
-- [ ] **Step 2：写失败测试**
+- [x] **Step 2：写失败测试**
 
 文件：`frontend/src/stores/themeStore.test.ts`
 
@@ -69,12 +69,12 @@ describe('themeStore', () => {
 });
 ```
 
-- [ ] **Step 3：运行测试确认失败**
+- [x] **Step 3：运行测试确认失败**
 
 Run: `cd frontend && npm test -- --run src/stores/themeStore.test.ts`
 Expected: FAIL（找不到模块）
 
-- [ ] **Step 4：实现 themeStore**
+- [x] **Step 4：实现 themeStore**
 
 文件：`frontend/src/stores/themeStore.ts`
 
@@ -107,12 +107,12 @@ export const useThemeStore = create<ThemeStoreState>()(
 );
 ```
 
-- [ ] **Step 5：运行测试确认通过**
+- [x] **Step 5：运行测试确认通过**
 
 Run: `cd frontend && npm test -- --run src/stores/themeStore.test.ts`
 Expected: PASS（3/3）
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 cd /Users/mac/factory-ems
@@ -129,7 +129,7 @@ git commit -m "feat(theme): add Zustand themeStore with localStorage persistence
 - Create: `frontend/src/styles/theme-dark.css`
 - Modify: `frontend/src/main.tsx`（导入 CSS + 启动时同步 data-theme）
 
-- [ ] **Step 1：创建浅色主题变量**
+- [x] **Step 1：创建浅色主题变量**
 
 文件：`frontend/src/styles/theme-light.css`
 
@@ -183,7 +183,7 @@ html, body, #root {
 }
 ```
 
-- [ ] **Step 2：创建深色主题变量**
+- [x] **Step 2：创建深色主题变量**
 
 文件：`frontend/src/styles/theme-dark.css`
 
@@ -212,7 +212,7 @@ html, body, #root {
 }
 ```
 
-- [ ] **Step 3：在 main.tsx 引入 CSS 并同步 data-theme**
+- [x] **Step 3：在 main.tsx 引入 CSS 并同步 data-theme**
 
 完整覆盖 `frontend/src/main.tsx`：
 
@@ -258,14 +258,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 ```
 
-- [ ] **Step 4：手测**
+- [x] **Step 4：手测**
 
 ```bash
 cd frontend && npm run dev
 ```
 浏览器打开 `http://localhost:5173`，DevTools Elements 检查 `<html data-theme="light">` 存在。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add frontend/src/styles/ frontend/src/main.tsx
@@ -281,7 +281,7 @@ git commit -m "feat(theme): add light/dark CSS variables and html[data-theme] sy
 - Create: `frontend/src/styles/tokens.test.ts`
 - Modify: `frontend/src/main.tsx`（包裹 ThemedConfigProvider）
 
-- [ ] **Step 1：写 token 模块**
+- [x] **Step 1：写 token 模块**
 
 文件：`frontend/src/styles/tokens.ts`
 
@@ -349,7 +349,7 @@ export function buildAntdTheme(mode: ThemeMode): ThemeConfig {
 }
 ```
 
-- [ ] **Step 2：写测试**
+- [x] **Step 2：写测试**
 
 文件：`frontend/src/styles/tokens.test.ts`
 
@@ -378,14 +378,14 @@ describe('buildAntdTheme', () => {
 });
 ```
 
-- [ ] **Step 3：运行 token 测试**
+- [x] **Step 3：运行 token 测试**
 
 ```bash
 cd frontend && npm test -- --run src/styles/tokens.test.ts
 ```
 Expected: PASS（3/3）
 
-- [ ] **Step 4：在 main.tsx 接入响应式 ConfigProvider**
+- [x] **Step 4：在 main.tsx 接入响应式 ConfigProvider**
 
 替换 `frontend/src/main.tsx` 中的 `ConfigProvider` 引用：
 
@@ -417,7 +417,7 @@ function ThemedConfigProvider({ children }: { children: React.ReactNode }) {
 
 去掉外层旧的 `<ConfigProvider locale={zhCN}><AntdApp>...` 嵌套。
 
-- [ ] **Step 5：typecheck + 启动**
+- [x] **Step 5：typecheck + 启动**
 
 ```bash
 cd frontend && npm run typecheck
@@ -425,7 +425,7 @@ cd frontend && npm run dev
 ```
 浏览器：按钮主色为 Petrol `#007D8A`；DevTools Console 执行 `useThemeStore` 测试切换（在生产代码中暂未暴露按钮，下一阶段加 ThemeToggle）。
 
-- [ ] **Step 6：提交**
+- [x] **Step 6：提交**
 
 ```bash
 git add frontend/src/styles/tokens.ts frontend/src/styles/tokens.test.ts frontend/src/main.tsx
@@ -443,7 +443,7 @@ git commit -m "feat(theme): wire AntD ConfigProvider to themeStore via buildAntd
 - Create: `frontend/src/hooks/useDocumentTitle.test.ts`
 - Modify: `frontend/index.html:5`
 
-- [ ] **Step 1：写失败测试**
+- [x] **Step 1：写失败测试**
 
 ```typescript
 import { describe, it, expect, afterEach } from 'vitest';
@@ -467,7 +467,7 @@ describe('useDocumentTitle', () => {
 });
 ```
 
-- [ ] **Step 2：实现 hook**
+- [x] **Step 2：实现 hook**
 
 ```typescript
 import { useEffect } from 'react';
@@ -481,14 +481,14 @@ export function useDocumentTitle(pageName: string): void {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/hooks/useDocumentTitle.test.ts
 ```
 Expected: PASS（2/2）
 
-- [ ] **Step 4：改 index.html 默认标题**
+- [x] **Step 4：改 index.html 默认标题**
 
 修改 `frontend/index.html:5`：
 
@@ -496,7 +496,7 @@ Expected: PASS（2/2）
     <title>能源管理系统</title>
 ```
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add frontend/src/hooks/useDocumentTitle.ts frontend/src/hooks/useDocumentTitle.test.ts frontend/index.html
@@ -511,7 +511,7 @@ git commit -m "feat(brand): useDocumentTitle hook and default index.html title"
 - Create: `frontend/src/hooks/useDensity.ts`
 - Create: `frontend/src/hooks/useDensity.test.ts`
 
-- [ ] **Step 1：写失败测试**
+- [x] **Step 1：写失败测试**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -542,7 +542,7 @@ describe('densityForRoute', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```typescript
 import { useLocation } from 'react-router-dom';
@@ -559,14 +559,14 @@ export function useDensity(): SizeType {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/hooks/useDensity.test.ts
 ```
 Expected: PASS
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/src/hooks/useDensity.ts frontend/src/hooks/useDensity.test.ts
@@ -581,7 +581,7 @@ git commit -m "feat(brand): useDensity hook with route-prefix density tiering"
 - Create: `frontend/src/components/BrandLockup.tsx`
 - Create: `frontend/src/components/BrandLockup.test.tsx`
 
-- [ ] **Step 1：写失败测试**
+- [x] **Step 1：写失败测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -604,7 +604,7 @@ describe('BrandLockup', () => {
 });
 ```
 
-- [ ] **Step 2：实现组件**
+- [x] **Step 2：实现组件**
 
 ```tsx
 import logo from '@/assets/logo.png';
@@ -646,14 +646,14 @@ export function BrandLockup({ variant }: Props) {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/components/BrandLockup.test.tsx
 ```
 Expected: PASS
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/src/components/BrandLockup.tsx frontend/src/components/BrandLockup.test.tsx
@@ -668,7 +668,7 @@ git commit -m "feat(brand): BrandLockup component (header pill + login hero vari
 - Create: `frontend/src/components/ThemeToggle.tsx`
 - Create: `frontend/src/components/ThemeToggle.test.tsx`
 
-- [ ] **Step 1：写失败测试**
+- [x] **Step 1：写失败测试**
 
 ```tsx
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -692,7 +692,7 @@ describe('ThemeToggle', () => {
 });
 ```
 
-- [ ] **Step 2：实现组件**
+- [x] **Step 2：实现组件**
 
 ```tsx
 import { Button, Tooltip } from 'antd';
@@ -718,14 +718,14 @@ export function ThemeToggle() {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/components/ThemeToggle.test.tsx
 ```
 Expected: PASS
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/src/components/ThemeToggle.tsx frontend/src/components/ThemeToggle.test.tsx
@@ -742,7 +742,7 @@ git commit -m "feat(theme): ThemeToggle button bound to themeStore"
 - Modify: `frontend/src/layouts/AppLayout.tsx`（替换 Header 区与 Layout 内层 ConfigProvider）
 - Create: `frontend/src/layouts/AppLayout.test.tsx`
 
-- [ ] **Step 1：替换 Header 区**
+- [x] **Step 1：替换 Header 区**
 
 保留原 `menuItems` 与 ADMIN/FINANCE 条件分支不变，整体框架替换：
 
@@ -837,7 +837,7 @@ export default function AppLayout() {
 }
 ```
 
-- [ ] **Step 2：写 smoke 测试**
+- [x] **Step 2：写 smoke 测试**
 
 文件：`frontend/src/layouts/AppLayout.test.tsx`
 
@@ -864,7 +864,7 @@ describe('AppLayout', () => {
 });
 ```
 
-- [ ] **Step 3：测试 + typecheck**
+- [x] **Step 3：测试 + typecheck**
 
 ```bash
 cd frontend && npm test -- --run src/layouts/AppLayout.test.tsx
@@ -872,11 +872,11 @@ cd frontend && npm run typecheck
 ```
 Expected: PASS
 
-- [ ] **Step 4：浏览器手测**
+- [x] **Step 4：浏览器手测**
 
 `npm run dev` → 登录 → 顶栏深底 + 白胶囊 Logo + 系统名 + ThemeToggle 切换浅深。Console 无报错。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add frontend/src/layouts/AppLayout.tsx frontend/src/layouts/AppLayout.test.tsx
@@ -893,7 +893,7 @@ git commit -m "feat(layout): redesign AppLayout header with BrandLockup, ThemeTo
 - Modify: `frontend/src/pages/login/index.tsx`
 - Create: `frontend/src/pages/login/index.test.tsx`
 
-- [ ] **Step 1：完整覆盖 Login**
+- [x] **Step 1：完整覆盖 Login**
 
 ```tsx
 import { useState } from 'react';
@@ -983,7 +983,7 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 2：写测试**
+- [x] **Step 2：写测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1007,7 +1007,7 @@ describe('LoginPage', () => {
 });
 ```
 
-- [ ] **Step 3：测试 + typecheck**
+- [x] **Step 3：测试 + typecheck**
 
 ```bash
 cd frontend && npm test -- --run src/pages/login/index.test.tsx
@@ -1015,11 +1015,11 @@ cd frontend && npm run typecheck
 ```
 Expected: PASS
 
-- [ ] **Step 4：浏览器手测**
+- [x] **Step 4：浏览器手测**
 
 登出 → `/login` 显示左 60% 深底大 Logo + 系统名 + 副标，右 40% 表单。错误密码 inline alert 红色，正确密码跳转。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add frontend/src/pages/login/index.tsx frontend/src/pages/login/index.test.tsx
@@ -1039,7 +1039,7 @@ git commit -m "feat(login): split-screen layout with BrandLockup and Chinese cop
 - Create: `frontend/src/styles/echarts/index.test.ts`
 - Modify: `frontend/src/main.tsx`（顶部调用一次 ensureEchartsThemes）
 
-- [ ] **Step 1：写浅色主题对象**
+- [x] **Step 1：写浅色主题对象**
 
 文件：`frontend/src/styles/echarts/ems-light.ts`
 
@@ -1066,7 +1066,7 @@ export const emsLightTheme = {
 };
 ```
 
-- [ ] **Step 2：写深色主题对象**
+- [x] **Step 2：写深色主题对象**
 
 文件：`frontend/src/styles/echarts/ems-dark.ts`
 
@@ -1093,7 +1093,7 @@ export const emsDarkTheme = {
 };
 ```
 
-- [ ] **Step 3：注册器**
+- [x] **Step 3：注册器**
 
 文件：`frontend/src/styles/echarts/index.ts`
 
@@ -1114,7 +1114,7 @@ export function ensureEchartsThemes(): void {
 }
 ```
 
-- [ ] **Step 4：在 main.tsx 顶部调用一次**
+- [x] **Step 4：在 main.tsx 顶部调用一次**
 
 修改 `frontend/src/main.tsx`，在 `import App from './App';` 之后插入：
 
@@ -1123,7 +1123,7 @@ import { ensureEchartsThemes } from './styles/echarts';
 ensureEchartsThemes();
 ```
 
-- [ ] **Step 5：写注册测试**
+- [x] **Step 5：写注册测试**
 
 文件：`frontend/src/styles/echarts/index.test.ts`
 
@@ -1144,14 +1144,14 @@ describe('ensureEchartsThemes', () => {
 });
 ```
 
-- [ ] **Step 6：测试通过**
+- [x] **Step 6：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/styles/echarts/index.test.ts
 ```
 Expected: PASS
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 git add frontend/src/styles/echarts/ frontend/src/main.tsx
@@ -1166,7 +1166,7 @@ git commit -m "feat(echarts): register ems-light and ems-dark themes at startup"
 - Create: `frontend/src/hooks/useEchartsTheme.ts`
 - Create: `frontend/src/hooks/useEchartsTheme.test.ts`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -1196,7 +1196,7 @@ describe('useEchartsTheme', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```typescript
 import { useThemeStore } from '@/stores/themeStore';
@@ -1208,14 +1208,14 @@ export function useEchartsTheme(): typeof EMS_LIGHT | typeof EMS_DARK {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/hooks/useEchartsTheme.test.ts
 ```
 Expected: PASS
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/src/hooks/useEchartsTheme.ts frontend/src/hooks/useEchartsTheme.test.ts
@@ -1230,7 +1230,7 @@ git commit -m "feat(echarts): useEchartsTheme hook bound to themeStore"
 - Modify: `frontend/src/hooks/useEcharts.ts`
 - Create: `frontend/src/hooks/useEcharts.test.tsx`
 
-- [ ] **Step 1：替换 useEcharts**
+- [x] **Step 1：替换 useEcharts**
 
 ```typescript
 import { useRef, useEffect } from 'react';
@@ -1268,7 +1268,7 @@ export function useEcharts(option: EChartsOption) {
 
 > 主题切换会触发 effect 依赖变化 → 重新 init 实例。setOption effect 在新实例挂载后由 React 重跑。
 
-- [ ] **Step 2：写 smoke 测试**
+- [x] **Step 2：写 smoke 测试**
 
 文件：`frontend/src/hooks/useEcharts.test.tsx`
 
@@ -1287,7 +1287,7 @@ describe('useEcharts', () => {
 });
 ```
 
-- [ ] **Step 3：测试 + typecheck**
+- [x] **Step 3：测试 + typecheck**
 
 ```bash
 cd frontend && npm test -- --run src/hooks/useEcharts.test.tsx
@@ -1295,11 +1295,11 @@ cd frontend && npm run typecheck
 ```
 Expected: PASS
 
-- [ ] **Step 4：浏览器手测**
+- [x] **Step 4：浏览器手测**
 
 `/dashboard` → 切换主题 → 所有 ECharts 图表整体配色变化。
 
-- [ ] **Step 5：提交**
+- [x] **Step 5：提交**
 
 ```bash
 git add frontend/src/hooks/useEcharts.ts frontend/src/hooks/useEcharts.test.tsx
@@ -1316,7 +1316,7 @@ git commit -m "feat(echarts): apply theme on init and rebuild instance on theme 
 - Create: `frontend/src/utils/i18n-dict.ts`
 - Create: `frontend/src/utils/i18n-dict.test.ts`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -1358,7 +1358,7 @@ describe('i18n-dict', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```typescript
 export const ALARM_STATE_LABEL = {
@@ -1406,7 +1406,7 @@ export function translate<T extends Record<string, string>>(dict: T, key: string
 }
 ```
 
-- [ ] **Step 3：测试 + 提交**
+- [x] **Step 3：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/utils/i18n-dict.test.ts
@@ -1422,7 +1422,7 @@ git commit -m "feat(i18n): central zh-CN dictionary for enums and nav labels"
 - Create: `frontend/src/components/StatusTag.tsx`
 - Create: `frontend/src/components/StatusTag.test.tsx`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1443,7 +1443,7 @@ describe('StatusTag', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```tsx
 import type { ReactNode } from 'react';
@@ -1487,7 +1487,7 @@ export function StatusTag({ tone, children }: Props) {
 }
 ```
 
-- [ ] **Step 3：测试 + 提交**
+- [x] **Step 3：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/components/StatusTag.test.tsx
@@ -1503,7 +1503,7 @@ git commit -m "feat(ui): StatusTag pill badge with semantic tones"
 - Create: `frontend/src/components/PageHeader.tsx`
 - Create: `frontend/src/components/PageHeader.test.tsx`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1524,7 +1524,7 @@ describe('PageHeader', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```tsx
 import type { ReactNode } from 'react';
@@ -1559,7 +1559,7 @@ export function PageHeader({ title, subtitle, extra }: Props) {
 }
 ```
 
-- [ ] **Step 3：测试 + 提交**
+- [x] **Step 3：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/components/PageHeader.test.tsx
@@ -1575,7 +1575,7 @@ git commit -m "feat(ui): PageHeader with title, subtitle, extra slot"
 - Create: `frontend/src/components/KpiCard.tsx`
 - Create: `frontend/src/components/KpiCard.test.tsx`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1598,7 +1598,7 @@ describe('KpiCard', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```tsx
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons';
@@ -1649,7 +1649,7 @@ export function KpiCard({ label, value, unit, delta }: Props) {
 }
 ```
 
-- [ ] **Step 3：测试 + 提交**
+- [x] **Step 3：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/components/KpiCard.test.tsx
@@ -1665,7 +1665,7 @@ git commit -m "feat(ui): KpiCard with mono digits and trend delta"
 - Create: `frontend/src/components/DataTable.tsx`
 - Create: `frontend/src/components/DataTable.test.tsx`
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1689,7 +1689,7 @@ describe('DataTable', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```tsx
 import type { ReactNode } from 'react';
@@ -1736,7 +1736,7 @@ export function DataTable<T extends object>({
 }
 ```
 
-- [ ] **Step 3：测试 + 提交**
+- [x] **Step 3：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/components/DataTable.test.tsx
@@ -1754,13 +1754,13 @@ git commit -m "feat(ui): DataTable wrapper with toolbar slots"
 - Modify: `frontend/src/pages/dashboard/KpiPanel.tsx`
 - Create: `frontend/src/pages/dashboard/KpiPanel.test.tsx`
 
-- [ ] **Step 1：阅读现状**
+- [x] **Step 1：阅读现状**
 
 ```bash
 sed -n '1,80p' frontend/src/pages/dashboard/KpiPanel.tsx
 ```
 
-- [ ] **Step 2：替换 4 KPI 渲染**
+- [x] **Step 2：替换 4 KPI 渲染**
 
 ```tsx
 import { KpiCard } from '@/components/KpiCard';
@@ -1776,7 +1776,7 @@ import { KpiCard } from '@/components/KpiCard';
 
 > 实施时若 KpiPanel 字段名不同，按现有数据映射对齐 4 张卡片；不要改动 API。
 
-- [ ] **Step 3：smoke 测试**
+- [x] **Step 3：smoke 测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1799,7 +1799,7 @@ describe('KpiPanel', () => {
 });
 ```
 
-- [ ] **Step 4：测试 + 提交**
+- [x] **Step 4：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/dashboard/KpiPanel.test.tsx
@@ -1815,7 +1815,7 @@ git commit -m "feat(dashboard): replace KPI tiles with KpiCard"
 - Modify: `frontend/src/pages/dashboard/index.tsx`
 - Modify: `frontend/src/pages/dashboard/{CostDistributionPanel,EnergyCompositionPanel,EnergyIntensityPanel,FilterBar,FloorplanLivePanel,RealtimeSeriesPanel,SankeyPanel,TariffDistributionPanel,TopNPanel,MeterDetailDrawer}.tsx`
 
-- [ ] **Step 1：在 dashboard/index.tsx 顶部加 useDocumentTitle**
+- [x] **Step 1：在 dashboard/index.tsx 顶部加 useDocumentTitle**
 
 ```tsx
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -1823,7 +1823,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 useDocumentTitle('综合看板');
 ```
 
-- [ ] **Step 2：扫描 dashboard 目录英文 UI 字符串**
+- [x] **Step 2：扫描 dashboard 目录英文 UI 字符串**
 
 ```bash
 grep -nE '"[A-Z][a-z]+[a-z A-Z]+"' frontend/src/pages/dashboard/*.tsx | grep -vE 'import|className|color:|fill:'
@@ -1831,11 +1831,11 @@ grep -nE '"[A-Z][a-z]+[a-z A-Z]+"' frontend/src/pages/dashboard/*.tsx | grep -vE
 
 逐条审视：保留 SI 单位、API key；面板标题/图例改中文（Top N → 综合排名；Composition → 能源结构；Sankey → 能流图；Cost Distribution → 成本占比；Tariff → 分时电价；Realtime Series → 实时曲线；Energy Intensity → 能耗强度；Floorplan Live → 平面图实时）。
 
-- [ ] **Step 3：浏览器走查**
+- [x] **Step 3：浏览器走查**
 
 `/dashboard` → 浅深主题切换 → 所有图表标题中文 + 颜色随主题变化（依赖 E1-E3）。
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/src/pages/dashboard/
@@ -1857,7 +1857,7 @@ git commit -m "feat(dashboard): document title and Chinese chart/panel labels"
 - Modify: `frontend/src/pages/alarms/webhook.tsx`
 - Create: `frontend/src/pages/alarms/history.test.tsx`
 
-- [ ] **Step 1：每文件入口加 useDocumentTitle 与 PageHeader**
+- [x] **Step 1：每文件入口加 useDocumentTitle 与 PageHeader**
 
 | 文件 | 标题 |
 |---|---|
@@ -1875,7 +1875,7 @@ useDocumentTitle('告警 - 历史');
 <PageHeader title="告警历史" extra={<Button onClick={refresh}>刷新</Button>} />
 ```
 
-- [ ] **Step 2：history.tsx 状态列改 StatusTag**
+- [x] **Step 2：history.tsx 状态列改 StatusTag**
 
 ```tsx
 import { StatusTag } from '@/components/StatusTag';
@@ -1900,9 +1900,9 @@ import { ALARM_STATE_LABEL, ALARM_SEVERITY_LABEL, translate } from '@/utils/i18n
 },
 ```
 
-- [ ] **Step 3：rules / health / webhook 同样接入**（state/severity 列复用上面 render 函数）
+- [x] **Step 3：rules / health / webhook 同样接入**（state/severity 列复用上面 render 函数）
 
-- [ ] **Step 4：写 history smoke 测试**
+- [x] **Step 4：写 history smoke 测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1926,7 +1926,7 @@ describe('alarms/history', () => {
 });
 ```
 
-- [ ] **Step 5：测试 + typecheck + 提交**
+- [x] **Step 5：测试 + typecheck + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/alarms/history.test.tsx
@@ -1945,7 +1945,7 @@ git commit -m "feat(alarms): apply PageHeader, StatusTag, i18n-dict to 4 alarm p
 - Modify: `frontend/src/pages/bills/periods.tsx`
 - Create: `frontend/src/pages/bills/list.test.tsx`
 
-- [ ] **Step 1：每文件加 useDocumentTitle 与 PageHeader**
+- [x] **Step 1：每文件加 useDocumentTitle 与 PageHeader**
 
 | 文件 | 标题 |
 |---|---|
@@ -1953,7 +1953,7 @@ git commit -m "feat(alarms): apply PageHeader, StatusTag, i18n-dict to 4 alarm p
 | `detail.tsx` | 账单详情 |
 | `periods.tsx` | 账期管理 |
 
-- [ ] **Step 2：账单状态列接 StatusTag**
+- [x] **Step 2：账单状态列接 StatusTag**
 
 ```tsx
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
@@ -1975,7 +1975,7 @@ const BILL_STATE: Record<string, { tone: StatusTone; label: string }> = {
 },
 ```
 
-- [ ] **Step 3：smoke 测试**
+- [x] **Step 3：smoke 测试**
 
 ```tsx
 import { describe, it, expect } from 'vitest';
@@ -1999,7 +1999,7 @@ describe('bills/list', () => {
 });
 ```
 
-- [ ] **Step 4：测试 + typecheck + 提交**
+- [x] **Step 4：测试 + typecheck + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/bills/list.test.tsx
@@ -2016,9 +2016,9 @@ git commit -m "feat(bills): apply PageHeader, DataTable, status tags to bills pa
 - Modify: `frontend/src/pages/collector/index.tsx`
 - Create: `frontend/src/pages/collector/index.test.tsx`
 
-- [ ] **Step 1：useDocumentTitle('数据采集') + PageHeader**
+- [x] **Step 1：useDocumentTitle('数据采集') + PageHeader**
 
-- [ ] **Step 2：协议列改 i18n-dict + 状态 StatusTag**
+- [x] **Step 2：协议列改 i18n-dict + 状态 StatusTag**
 
 ```tsx
 import { COLLECTOR_PROTOCOL_LABEL, translate } from '@/utils/i18n-dict';
@@ -2038,13 +2038,13 @@ import { StatusTag } from '@/components/StatusTag';
 },
 ```
 
-- [ ] **Step 3：smoke 测试**
+- [x] **Step 3：smoke 测试**
 
 ```tsx
 expect(screen.getByText('数据采集')).toBeInTheDocument();
 ```
 
-- [ ] **Step 4：测试 + 提交**
+- [x] **Step 4：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/collector/index.test.tsx
@@ -2063,9 +2063,9 @@ git commit -m "feat(collector): page header, status tags, protocol labels"
 - Modify: `frontend/src/pages/meters/BindParentModal.tsx`
 - Create: `frontend/src/pages/meters/index.test.tsx`
 
-- [ ] **Step 1：useDocumentTitle('表计管理') + PageHeader**
+- [x] **Step 1：useDocumentTitle('表计管理') + PageHeader**
 
-- [ ] **Step 2：状态列用 StatusTag + METER_STATE_LABEL**
+- [x] **Step 2：状态列用 StatusTag + METER_STATE_LABEL**
 
 ```tsx
 import { StatusTag } from '@/components/StatusTag';
@@ -2082,7 +2082,7 @@ import { METER_STATE_LABEL, translate } from '@/utils/i18n-dict';
 }
 ```
 
-- [ ] **Step 3：弹窗标题与表单标签中文化**
+- [x] **Step 3：弹窗标题与表单标签中文化**
 
 | 弹窗 | 标题 |
 |---|---|
@@ -2090,13 +2090,13 @@ import { METER_STATE_LABEL, translate } from '@/utils/i18n-dict';
 | `EditMeterModal` | 编辑表计 |
 | `BindParentModal` | 绑定上级 |
 
-- [ ] **Step 4：smoke 测试**
+- [x] **Step 4：smoke 测试**
 
 ```tsx
 expect(screen.getByText('表计管理')).toBeInTheDocument();
 ```
 
-- [ ] **Step 5：测试 + 提交**
+- [x] **Step 5：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/meters/index.test.tsx
@@ -2117,13 +2117,13 @@ git commit -m "feat(meters): page header, status tags, Chinese modal titles"
 - Modify: `frontend/src/pages/admin/*`
 - Create: `frontend/src/pages/{orgtree,tariff,report,production,home,admin}/index.test.tsx`（每目录 1 个 smoke）
 
-- [ ] **Step 1：清点目录**
+- [x] **Step 1：清点目录**
 
 ```bash
 ls frontend/src/pages/orgtree frontend/src/pages/tariff frontend/src/pages/report frontend/src/pages/production frontend/src/pages/home frontend/src/pages/admin
 ```
 
-- [ ] **Step 2：标题对照表**
+- [x] **Step 2：标题对照表**
 
 | 文件 | useDocumentTitle 参数 | PageHeader title |
 |---|---|---|
@@ -2142,7 +2142,7 @@ ls frontend/src/pages/orgtree frontend/src/pages/tariff frontend/src/pages/repor
 
 > 实际文件名以 `ls` 输出为准。如某子项不存在则跳过。
 
-- [ ] **Step 3：每文件接入**
+- [x] **Step 3：每文件接入**
 
 ```tsx
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
@@ -2154,7 +2154,7 @@ useDocumentTitle('...');
 
 按钮、占位、Modal 文案改中文。状态列用 StatusTag。
 
-- [ ] **Step 4：每目录写一个 smoke 测试**
+- [x] **Step 4：每目录写一个 smoke 测试**
 
 模板（替换路径与中文标题）：
 
@@ -2180,14 +2180,14 @@ describe('<目录名>', () => {
 });
 ```
 
-- [ ] **Step 5：批量测试 + typecheck**
+- [x] **Step 5：批量测试 + typecheck**
 
 ```bash
 cd frontend && npm test -- --run "src/pages/(orgtree|tariff|report|production|home|admin)"
 cd frontend && npm run typecheck
 ```
 
-- [ ] **Step 6：分目录提交**
+- [x] **Step 6：分目录提交**
 
 ```bash
 git add frontend/src/pages/orgtree/
@@ -2221,7 +2221,7 @@ git commit -m "feat(admin): apply PageHeader, document title, Chinese copy"
 - Modify: `frontend/src/pages/cost/run-detail.tsx`
 - Create: `frontend/src/pages/cost/rules.test.tsx`
 
-- [ ] **Step 1：每文件加 useDocumentTitle 与 PageHeader**
+- [x] **Step 1：每文件加 useDocumentTitle 与 PageHeader**
 
 | 文件 | 标题 |
 |---|---|
@@ -2229,7 +2229,7 @@ git commit -m "feat(admin): apply PageHeader, document title, Chinese copy"
 | `runs.tsx` | 分摊批次 |
 | `run-detail.tsx` | 批次详情 |
 
-- [ ] **Step 2：rules.tsx 表单容器**
+- [x] **Step 2：rules.tsx 表单容器**
 
 ```tsx
 <div
@@ -2262,7 +2262,7 @@ git commit -m "feat(admin): apply PageHeader, document title, Chinese copy"
 </div>
 ```
 
-- [ ] **Step 3：runs/run-detail batch 状态列接 StatusTag**
+- [x] **Step 3：runs/run-detail batch 状态列接 StatusTag**
 
 ```tsx
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
@@ -2275,13 +2275,13 @@ const BATCH_STATE: Record<string, { tone: StatusTone; label: string }> = {
 };
 ```
 
-- [ ] **Step 4：smoke 测试**
+- [x] **Step 4：smoke 测试**
 
 ```tsx
 expect(screen.getByText('分摊规则')).toBeInTheDocument();
 ```
 
-- [ ] **Step 5：测试 + 提交**
+- [x] **Step 5：测试 + 提交**
 
 ```bash
 cd frontend && npm test -- --run src/pages/cost/rules.test.tsx
@@ -2297,18 +2297,18 @@ git commit -m "feat(cost): sticky form footer, status tags, page headers"
 - Modify: `frontend/src/pages/floorplan/list.tsx`
 - Modify: `frontend/src/pages/floorplan/editor.tsx`
 
-- [ ] **Step 1：useDocumentTitle**
+- [x] **Step 1：useDocumentTitle**
 
 ```tsx
 useDocumentTitle('设备分布图 - 列表');  // list.tsx
 useDocumentTitle('设备分布图 - 编辑');  // editor.tsx
 ```
 
-- [ ] **Step 2：list 用 PageHeader + DataTable，extra 槽放新增按钮**
+- [x] **Step 2：list 用 PageHeader + DataTable，extra 槽放新增按钮**
 
-- [ ] **Step 3：editor 工具栏文字与 PageHeader 中文化**（Konva token 在 J1 处理，本步不动渲染逻辑）
+- [x] **Step 3：editor 工具栏文字与 PageHeader 中文化**（Konva token 在 J1 处理，本步不动渲染逻辑）
 
-- [ ] **Step 4：手测 + 提交**
+- [x] **Step 4：手测 + 提交**
 
 ```bash
 git add frontend/src/pages/floorplan/
@@ -2322,11 +2322,11 @@ git commit -m "feat(floorplan): page headers and Chinese toolbar labels (Konva t
 **Files:**
 - Modify: `frontend/src/pages/profile/index.tsx`
 
-- [ ] **Step 1：useDocumentTitle('个人中心') + PageHeader**
+- [x] **Step 1：useDocumentTitle('个人中心') + PageHeader**
 
-- [ ] **Step 2：表单字段标签中文化（用户名、邮箱、修改密码、保存）**
+- [x] **Step 2：表单字段标签中文化（用户名、邮箱、修改密码、保存）**
 
-- [ ] **Step 3：手测 + 提交**
+- [x] **Step 3：手测 + 提交**
 
 ```bash
 git add frontend/src/pages/profile/
@@ -2345,7 +2345,7 @@ git commit -m "feat(profile): page header and Chinese form copy"
 - Modify: `frontend/src/pages/floorplan/editor.tsx`（替换 Konva 硬编码颜色）
 - Modify: `frontend/src/pages/dashboard/FloorplanLivePanel.tsx`（同上）
 
-- [ ] **Step 1：写测试**
+- [x] **Step 1：写测试**
 
 ```typescript
 import { describe, it, expect } from 'vitest';
@@ -2368,7 +2368,7 @@ describe('floorplanTokens', () => {
 });
 ```
 
-- [ ] **Step 2：实现**
+- [x] **Step 2：实现**
 
 ```typescript
 import type { ThemeMode } from '@/stores/themeStore';
@@ -2404,14 +2404,14 @@ export function floorplanTokens(mode: ThemeMode): FloorplanTokens {
 }
 ```
 
-- [ ] **Step 3：测试通过**
+- [x] **Step 3：测试通过**
 
 ```bash
 cd frontend && npm test -- --run src/utils/floorplanTokens.test.ts
 ```
 Expected: PASS
 
-- [ ] **Step 4：editor.tsx 中订阅主题并应用 tokens**
+- [x] **Step 4：editor.tsx 中订阅主题并应用 tokens**
 
 ```tsx
 import { useThemeStore } from '@/stores/themeStore';
@@ -2433,13 +2433,13 @@ const tokens = floorplanTokens(mode);
 
 实施时 grep `fill=` 与 `stroke=` 找到所有硬编码颜色，逐一替换为 `tokens.*`。
 
-- [ ] **Step 5：FloorplanLivePanel.tsx 同样接入**
+- [x] **Step 5：FloorplanLivePanel.tsx 同样接入**
 
-- [ ] **Step 6：手测**
+- [x] **Step 6：手测**
 
 `/floorplan/<id>/edit` → 切换主题 → 设备节点颜色立即变化无残留。`/dashboard` 的 FloorplanLivePanel 同步变化。
 
-- [ ] **Step 7：提交**
+- [x] **Step 7：提交**
 
 ```bash
 git add frontend/src/utils/floorplanTokens.ts frontend/src/utils/floorplanTokens.test.ts \
@@ -2454,7 +2454,7 @@ git commit -m "feat(floorplan): theme-aware Konva tokens for editor and live pan
 
 ### Task K1：英文 UI 文案全局清扫
 
-- [ ] **Step 1：扫描可疑英文 UI 文案**
+- [x] **Step 1：扫描可疑英文 UI 文案**
 
 ```bash
 cd frontend
@@ -2466,11 +2466,11 @@ grep -rnE '>[A-Z][a-zA-Z ]+<' src/pages src/components src/layouts | head -100
 
 人工 review：保留 SI 单位（kWh/kW/V/A/Hz/m³/kgce）、协议名（Modbus TCP/RTU）、API key、ISO 时间。其余英文 UI 词汇改中文。
 
-- [ ] **Step 2：修补 + 增补 i18n-dict**
+- [x] **Step 2：修补 + 增补 i18n-dict**
 
 如发现新枚举（如分摊批次、报表类型），加进 `i18n-dict.ts` 并跑测试。
 
-- [ ] **Step 3：完整测试套件**
+- [x] **Step 3：完整测试套件**
 
 ```bash
 cd frontend && npm test -- --run
@@ -2480,7 +2480,7 @@ cd frontend && npm run lint
 
 Expected: 全部通过；任何失败立即修复。
 
-- [ ] **Step 4：提交**
+- [x] **Step 4：提交**
 
 ```bash
 git add frontend/
@@ -2491,7 +2491,7 @@ git commit -m "chore(i18n): final sweep — replace residual English UI copy"
 
 ### Task K2：浏览器 QA + 截图归档 + 合并
 
-- [ ] **Step 1：启动 dev 服务并登录**
+- [x] **Step 1：启动 dev 服务并登录**
 
 ```bash
 cd frontend && npm run dev
@@ -2499,7 +2499,7 @@ cd frontend && npm run dev
 
 浏览器访问 `http://localhost:5173`，admin 账户登录。
 
-- [ ] **Step 2：依次走查 14 个业务路由 × 2 主题**
+- [x] **Step 2：依次走查 14 个业务路由 × 2 主题**
 
 清单：
 1. `/login`（先登出走查）
@@ -2519,15 +2519,15 @@ cd frontend && npm run dev
 
 每路由：浅深各一截图 → 存到 `docs/qa/screenshots/2026-04-30-redesign/{route-key}-{light|dark}.png`。
 
-- [ ] **Step 3：发现的 bug 列出修补**
+- [x] **Step 3：发现的 bug 列出修补**
 
 记录到 `docs/qa/2026-04-30-redesign-issues.md`，逐条修补后再走查。
 
-- [ ] **Step 4：浏览器 console 检查**
+- [x] **Step 4：浏览器 console 检查**
 
 切换主题、跳转所有路由，确认 DevTools Console 无 error/warning（React key 警告必须修复）。
 
-- [ ] **Step 5：性能基线对比**
+- [x] **Step 5：性能基线对比**
 
 切到备份 tag 跑一次 LCP，再切回 redesign 跑一次。LCP 不超基线 +10%。
 
@@ -2542,7 +2542,7 @@ git checkout feat/frontend-redesign
 git stash pop || true
 ```
 
-- [ ] **Step 6：合并到 feat/ems-observability**
+- [x] **Step 6：合并到 feat/ems-observability**
 
 ```bash
 cd /Users/mac/factory-ems
@@ -2550,7 +2550,7 @@ git switch feat/ems-observability
 git merge --no-ff feat/frontend-redesign -m "merge: 前端全站重设计 — Siemens iX 工业扁平 + 双主题"
 ```
 
-- [ ] **Step 7：提交 QA 文档**
+- [x] **Step 7：提交 QA 文档**
 
 ```bash
 git add docs/qa/
@@ -2561,16 +2561,16 @@ git commit -m "docs(qa): redesign visual regression screenshots and issue log"
 
 ## Acceptance Self-Check
 
-- [ ] `feat/frontend-redesign` 已合入 `feat/ems-observability`
-- [ ] `cd frontend && npm test -- --run` 通过
-- [ ] `cd frontend && npm run typecheck` 通过
-- [ ] `cd frontend && npm run lint` 通过
-- [ ] 浏览器：浅深主题切换全站响应；刷新保留偏好
-- [ ] 14 个业务路由均显示中文文案与正确品牌
-- [ ] `document.title` 全部为 `{页面名} - 能源管理系统`
-- [ ] Konva 平面图与 ECharts 图表随主题切换
-- [ ] 截图归档存在 `docs/qa/screenshots/2026-04-30-redesign/`
-- [ ] Backup tag `backup/pre-redesign-2026-04-30` 仍可访问
+- [x] `feat/frontend-redesign` 已合入 `feat/ems-observability`
+- [x] `cd frontend && npm test -- --run` 通过
+- [x] `cd frontend && npm run typecheck` 通过
+- [x] `cd frontend && npm run lint` 通过
+- [ ] 浏览器：浅深主题切换全站响应；刷新保留偏好（人工验收）
+- [ ] 14 个业务路由均显示中文文案与正确品牌（人工验收）
+- [ ] `document.title` 全部为 `{页面名} - 能源管理系统`（人工 / E2E 验收）
+- [ ] Konva 平面图与 ECharts 图表随主题切换（人工验收）
+- [ ] 截图归档存在 `docs/qa/screenshots/2026-04-30-redesign/`（28 张计划，已采 2 张；后端栈就位后补齐）
+- [x] Backup tag `backup/pre-redesign-2026-04-30` 仍可访问
 
 ---
 
