@@ -314,7 +314,30 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 
 → `204 No Content`，写审计事件 `SECRET_DELETE`。引用该 secret 的 channel 下次 transport 重启时会失败。
 
-> **v1.1 限制**：spec §8.3 描述的 `POST /api/v1/secrets/opcua/cert`（multipart .pfx 上传）尚未实装；需先手工把 .pfx 放入 `~/.ems/secrets/opcua/certs/` 再用 §3.2 写入引用。
+### §3.4 上传 .pfx 客户端证书（multipart）
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "file=@client.pfx" \
+  -F "name=plc-line1" \
+  -F "password=<pfx-password>" \
+  http://localhost:8888/api/v1/secrets/opcua/cert
+```
+
+→ `204 No Content`。后端解析 PKCS#12 并落盘成两个 secret：
+
+- `secret://opcua/<name>.pem` — 证书 + encrypted PKCS#8 私钥（密码同表单 `password`）
+- `secret://opcua/<name>.pem.password` — 上述 PEM 私钥密码
+
+ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRef` 填 `secret://opcua/plc-line1.pem.password` 即可。
+
+约束：
+
+- `file` 上限 64KB（PFX 文件实际从来不会到 KB 级以上）
+- `name` 必须匹配 `^[a-zA-Z0-9._-]+$` 且不超过 100 字符
+- 多 alias 的 keystore 必须额外传 `alias` 表单字段；否则 400
+- 错误密码 → 400 `{ error: "invalid keystore password" }`
+- 写审计事件 `SECRET_PFX_UPLOAD`
 
 ---
 
@@ -439,11 +462,10 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
 
 ## §6 已知 v1.1 限制（与 spec 偏差）
 
-- **未实装**：`POST /api/v1/secrets/opcua/cert`（multipart .pfx 上传）— 见 §3.3 备注
-
 > 已在 v1.1 落地（先前文档曾标记为未实装，现已交付）：
 > - `GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` — OPC UA 服务器证书审批
 > - OPC UA `SecurityMode = SIGN` 客户端 PEM 私钥加载（见 `OpcUaCertificateLoader`）
+> - `POST /api/v1/secrets/opcua/cert`（multipart .pfx 上传，后端解析 PKCS#12 转 PEM）— 见 §3.4
 > - Modbus TCP / RTU 指数退避自动重连（`ModbusBackoff`：1s→2s→4s→8s→16s→32s→60s 封顶）
 > - API 端点级 per-IP 限流（Bucket4j），见 §5
 

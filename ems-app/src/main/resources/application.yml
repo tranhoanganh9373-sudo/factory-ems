@@ -15,6 +15,13 @@ spring:
     baseline-on-migrate: true
     out-of-order: true
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      # Cap multipart uploads. Only `/api/v1/secrets/opcua/cert` accepts a file
+      # (the .pfx blob), and PFX 实际从来不会到 KB 级以上；controller 本身另
+      # 行 enforce 64KB hard cap (see SecretController.uploadPfx).
+      max-file-size: 256KB
+      max-request-size: 1MB
 
 server:
   port: 8080

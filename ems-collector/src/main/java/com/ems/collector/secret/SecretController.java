@@ -4,11 +4,15 @@ import com.ems.audit.aspect.AuditContext;
 import com.ems.audit.event.AuditEvent;
 import com.ems.audit.service.AuditService;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/v1/secrets")
@@ -50,5 +54,73 @@ public class SecretController {
             "SECRET_DELETE", "SECRET", ref,
             "secret deleted", null, null, null, OffsetDateTime.now()));
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Multipart 上传 .pfx (PKCS#12) → 后端解析 → 落盘成 {@code secret://opcua/<name>.pem}
+     * + {@code secret://opcua/<name>.pem.password}（OPC UA Transport 仍读 PEM，零改动）。
+     *
+     * <p>password 既是 keystore 解密密码，也作为生成的 encrypted PKCS#8 PEM 的密码——
+     * 这样 channel 配置可继续用 {@code certPasswordRef=secret://opcua/<name>.pem.password}。
+     */
+    @PostMapping(path = "/opcua/cert", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadPfx(
+            @RequestPart("file") MultipartFile file,
+            @RequestParam("name") String name,
+            @RequestParam("password") String password,
+            @RequestParam(value = "alias", required = false) String alias) {
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("file is empty");
+        }
+        if (file.getSize() > MAX_PFX_BYTES) {
+            throw new IllegalArgumentException(
+                "file too large: " + file.getSize() + " bytes (max " + MAX_PFX_BYTES + ")");
+        }
+        validateName(name);
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("password is required");
+        }
+
+        byte[] pfxBytes;
+        try {
+            pfxBytes = file.getBytes();
+        } catch (IOException e) {
+            throw new IllegalArgumentException("cannot read uploaded file: " + e.getMessage(), e);
+        }
+
+        var result = Pkcs12CertificateImporter.importPfx(pfxBytes, password, alias);
+
+        String pemRef = "secret://opcua/" + name + ".pem";
+        String pwdRef = "secret://opcua/" + name + ".pem.password";
+
+        // 写入顺序：先 pem，再 pem.password（与审计事件 targetId 一致）
+        resolver.write(pemRef, result.certificatePem() + "\n" + result.encryptedKeyPem());
+        resolver.write(pwdRef, password);
+
+        auditService.record(new AuditEvent(
+            auditContext.currentUserId(), auditContext.currentUsername(),
+            "SECRET_PFX_UPLOAD", "SECRET", pemRef,
+            "pfx uploaded fingerprint=" + result.fingerprintHex(),
+            null, null, null, OffsetDateTime.now()));
+
+        return ResponseEntity.noContent().build();
+    }
+
+    private static final long MAX_PFX_BYTES = 65_536L;
+    private static final Pattern NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]+$");
+    private static final int NAME_MAX_LEN = 100;
+
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("name is required");
+        }
+        if (name.length() > NAME_MAX_LEN) {
+            throw new IllegalArgumentException("name too long (max " + NAME_MAX_LEN + ")");
+        }
+        if (!NAME_PATTERN.matcher(name).matches()) {
+            throw new IllegalArgumentException(
+                "name must match " + NAME_PATTERN.pattern() + "; got: " + name);
+        }
     }
 }
