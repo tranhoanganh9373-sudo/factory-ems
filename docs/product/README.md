@@ -47,6 +47,7 @@
 | [alarm-business-rules.md](./alarm-business-rules.md) | 客户/实施 | 业务规则（状态机 + 抑制窗口 + 维护模式） | Phase C ✅ |
 | [alarm-detection-rules.md](./alarm-detection-rules.md) | 客户/实施 | 检测口径（什么时候触发、什么时候不触发） | Phase D ✅ |
 | [alarm-webhook-integration.md](./alarm-webhook-integration.md) | 客户开发对接 | Webhook 接入指南（含钉钉/企微/自定义示例） | Phase E ✅ |
+| [alarm-bridge-recipes.md](./alarm-bridge-recipes.md) | 客户开发对接 | 飞书 / 邮件 / 短信桥接配方 + Docker Compose 模板 | 2026-05-01 ✅ |
 | [alarm-user-guide.md](./alarm-user-guide.md) | 最终用户 | 操作手册（管理员视角 + 操作员视角） | Phase G ✅ |
 
 > Phase F 的 API 规约写到 [`docs/api/alarm-api.md`](../api/alarm-api.md)（开发对接文档）。
