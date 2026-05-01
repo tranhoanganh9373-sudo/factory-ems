@@ -22,7 +22,7 @@ test('admin can navigate to cert-approval page and sees expected UI', async ({ p
   await login(page);
   await page.goto('/admin/cert-approval');
 
-  await expect(page.getByText('OPC UA 证书审批')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole('heading', { name: '证书审批' })).toBeVisible({ timeout: 10_000 });
 
   // In a cold-start environment there are no pending certs → empty state is shown.
   // If certs exist the table is shown instead. At least one must be visible.
