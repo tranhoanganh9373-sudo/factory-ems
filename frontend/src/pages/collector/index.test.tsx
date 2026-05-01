@@ -26,7 +26,7 @@ vi.mock('@/api/collectorDiag', () => ({
 }));
 
 vi.mock('@/api/channel', () => ({
-  channelApi: { get: vi.fn(), list: vi.fn() },
+  channelApi: { get: vi.fn(), list: vi.fn(), delete: vi.fn().mockResolvedValue(undefined) },
 }));
 
 function renderPage() {
@@ -59,5 +59,12 @@ describe('CollectorPage', () => {
   it('shows 新增通道 button', () => {
     renderPage();
     expect(screen.getByRole('button', { name: /新\s*增\s*通\s*道/ })).toBeInTheDocument();
+  });
+
+  it('renders a delete button per channel row with data-testid', async () => {
+    renderPage();
+    const btn = await screen.findByTestId('channel-delete-1');
+    expect(btn).toBeInTheDocument();
+    expect(btn).toHaveTextContent(/删\s*除/);
   });
 });

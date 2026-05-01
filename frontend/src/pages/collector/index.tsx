@@ -24,11 +24,12 @@ const STATE_COLORS: Record<string, string> = {
 
 export default function CollectorPage() {
   useDocumentTitle('数据采集');
-  const { message } = AntApp.useApp();
+  const { message, modal } = AntApp.useApp();
   const qc = useQueryClient();
   const [detailId, setDetailId] = useState<number | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelDTO | undefined>(undefined);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   const { data: states = [], isLoading } = useQuery({
     queryKey: ['collector', 'state'],
@@ -51,6 +52,38 @@ export default function CollectorPage() {
       qc.invalidateQueries({ queryKey: ['collector'] });
     },
   });
+
+  const remove = useMutation({
+    mutationFn: (id: number) => channelApi.delete(id),
+    onSuccess: () => {
+      message.success('通道已删除');
+      qc.invalidateQueries({ queryKey: ['collector'] });
+    },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '删除失败';
+      message.error(msg);
+    },
+    onSettled: () => setDeletingId(null),
+  });
+
+  const confirmDelete = (channelId: number) => {
+    modal.confirm({
+      title: '删除通道',
+      content: `确认删除通道 #${channelId}？此操作不可撤销，正在采集的数据会停止。`,
+      okText: '删除',
+      okButtonProps: { danger: true },
+      cancelText: '取消',
+      onOk: () => {
+        setDeletingId(channelId);
+        return new Promise<void>((resolve, reject) => {
+          remove.mutate(channelId, {
+            onSuccess: () => resolve(),
+            onError: () => reject(),
+          });
+        });
+      },
+    });
+  };
 
   const openEditor = async (channelId?: number) => {
     if (channelId !== undefined) {
@@ -153,6 +186,17 @@ export default function CollectorPage() {
                   </Button>
                   <Button size="small" type="link" onClick={() => setDetailId(r.channelId)}>
                     详情
+                  </Button>
+                  <Button
+                    size="small"
+                    type="link"
+                    danger
+                    data-testid={`channel-delete-${r.channelId}`}
+                    loading={deletingId === r.channelId}
+                    disabled={deletingId !== null && deletingId !== r.channelId}
+                    onClick={() => confirmDelete(r.channelId)}
+                  >
+                    删除
                   </Button>
                 </Space>
               ),
