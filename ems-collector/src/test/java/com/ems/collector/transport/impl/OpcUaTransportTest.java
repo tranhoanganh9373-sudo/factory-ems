@@ -9,7 +9,10 @@ import com.ems.collector.protocol.VirtualConfig;
 import com.ems.collector.protocol.VirtualMode;
 import com.ems.collector.protocol.VirtualPoint;
 import com.ems.collector.secret.SecretResolver;
+import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.TransportException;
+import org.eclipse.milo.opcua.stack.core.StatusCodes;
+import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -226,5 +229,31 @@ class OpcUaTransportTest {
     @DisplayName("stop 无 client 不抛异常")
     void stop_neverStarted_doesNotThrow() {
         new OpcUaTransport().stop();
+    }
+
+    @Test
+    @DisplayName("qualityFromStatus: Good 返回 GOOD")
+    void qualityFromStatus_good_returnsGood() {
+        assertThat(OpcUaTransport.qualityFromStatus(StatusCode.GOOD)).isEqualTo(Quality.GOOD);
+    }
+
+    @Test
+    @DisplayName("qualityFromStatus: Bad 返回 BAD")
+    void qualityFromStatus_bad_returnsBad() {
+        assertThat(OpcUaTransport.qualityFromStatus(new StatusCode(StatusCodes.Bad_DeviceFailure)))
+            .isEqualTo(Quality.BAD);
+    }
+
+    @Test
+    @DisplayName("qualityFromStatus: Uncertain 返回 BAD（保守策略）")
+    void qualityFromStatus_uncertain_returnsBad() {
+        assertThat(OpcUaTransport.qualityFromStatus(new StatusCode(StatusCodes.Uncertain_LastUsableValue)))
+            .isEqualTo(Quality.BAD);
+    }
+
+    @Test
+    @DisplayName("qualityFromStatus: null 返回 BAD")
+    void qualityFromStatus_null_returnsBad() {
+        assertThat(OpcUaTransport.qualityFromStatus(null)).isEqualTo(Quality.BAD);
     }
 }

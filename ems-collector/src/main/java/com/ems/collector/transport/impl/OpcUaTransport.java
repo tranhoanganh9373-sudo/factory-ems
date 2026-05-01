@@ -233,12 +233,9 @@ public final class OpcUaTransport implements Transport {
         try {
             var variant = dv.getValue();
             Object value = (variant != null) ? variant.getValue() : null;
-            // TODO: READ 路径 (pollOne) 也硬编码 GOOD；待统一改造时与此处一并处理
-            Quality q = (dv.getStatusCode() != null && dv.getStatusCode().isGood())
-                ? Quality.GOOD
-                : Quality.BAD;
             sink.accept(new Sample(channelId, p.key(), Instant.now(),
-                value, q, Map.of("source", "subscription")));
+                value, qualityFromStatus(dv.getStatusCode()),
+                Map.of("source", "subscription")));
         } catch (Throwable t) {
             log.warn("opcua subscription value handle failed channel={} key={}: {}",
                 channelId, p.key(), t.toString());
@@ -261,13 +258,20 @@ public final class OpcUaTransport implements Transport {
         try {
             var nodeId = NodeId.parse(p.nodeId());
             var dv = client.readValue(0, TimestampsToReturn.Both, nodeId).get();
+            var variant = dv.getValue();
+            Object value = (variant != null) ? variant.getValue() : null;
             sink.accept(new Sample(channelId, p.key(), Instant.now(),
-                dv.getValue().getValue(), Quality.GOOD,
+                value, qualityFromStatus(dv.getStatusCode()),
                 Map.of("latencyMs", String.valueOf(System.currentTimeMillis() - startMs))));
         } catch (Exception e) {
             log.warn("opcua read channel={} nodeId={} failed: {}",
                 channelId, p.nodeId(), e.getMessage());
         }
+    }
+
+    /** Maps an OPC UA {@link StatusCode} to a {@link Quality} value (null/non-good → BAD). */
+    static Quality qualityFromStatus(org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode sc) {
+        return (sc != null && sc.isGood()) ? Quality.GOOD : Quality.BAD;
     }
 
     /**
