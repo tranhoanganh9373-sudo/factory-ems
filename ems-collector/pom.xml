@@ -56,5 +56,14 @@
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-testcontainers</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.testcontainers</groupId><artifactId>junit-jupiter</artifactId><scope>test</scope></dependency>
         <dependency><groupId>org.awaitility</groupId><artifactId>awaitility</artifactId><scope>test</scope></dependency>
+
+        <!-- BouncyCastle: test-only — 用于 OpcUaCertificateStore 测试中生成自签 X509 证书。
+             JDK 17+ 强封装 sun.security.x509，行业事实标准是用 BC（Milo / Spring Security 测试同方案）。 -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.78.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>
