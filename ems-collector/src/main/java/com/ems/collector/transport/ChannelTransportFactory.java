@@ -1,5 +1,6 @@
 package com.ems.collector.transport;
 
+import com.ems.collector.cert.OpcUaCertificateStore;
 import com.ems.collector.secret.SecretResolver;
 import com.ems.collector.transport.impl.ModbusRtuAdapterTransport;
 import com.ems.collector.transport.impl.ModbusTcpAdapterTransport;
@@ -17,9 +18,11 @@ import org.springframework.stereotype.Component;
 public class ChannelTransportFactory {
 
     private final SecretResolver secretResolver;
+    private final OpcUaCertificateStore certStore;
 
-    public ChannelTransportFactory(SecretResolver secretResolver) {
+    public ChannelTransportFactory(SecretResolver secretResolver, OpcUaCertificateStore certStore) {
         this.secretResolver = secretResolver;
+        this.certStore = certStore;
     }
 
     public Transport create(String protocol) {
@@ -29,7 +32,7 @@ public class ChannelTransportFactory {
         return switch (protocol) {
             case "MODBUS_TCP" -> new ModbusTcpAdapterTransport();
             case "MODBUS_RTU" -> new ModbusRtuAdapterTransport();
-            case "OPC_UA"     -> new OpcUaTransport(secretResolver);
+            case "OPC_UA"     -> new OpcUaTransport(secretResolver, certStore);
             case "MQTT"       -> new MqttTransport(secretResolver);
             case "VIRTUAL"    -> new VirtualTransport();
             default -> throw new IllegalArgumentException("unknown protocol: " + protocol);

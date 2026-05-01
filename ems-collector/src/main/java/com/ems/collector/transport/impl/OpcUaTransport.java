@@ -1,5 +1,7 @@
 package com.ems.collector.transport.impl;
 
+import com.ems.collector.cert.OpcUaCertificateLoader;
+import com.ems.collector.cert.OpcUaCertificateStore;
 import com.ems.collector.protocol.ChannelConfig;
 import com.ems.collector.protocol.OpcUaConfig;
 import com.ems.collector.protocol.OpcUaPoint;
@@ -16,6 +18,8 @@ import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.config.OpcUaClientConfig;
 import org.eclipse.milo.opcua.sdk.client.api.identity.UsernameProvider;
 import org.eclipse.milo.opcua.stack.client.DiscoveryClient;
+import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
+import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
@@ -23,7 +27,9 @@ import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,7 +42,7 @@ import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.
  *
  * <p>v1 限制：
  * <ul>
- *   <li>仅支持 {@link SecurityMode#NONE}；SIGN / SIGN_AND_ENCRYPT 需要证书 store 集成，留 v2。
+ *   <li>支持 {@link SecurityMode#NONE}、{@link SecurityMode#SIGN}（需配置 certRef）。
  *   <li>仅支持 {@link SubscriptionMode#READ}；SUBSCRIBE 留 v2。
  * </ul>
  *
@@ -48,18 +54,24 @@ public final class OpcUaTransport implements Transport {
     private static final Logger log = LoggerFactory.getLogger(OpcUaTransport.class);
 
     private final SecretResolver secretResolver;
+    private final OpcUaCertificateStore certStore;
 
     private OpcUaClient client;
     private ScheduledExecutorService poller;
     private volatile boolean connected = false;
     private Long channelId;
 
-    public OpcUaTransport(SecretResolver secretResolver) {
+    public OpcUaTransport(SecretResolver secretResolver, OpcUaCertificateStore certStore) {
         this.secretResolver = secretResolver;
+        this.certStore = certStore;
+    }
+
+    public OpcUaTransport(SecretResolver secretResolver) {
+        this(secretResolver, null);
     }
 
     public OpcUaTransport() {
-        this(null);
+        this(null, null);
     }
 
     @Override
@@ -70,13 +82,6 @@ public final class OpcUaTransport implements Transport {
         }
         this.channelId = channelId;
 
-        // v1 限制：仅支持 SecurityMode.NONE。SIGN / SIGN_AND_ENCRYPT 需要证书 store 集成，留 v2。
-        if (cfg.securityMode() != SecurityMode.NONE) {
-            throw new TransportException(
-                "OPC UA SecurityMode " + cfg.securityMode() + " is not implemented in v1; "
-                    + "use SecurityMode.NONE (channelId=" + channelId + ")");
-        }
-
         // v1 仅实现 READ 模式；SUBSCRIBE 留待 v2。早 fail 比静默丢数据更安全。
         boolean hasSubscribe = cfg.points().stream()
             .anyMatch(p -> p.mode() == SubscriptionMode.SUBSCRIBE);
@@ -86,12 +91,33 @@ public final class OpcUaTransport implements Transport {
                     + "configure all points with mode=READ (channelId=" + channelId + ")");
         }
 
+        // SIGN / SIGN_AND_ENCRYPT 需要 certRef。
+        if (cfg.securityMode() != SecurityMode.NONE && cfg.certRef() == null) {
+            throw new TransportException(
+                "OPC UA SecurityMode " + cfg.securityMode() + " requires certRef "
+                    + "(channelId=" + channelId + ")");
+        }
+
         // usernameRef 配了但 SecretResolver 缺失 → 早 fail（与 MqttTransport 一致）。
         if (cfg.usernameRef() != null && secretResolver == null) {
             throw new TransportException(
                 "usernameRef configured but no SecretResolver injected (channelId="
                     + channelId + ")");
         }
+
+        // 若为 SIGN/SIGN_AND_ENCRYPT，提前解析客户端证书（fail-fast，避免连 server 后才报错）。
+        OpcUaCertificateLoader.ClientKeyMaterial keyMaterial = null;
+        if (cfg.securityMode() != SecurityMode.NONE) {
+            String pem = secretResolver.resolve(cfg.certRef());
+            String password = cfg.certPasswordRef() != null
+                ? secretResolver.resolve(cfg.certPasswordRef())
+                : null;
+            keyMaterial = OpcUaCertificateLoader.loadClientKeyMaterial(pem, password);
+            log.info("opcua client cert loaded channel={} subject={}",
+                channelId, keyMaterial.certificate().getSubjectX500Principal().getName());
+        }
+
+        final OpcUaCertificateLoader.ClientKeyMaterial finalKeyMaterial = keyMaterial;
 
         try {
             var endpoints = DiscoveryClient.getEndpoints(cfg.endpointUrl()).get();
@@ -107,6 +133,14 @@ public final class OpcUaTransport implements Transport {
                 .setApplicationName(LocalizedText.english("EMS Collector"))
                 .setApplicationUri("urn:ems:collector")
                 .setRequestTimeout(uint(10_000));
+
+            if (finalKeyMaterial != null) {
+                clientConfigBuilder
+                    .setKeyPair(finalKeyMaterial.keyPair())
+                    .setCertificate(finalKeyMaterial.certificate())
+                    .setCertificateValidator(buildCertificateValidator());
+                log.info("opcua tls configured channel={} mode={}", channelId, cfg.securityMode());
+            }
 
             if (cfg.usernameRef() != null) {
                 String username = secretResolver.resolve(cfg.usernameRef());
@@ -161,6 +195,41 @@ public final class OpcUaTransport implements Transport {
             log.warn("opcua read channel={} nodeId={} failed: {}",
                 channelId, p.nodeId(), e.getMessage());
         }
+    }
+
+    /**
+     * 构建基于 {@link OpcUaCertificateStore} 的服务端证书校验器。
+     * 若 certStore 未注入（向后兼容），则接受所有证书（仅 NONE 模式下不会到达此处）。
+     */
+    private ClientCertificateValidator buildCertificateValidator() {
+        return new ClientCertificateValidator() {
+            @Override
+            public void validateCertificateChain(List<X509Certificate> chain) throws UaException {
+                if (certStore == null) return;
+                X509Certificate serverCert = chain.get(0);
+                try {
+                    if (!certStore.isTrusted(serverCert)) {
+                        String thumbprint = certStore.thumbprint(serverCert);
+                        throw new TransportException(
+                            "server certificate not trusted: "
+                                + serverCert.getSubjectX500Principal().getName()
+                                + " thumbprint=" + thumbprint
+                                + " — use /api/opcua/certs/approve to trust it");
+                    }
+                } catch (TransportException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new TransportException("cert trust check failed: " + e.getMessage(), e);
+                }
+            }
+
+            @Override
+            public void validateCertificateChain(
+                    List<X509Certificate> chain, String applicationUri, String... validHostNames)
+                    throws UaException {
+                validateCertificateChain(chain);
+            }
+        };
     }
 
     private boolean matchesSecurity(EndpointDescription ep, SecurityMode mode) {
