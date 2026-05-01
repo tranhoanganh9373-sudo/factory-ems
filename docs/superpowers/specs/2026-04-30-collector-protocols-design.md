@@ -28,7 +28,6 @@
 - HA / 集群部署
 - DLT645 / IEC104 / BACnet 等其他协议
 - OPC UA 多证书轮换
-- MQTT QoS 2 + Last Will
 - 历史指标长期存储（>30 天）
 
 ---

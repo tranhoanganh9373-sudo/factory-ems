@@ -80,4 +80,21 @@ class ChannelConfigJsonTest {
         var parsed = om.readValue(json, ChannelConfig.class);
         assertThat(parsed).isInstanceOf(ModbusRtuConfig.class);
     }
+
+    @Test
+    @DisplayName("MqttConfig 旧格式 JSON（无 LWT 字段）能向后兼容反序列化")
+    void deserialize_mqttConfig_legacyJson_noLwtFields_succeeds() throws Exception {
+        var json = """
+            {"protocol":"MQTT","brokerUrl":"tcp://b:1883","clientId":"c",
+             "qos":1,"cleanSession":true,"keepAlive":"PT60S",
+             "points":[{"key":"t","topic":"a/b","jsonPath":"$.v"}]}
+            """;
+        var parsed = om.readValue(json, ChannelConfig.class);
+        assertThat(parsed).isInstanceOf(MqttConfig.class);
+        var mqtt = (MqttConfig) parsed;
+        assertThat(mqtt.lastWillTopic()).isNull();
+        assertThat(mqtt.lastWillPayload()).isNull();
+        assertThat(mqtt.lastWillQos()).isEqualTo(0);
+        assertThat(mqtt.lastWillRetained()).isFalse();
+    }
 }
