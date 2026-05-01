@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -25,6 +27,8 @@ import java.util.stream.Stream;
 
 @Component
 public class OpcUaCertificateStore {
+
+    private static final Logger log = LoggerFactory.getLogger(OpcUaCertificateStore.class);
 
     private static final Set<PosixFilePermission> OWNER_RW = Set.of(
             PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
@@ -120,8 +124,8 @@ public class OpcUaCertificateStore {
                                   (String) meta.get("endpointUrl"),
                                   Instant.parse((String) meta.get("firstSeenAt")),
                                   (String) meta.get("subjectDn")));
-                      } catch (IOException e) {
-                          // skip malformed entry
+                      } catch (Exception e) {
+                          log.warn("skipping malformed pending cert json: {} - {}", jsonPath, e.getMessage());
                       }
                   });
         }

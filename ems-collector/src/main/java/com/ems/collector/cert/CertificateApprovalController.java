@@ -4,12 +4,14 @@ import com.ems.audit.aspect.AuditContext;
 import com.ems.audit.event.AuditEvent;
 import com.ems.audit.service.AuditService;
 import com.ems.collector.runtime.ChannelCertificateApprovedEvent;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -35,7 +37,7 @@ public class CertificateApprovalController {
     }
 
     @GetMapping("/cert-pending")
-    public List<PendingCertificate> listPending() throws Exception {
+    public List<PendingCertificate> listPending() throws IOException {
         return certStore.listPending();
     }
 
@@ -43,7 +45,7 @@ public class CertificateApprovalController {
 
     @PostMapping("/{channelId}/trust-cert")
     public ResponseEntity<Void> trust(@PathVariable Long channelId,
-                                      @RequestBody TrustCertRequest req) throws Exception {
+                                      @Valid @RequestBody TrustCertRequest req) throws IOException {
         certStore.approve(req.thumbprint());
         auditService.record(new AuditEvent(
                 auditContext.currentUserId(), auditContext.currentUsername(),
@@ -57,7 +59,7 @@ public class CertificateApprovalController {
     }
 
     @DeleteMapping("/cert-pending/{thumbprint}")
-    public ResponseEntity<Void> reject(@PathVariable String thumbprint) throws Exception {
+    public ResponseEntity<Void> reject(@PathVariable String thumbprint) throws IOException {
         certStore.reject(thumbprint);
         auditService.record(new AuditEvent(
                 auditContext.currentUserId(), auditContext.currentUsername(),
