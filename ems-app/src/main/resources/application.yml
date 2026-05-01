@@ -43,6 +43,17 @@ ems:
   login:
     max-failed-attempts: 5
     lockout-minutes: 15
+  security:
+    rate-limit:
+      enabled: true
+      read-per-minute: 600
+      write-per-minute: 60
+      burst-multiplier: 2
+      exempt-path-prefixes:
+        - /actuator
+        - /error
+        - /login
+        - /api/v1/auth
   alarm:
     default-silent-timeout-seconds: 600
     default-consecutive-fail-count: 3
