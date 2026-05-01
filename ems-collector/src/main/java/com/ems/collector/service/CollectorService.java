@@ -4,15 +4,20 @@ import com.ems.collector.config.CollectorProperties;
 import com.ems.collector.config.DeviceConfig;
 import com.ems.collector.config.Protocol;
 import com.ems.collector.health.CollectorMetrics;
+import com.ems.collector.observability.CollectorBusinessMetrics;
 import com.ems.collector.poller.DevicePoller;
 import com.ems.collector.poller.DeviceSnapshot;
+import com.ems.collector.poller.DeviceState;
 import com.ems.collector.poller.ReadingSink;
 import com.ems.collector.transport.ModbusMaster;
 import com.ems.collector.transport.ModbusMasterFactory;
 import com.ems.collector.transport.SerialPortLockRegistry;
+import com.ems.meter.observability.MeterMetrics;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -52,6 +57,9 @@ public class CollectorService {
     /** 优雅关闭时给 in-flight read 留多少秒。 */
     static final int SHUTDOWN_TIMEOUT_SECONDS = 5;
 
+    /** Spec §8.2 设备在/离线 gauge 周期刷新间隔。 */
+    static final long DEVICE_STATE_REFRESH_MS = 30_000L;
+
     private static final Logger log = LoggerFactory.getLogger(CollectorService.class);
 
     private final CollectorProperties props;
@@ -60,25 +68,41 @@ public class CollectorService {
     private final Clock clock;
     private final DevicePoller.StateTransitionListener stateListener;
     private final CollectorMetrics metrics;
+    private final CollectorBusinessMetrics businessMetrics;
+    private final MeterMetrics meterMetrics;
     private final SerialPortLockRegistry serialLocks;
 
     private final Map<String, DevicePoller> pollers = new ConcurrentHashMap<>();
     private ScheduledExecutorService scheduler;
+    /** follow-up #5: gauge 刷新独立线程池，避免与 device polling 抢 worker slot（>200 设备时尤甚）。 */
+    private ScheduledExecutorService gaugeScheduler;
     private volatile boolean running = false;
 
+    /**
+     * follow-up #4: 唯一构造器（之前有 7-arg / 8-arg / 9-arg 三个 overload，依赖 Spring
+     * "greediest satisfiable constructor" 选最长那个，重构容易触发隐性歧义）。改成单
+     * ctor + 显式 {@code @Autowired}：DI 路径锁死，不靠 Spring 启发式。测试用 NOOP
+     * 单例填空。
+     */
+    @Autowired
     public CollectorService(CollectorProperties props,
                             ReadingSink sink,
                             ModbusMasterFactory masterFactory,
-                            Clock clock,
+                            @Qualifier("collectorClock") Clock clock,
                             DevicePoller.StateTransitionListener stateListener,
                             CollectorMetrics metrics,
-                            SerialPortLockRegistry serialLocks) {
+                            SerialPortLockRegistry serialLocks,
+                            CollectorBusinessMetrics businessMetrics,
+                            MeterMetrics meterMetrics) {
         this.props = props;
         this.sink = sink;
         this.masterFactory = masterFactory;
         this.clock = clock == null ? Clock.systemUTC() : clock;
         this.stateListener = stateListener == null ? DevicePoller.StateTransitionListener.NOOP : stateListener;
         this.metrics = metrics;
+        this.businessMetrics = businessMetrics == null
+                ? CollectorBusinessMetrics.NOOP : businessMetrics;
+        this.meterMetrics = meterMetrics == null ? MeterMetrics.NOOP : meterMetrics;
         this.serialLocks = serialLocks == null ? new SerialPortLockRegistry() : serialLocks;
     }
 
@@ -108,7 +132,8 @@ public class CollectorService {
             java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
                     ? serialLocks.lockFor(dev.serialPort())
                     : null;
-            DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
+            DevicePoller poller = new DevicePoller(
+                    dev, master, sink, clock, stateListener, lock, businessMetrics);
             pollers.put(dev.id(), poller);
         }
 
@@ -119,7 +144,47 @@ public class CollectorService {
             scheduleAfter(p, stagger);
             stagger += 100;
         }
+        // Spec §8.2: ems.collector.devices.online/offline gauge 周期刷新（30s）
+        // follow-up #5: 独立 single-thread scheduler；不挤占 device polling worker slot
+        gaugeScheduler = Executors.newSingleThreadScheduledExecutor(
+                new NamedThreadFactory("ems-collector-gauge-"));
+        gaugeScheduler.scheduleAtFixedRate(this::refreshDeviceGauges,
+                0, DEVICE_STATE_REFRESH_MS, TimeUnit.MILLISECONDS);
         log.info("collector started: {} device(s)", pollers.size());
+    }
+
+    /**
+     * 计数 HEALTHY+DEGRADED → online，UNREACHABLE → offline；写入 collector gauge。
+     * <p>同时刷新 meter reading lag gauge（spec §8.4）：跨所有 poller 取
+     * {@code max(now - snapshot.lastReadAt)}。从未读过的 poller 跳过；空集合 → 0。
+     */
+    private void refreshDeviceGauges() {
+        try {
+            long online = 0;
+            long offline = 0;
+            for (DevicePoller p : pollers.values()) {
+                DeviceState s = p.state();
+                if (s == DeviceState.UNREACHABLE) {
+                    offline++;
+                } else {
+                    online++;
+                }
+            }
+            businessMetrics.setOnline(online);
+            businessMetrics.setOffline(offline);
+
+            long now = clock.instant().getEpochSecond();
+            long maxLag = pollers.values().stream()
+                    .map(DevicePoller::snapshot)
+                    .filter(s -> s.lastReadAt() != null)
+                    .mapToLong(s -> Math.max(0L, now - s.lastReadAt().getEpochSecond()))
+                    .max()
+                    .orElse(0L);
+            meterMetrics.setMaxLagSeconds(maxLag);
+        } catch (Throwable t) {
+            // 不能影响 polling
+            log.warn("device gauge refresh failed: {}", t.toString());
+        }
     }
 
     private void scheduleAfter(DevicePoller poller, long delayMs) {
@@ -157,6 +222,19 @@ public class CollectorService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 scheduler.shutdownNow();
+            }
+        }
+        // follow-up #5: gauge scheduler 与 polling scheduler 同步 shutdown
+        if (gaugeScheduler != null) {
+            gaugeScheduler.shutdown();
+            try {
+                if (!gaugeScheduler.awaitTermination(SHUTDOWN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                    log.warn("collector gauge scheduler did not terminate in {}s; forcing", SHUTDOWN_TIMEOUT_SECONDS);
+                    gaugeScheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                gaugeScheduler.shutdownNow();
             }
         }
         for (DevicePoller p : pollers.values()) {
@@ -253,7 +331,8 @@ public class CollectorService {
         java.util.concurrent.locks.Lock lock = (dev.protocol() == Protocol.RTU)
                 ? serialLocks.lockFor(dev.serialPort())
                 : null;
-        DevicePoller poller = new DevicePoller(dev, master, sink, clock, stateListener, lock);
+        DevicePoller poller = new DevicePoller(
+                dev, master, sink, clock, stateListener, lock, businessMetrics);
         pollers.put(dev.id(), poller);
     }
 

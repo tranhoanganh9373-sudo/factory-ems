@@ -1,0 +1,127 @@
+# Warning alerts — 24h response window, email-only notification.
+# Severity label drives Alertmanager routing (severity="warning" → default-email).
+
+groups:
+  - name: warning-alerts
+    rules:
+      - alert: EmsAppLatencyHigh
+        expr: histogram_quantile(0.99,
+                sum by (le) (
+                  rate(http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS"}[5m])
+                )) > 1
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: HTTP p99 延迟 > 1s（持续 10 分钟）
+          description: 'p99={{ $value | humanizeDuration }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsapplatencyhigh
+
+      - alert: EmsCollectorPollSlow
+        expr: histogram_quantile(0.95,
+                sum by (le, adapter) (
+                  rate(ems_collector_poll_duration_seconds_bucket[10m])
+                )) > 30
+        for: 15m
+        labels:
+          severity: warning
+          team: collector
+        annotations:
+          summary: 采集 poll p95 > 30s（{{ $labels.adapter }}）
+          description: 'adapter={{ $labels.adapter }} p95={{ $value | humanizeDuration }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emscollectorpollslow
+
+      - alert: EmsAlarmDetectorSlow
+        expr: histogram_quantile(0.95, sum by (le) (rate(ems_alarm_detector_duration_seconds_bucket[10m]))) > 10
+        for: 15m
+        labels:
+          severity: warning
+          team: alarm
+        annotations:
+          summary: Alarm 检测扫描 p95 > 10s（持续 15 分钟）
+          description: 'p95={{ $value | humanizeDuration }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsalarmdetectorslow
+
+      - alert: EmsWebhookFailureRate
+        expr: |
+          (
+            sum(rate(ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}[5m]))
+            /
+            sum(rate(ems_alarm_webhook_delivery_duration_seconds_count[5m]))
+          ) > 0.20
+        for: 15m
+        labels:
+          severity: warning
+          team: alarm
+        annotations:
+          summary: Webhook 失败率 > 20%（持续 15 分钟）
+          description: 'failure ratio={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emswebhookfailurerate
+
+      - alert: EmsSchedulerDrift
+        # v1 NOTE: ems_app_scheduled_drift_seconds is not emitted by the application
+        # (B4 deferred). Using SLO recording rule placeholder (constant 0). Alert will
+        # not fire in v1; placeholder kept for spec parity. Will activate once drift is
+        # actually computed.
+        expr: ems:slo:scheduler_drift:max_seconds > 60
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: 调度漂移 > 60s（v1 placeholder — 待 drift 实际埋点后生效）
+          description: 'max drift={{ $value | humanizeDuration }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsschedulerdrift
+
+      - alert: EmsJvmMemoryHigh
+        expr: |
+          (
+            sum by (instance) (jvm_memory_used_bytes{area="heap"})
+            /
+            sum by (instance) (jvm_memory_max_bytes{area="heap"})
+          ) > 0.85
+        for: 15m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: JVM heap 使用率 > 85%（持续 15 分钟）
+          description: 'instance={{ $labels.instance }} ratio={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsjvmmemoryhigh
+
+      - alert: EmsJvmGcPressure
+        expr: rate(jvm_gc_pause_seconds_sum[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: JVM GC 暂停时间速率 > 0.5（10 分钟内累计 GC 暂停时间 > 50%）
+          description: 'rate={{ $value }} s/s'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsjvmgcpressure
+
+      - alert: EmsCollectorOfflineDevices
+        expr: |
+          ems_collector_devices_offline
+          /
+          (ems_collector_devices_online + ems_collector_devices_offline) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          team: collector
+        annotations:
+          summary: 离线设备占比 > 10%（持续 10 分钟）
+          description: 'offline ratio={{ $value | humanizePercentage }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emscollectorofflinedevices
+
+      - alert: EmsAlarmBacklog
+        expr: ems_alarm_active_count{type="silent_timeout"} > 50
+        for: 30m
+        labels:
+          severity: warning
+          team: alarm
+        annotations:
+          summary: silent_timeout 告警积压 > 50 条（持续 30 分钟）
+          description: 'count={{ $value }}'
+          runbook_url: https://internal/docs/ops/observability-runbook.md#emsalarmbacklog

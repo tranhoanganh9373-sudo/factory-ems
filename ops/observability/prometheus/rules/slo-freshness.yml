@@ -1,0 +1,14 @@
+# SLO: Data freshness — max(reading lag) ≤ 5 minutes
+# SLI: current max lag across all meters (gauge updated every 30s by CollectorService).
+
+groups:
+  - name: slo-freshness
+    interval: 60s
+    rules:
+      - record: ems:slo:freshness:max_lag_seconds
+        expr: max(ems_meter_reading_lag_seconds)
+      - record: ems:slo:freshness:objective_seconds
+        expr: vector(300)
+      - record: ems:slo:freshness:error_budget_remaining
+        # 1 if lag well below objective; 0 once at/above; clamped 0..1.
+        expr: clamp_min((ems:slo:freshness:objective_seconds - ems:slo:freshness:max_lag_seconds) / ems:slo:freshness:objective_seconds, 0)

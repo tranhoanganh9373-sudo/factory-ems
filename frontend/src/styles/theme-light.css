@@ -1,0 +1,47 @@
+:root[data-theme='light'] {
+  --ems-color-brand-primary: #007D8A;
+  --ems-color-brand-accent: #FFD732;
+  --ems-color-bg-page: #F4F5F7;
+  --ems-color-bg-container: #FFFFFF;
+  --ems-color-bg-elevated: #FFFFFF;
+  --ems-color-bg-header: #0E1A2B;
+  --ems-color-bg-sider: #FFFFFF;
+  --ems-color-text-primary: #16181D;
+  --ems-color-text-secondary: #5A6470;
+  --ems-color-text-tertiary: #8A95A0;
+  --ems-color-text-on-header: #FFFFFF;
+  --ems-color-border: #E2E5E9;
+  --ems-color-border-strong: #C9CED4;
+  --ems-color-success: #1B7A3E;
+  --ems-color-warning: #E37A00;
+  --ems-color-error: #C8201F;
+  --ems-color-info: #0E6BB8;
+  --ems-radius-sm: 2px;
+  --ems-radius-base: 4px;
+  --ems-radius-lg: 6px;
+  --ems-radius-pill: 9999px;
+  --ems-space-1: 4px;
+  --ems-space-2: 8px;
+  --ems-space-3: 12px;
+  --ems-space-4: 16px;
+  --ems-space-5: 24px;
+  --ems-space-6: 32px;
+  --ems-space-7: 48px;
+  --ems-shadow-1: 0 1px 2px rgba(14,26,43,0.06);
+  --ems-shadow-2: 0 4px 12px rgba(14,26,43,0.10);
+  --ems-shadow-popup: 0 8px 24px rgba(14,26,43,0.16);
+  --ems-font-family-sans: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --ems-font-family-mono: "JetBrains Mono", "SF Mono", "Cascadia Mono", Consolas, monospace;
+  --ems-font-size-xs: 12px;
+  --ems-font-size-sm: 13px;
+  --ems-font-size-base: 14px;
+  --ems-font-size-lg: 16px;
+  --ems-font-size-xl: 20px;
+  --ems-font-size-display: 28px;
+}
+
+html, body, #root {
+  background: var(--ems-color-bg-page);
+  color: var(--ems-color-text-primary);
+  font-family: var(--ems-font-family-sans);
+}

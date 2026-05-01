@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
 public record AlarmListItemDTO(
         Long id,
         Long deviceId,
+        String deviceType,
         String deviceCode,
         String deviceName,
         AlarmType alarmType,

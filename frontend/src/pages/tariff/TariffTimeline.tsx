@@ -1,5 +1,6 @@
 import { Tooltip } from 'antd';
 import type { TariffPeriodDTO } from '@/api/tariff';
+import { translate, TARIFF_PERIOD_LABEL } from '@/utils/i18n-dict';
 
 interface Props {
   periods: TariffPeriodDTO[];
@@ -65,7 +66,7 @@ export default function TariffTimeline({ periods, height = 32 }: Props) {
           return (
             <Tooltip
               key={i}
-              title={`${s.period.periodType} ${s.period.timeStart} → ${s.period.timeEnd} | ¥${s.period.pricePerUnit}`}
+              title={`${translate(TARIFF_PERIOD_LABEL, s.period.periodType)} ${s.period.timeStart} → ${s.period.timeEnd} | ¥${s.period.pricePerUnit}`}
             >
               <div
                 style={{
@@ -84,7 +85,7 @@ export default function TariffTimeline({ periods, height = 32 }: Props) {
                   borderRight: '1px solid white',
                 }}
               >
-                {width > 5 ? s.period.periodType : ''}
+                {width > 5 ? translate(TARIFF_PERIOD_LABEL, s.period.periodType) : ''}
               </div>
             </Tooltip>
           );

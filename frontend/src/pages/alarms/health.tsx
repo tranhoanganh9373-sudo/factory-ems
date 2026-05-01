@@ -1,8 +1,11 @@
 import { Card, Col, Row, Statistic, Table } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { alarmApi } from '@/api/alarm';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 export default function AlarmHealthPage() {
+  useDocumentTitle('告警 - 健康');
   const { data: summary, isLoading } = useQuery({
     queryKey: ['alarms', 'health'],
     queryFn: alarmApi.healthSummary,
@@ -12,7 +15,7 @@ export default function AlarmHealthPage() {
 
   return (
     <div>
-      <h2>系统健康总览</h2>
+      <PageHeader title="告警健康" />
       <Row gutter={16}>
         <Col xs={24} sm={12} lg={6}>
           <Card loading={isLoading}>

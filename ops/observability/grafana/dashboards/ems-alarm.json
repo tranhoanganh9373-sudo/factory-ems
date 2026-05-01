@@ -1,0 +1,224 @@
+{
+  "title": "factory-ems · Alarm",
+  "uid": "ems-alarm",
+  "schemaVersion": 39,
+  "editable": false,
+  "tags": ["factory-ems", "observability", "alarm"],
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": "label_values(up{job=\"factory-ems\"}, instance)",
+        "current": { "text": "All", "value": "$__all" },
+        "includeAll": true,
+        "multi": true,
+        "refresh": 1
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "活跃 silent_timeout",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(ems_alarm_active_count{type=\"silent_timeout\", job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": { "graphMode": "area", "colorMode": "value", "textMode": "auto" }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "活跃 consecutive_fail",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 6, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(ems_alarm_active_count{type=\"consecutive_fail\", job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": { "graphMode": "area", "colorMode": "value", "textMode": "auto" }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "24h 触发总数",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(increase(ems_alarm_created_total{job=\"factory-ems\", instance=~\"$instance\"}[24h]))",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short" }
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "24h 自动恢复占比",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 5 },
+      "targets": [
+        {
+          "expr": "sum(increase(ems_alarm_resolved_total{reason=\"auto\", job=\"factory-ems\", instance=~\"$instance\"}[24h])) / clamp_min(sum(increase(ems_alarm_resolved_total{job=\"factory-ems\", instance=~\"$instance\"}[24h])), 1)",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 0.5 },
+              { "color": "green", "value": 0.8 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "活跃告警 by type",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 5, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (type) (ems_alarm_active_count{job=\"factory-ems\", instance=~\"$instance\"})",
+          "refId": "A",
+          "legendFormat": "{{type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": { "stacking": { "mode": "normal" } }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Detector 扫描耗时 p95",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 5, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(ems_alarm_detector_duration_seconds_bucket{job=\"factory-ems\", instance=~\"$instance\"}[5m])))",
+          "refId": "A",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Webhook 投递速率 by outcome / attempt",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 13, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum by (outcome, attempt) (rate(ems_alarm_webhook_delivery_duration_seconds_count{job=\"factory-ems\", instance=~\"$instance\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "{{outcome}} · attempt={{attempt}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "触发 vs 恢复速率",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(ems_alarm_created_total{job=\"factory-ems\", instance=~\"$instance\"}[5m]))",
+          "refId": "A",
+          "legendFormat": "created"
+        },
+        {
+          "expr": "sum(rate(ems_alarm_resolved_total{job=\"factory-ems\", instance=~\"$instance\"}[5m]))",
+          "refId": "B",
+          "legendFormat": "resolved"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ops" }
+      }
+    },
+    {
+      "id": 9,
+      "type": "table",
+      "title": "Top 5 type 触发 24h",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 21, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "topk(5, sum by (type) (increase(ems_alarm_created_total{job=\"factory-ems\", instance=~\"$instance\"}[24h])))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true, "__name__": true, "job": true, "instance": true },
+            "indexByName": { "type": 0, "Value": 1 },
+            "renameByName": { "Value": "created (24h)" }
+          }
+        }
+      ]
+    }
+  ]
+}

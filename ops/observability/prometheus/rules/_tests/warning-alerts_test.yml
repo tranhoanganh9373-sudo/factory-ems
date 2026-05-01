@@ -1,0 +1,300 @@
+# promtool tests for warning-alerts.yml — 9 alerts × 2 cases (positive + negative).
+#
+# Strategy (Path B per task spec):
+#   - Validate labels (alertname + severity + team + matcher labels) on every case.
+#   - Omit exp_annotations because description templates render Go template values
+#     whose exact string output is brittle (humanizeDuration / humanizePercentage).
+#   - For histogram_quantile-based alerts, inject all required _bucket boundaries.
+#   - For EmsSchedulerDrift v1 placeholder, inject the recording rule output directly.
+#
+# Note on histogram synthesis: promtool requires 'le' bucket label values as plain
+# strings ("0.5", "1", "+Inf"); we provide a minimal but valid bucket distribution
+# that drives the relevant quantile above/below the threshold.
+
+rule_files:
+  - ../warning-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # --- EmsAppLatencyHigh --------------------------------------------------
+  # histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket[5m]))) > 1
+  # for 10m. Push all observations into le="+Inf" with le="1" stuck at 0 → p99 > 1.
+  - interval: 1m
+    name: EmsAppLatencyHigh_fires_when_p99_above_1s
+    input_series:
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="0.5"}'
+        values: '0+0x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="1"}'
+        values: '0+0x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="2"}'
+        values: '0+10x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="+Inf"}'
+        values: '0+10x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsAppLatencyHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: backend
+
+  - interval: 1m
+    name: EmsAppLatencyHigh_silent_when_p99_below_1s
+    input_series:
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="0.1"}'
+        values: '0+10x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="0.5"}'
+        values: '0+10x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="1"}'
+        values: '0+10x20'
+      - series: 'http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS",le="+Inf"}'
+        values: '0+10x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsAppLatencyHigh
+        exp_alerts: []
+
+  # --- EmsCollectorPollSlow ----------------------------------------------
+  # histogram_quantile(0.95, ... [10m]) > 30 for 15m, grouped by adapter.
+  - interval: 1m
+    name: EmsCollectorPollSlow_fires_when_p95_above_30s
+    input_series:
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="10"}'
+        values: '0+0x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="30"}'
+        values: '0+0x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="60"}'
+        values: '0+10x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 26m
+        alertname: EmsCollectorPollSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: collector
+              adapter: modbus-tcp
+
+  - interval: 1m
+    name: EmsCollectorPollSlow_silent_when_fast
+    input_series:
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="1"}'
+        values: '0+10x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="10"}'
+        values: '0+10x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="30"}'
+        values: '0+10x30'
+      - series: 'ems_collector_poll_duration_seconds_bucket{adapter="modbus-tcp",le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 26m
+        alertname: EmsCollectorPollSlow
+        exp_alerts: []
+
+  # --- EmsAlarmDetectorSlow ----------------------------------------------
+  # histogram_quantile(0.95, ... [10m]) > 10 for 15m.
+  - interval: 1m
+    name: EmsAlarmDetectorSlow_fires_when_p95_above_10s
+    input_series:
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="5"}'
+        values: '0+0x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="10"}'
+        values: '0+0x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="30"}'
+        values: '0+10x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 26m
+        alertname: EmsAlarmDetectorSlow
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: alarm
+
+  - interval: 1m
+    name: EmsAlarmDetectorSlow_silent_when_fast
+    input_series:
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="1"}'
+        values: '0+10x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="5"}'
+        values: '0+10x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="10"}'
+        values: '0+10x30'
+      - series: 'ems_alarm_detector_duration_seconds_bucket{le="+Inf"}'
+        values: '0+10x30'
+    alert_rule_test:
+      - eval_time: 26m
+        alertname: EmsAlarmDetectorSlow
+        exp_alerts: []
+
+  # --- EmsWebhookFailureRate ---------------------------------------------
+  # failure_rate / total_rate > 0.20 for 15m. Construct counter where failure
+  # increments at 2/min, success at 3/min → ratio 2/5 = 0.40 > 0.20.
+  - interval: 1m
+    name: EmsWebhookFailureRate_fires_when_failure_above_20pct
+    input_series:
+      - series: 'ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}'
+        values: '0+2x25'
+      - series: 'ems_alarm_webhook_delivery_duration_seconds_count{outcome="success"}'
+        values: '0+3x25'
+    alert_rule_test:
+      - eval_time: 21m
+        alertname: EmsWebhookFailureRate
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: alarm
+
+  - interval: 1m
+    name: EmsWebhookFailureRate_silent_when_failure_low
+    input_series:
+      - series: 'ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}'
+        values: '0+0x25'
+      - series: 'ems_alarm_webhook_delivery_duration_seconds_count{outcome="success"}'
+        values: '0+5x25'
+    alert_rule_test:
+      - eval_time: 21m
+        alertname: EmsWebhookFailureRate
+        exp_alerts: []
+
+  # --- EmsSchedulerDrift -------------------------------------------------
+  # ems:slo:scheduler_drift:max_seconds > 60 for 5m. Inject recording rule
+  # output directly (v1 placeholder is constant 0).
+  - interval: 1m
+    name: EmsSchedulerDrift_fires_when_drift_high
+    input_series:
+      - series: 'ems:slo:scheduler_drift:max_seconds'
+        values: '70 70 70 70 70 70 70'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: EmsSchedulerDrift
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: backend
+
+  - interval: 1m
+    name: EmsSchedulerDrift_silent_when_drift_zero
+    input_series:
+      - series: 'ems:slo:scheduler_drift:max_seconds'
+        values: '0 0 0 0 0 0 0'
+    alert_rule_test:
+      - eval_time: 6m
+        alertname: EmsSchedulerDrift
+        exp_alerts: []
+
+  # --- EmsJvmMemoryHigh --------------------------------------------------
+  # heap_used / heap_max > 0.85 for 15m. Use 90/100 = 0.90.
+  - interval: 1m
+    name: EmsJvmMemoryHigh_fires_when_heap_high
+    input_series:
+      - series: 'jvm_memory_used_bytes{instance="prod-01",area="heap",id="eden"}'
+        values: '90+0x20'
+      - series: 'jvm_memory_max_bytes{instance="prod-01",area="heap",id="eden"}'
+        values: '100+0x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsJvmMemoryHigh
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: backend
+              instance: prod-01
+
+  - interval: 1m
+    name: EmsJvmMemoryHigh_silent_when_heap_low
+    input_series:
+      - series: 'jvm_memory_used_bytes{instance="prod-01",area="heap",id="eden"}'
+        values: '30+0x20'
+      - series: 'jvm_memory_max_bytes{instance="prod-01",area="heap",id="eden"}'
+        values: '100+0x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsJvmMemoryHigh
+        exp_alerts: []
+
+  # --- EmsJvmGcPressure --------------------------------------------------
+  # rate(jvm_gc_pause_seconds_sum[5m]) > 0.5 for 10m.
+  # Counter increments by 60s per minute → rate = 1.0 > 0.5.
+  - interval: 1m
+    name: EmsJvmGcPressure_fires_when_gc_high
+    input_series:
+      - series: 'jvm_gc_pause_seconds_sum{instance="prod-01",action="end of minor GC"}'
+        values: '0+60x20'
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsJvmGcPressure
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: backend
+              instance: prod-01
+              action: end of minor GC
+
+  - interval: 1m
+    name: EmsJvmGcPressure_silent_when_gc_low
+    input_series:
+      - series: 'jvm_gc_pause_seconds_sum{instance="prod-01",action="end of minor GC"}'
+        values: '0+1x20'  # 1s/min → 0.0167/s, well below 0.5
+    alert_rule_test:
+      - eval_time: 16m
+        alertname: EmsJvmGcPressure
+        exp_alerts: []
+
+  # --- EmsCollectorOfflineDevices ----------------------------------------
+  # offline / (online + offline) > 0.10 for 10m. Use 20 / 100 = 0.20.
+  - interval: 1m
+    name: EmsCollectorOfflineDevices_fires_when_offline_high
+    input_series:
+      - series: 'ems_collector_devices_offline'
+        values: '20+0x15'
+      - series: 'ems_collector_devices_online'
+        values: '80+0x15'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: EmsCollectorOfflineDevices
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: collector
+
+  - interval: 1m
+    name: EmsCollectorOfflineDevices_silent_when_offline_low
+    input_series:
+      - series: 'ems_collector_devices_offline'
+        values: '2+0x15'
+      - series: 'ems_collector_devices_online'
+        values: '98+0x15'
+    alert_rule_test:
+      - eval_time: 11m
+        alertname: EmsCollectorOfflineDevices
+        exp_alerts: []
+
+  # --- EmsAlarmBacklog ---------------------------------------------------
+  # ems_alarm_active_count{type="silent_timeout"} > 50 for 30m.
+  - interval: 1m
+    name: EmsAlarmBacklog_fires_when_backlog_high
+    input_series:
+      - series: 'ems_alarm_active_count{type="silent_timeout"}'
+        values: '60+0x35'
+    alert_rule_test:
+      - eval_time: 31m
+        alertname: EmsAlarmBacklog
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              team: alarm
+              type: silent_timeout
+
+  - interval: 1m
+    name: EmsAlarmBacklog_silent_when_backlog_low
+    input_series:
+      - series: 'ems_alarm_active_count{type="silent_timeout"}'
+        values: '5+0x35'
+    alert_rule_test:
+      - eval_time: 31m
+        alertname: EmsAlarmBacklog
+        exp_alerts: []

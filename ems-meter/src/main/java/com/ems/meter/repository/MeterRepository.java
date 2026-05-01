@@ -14,6 +14,13 @@ public interface MeterRepository extends JpaRepository<Meter, Long> {
     Optional<Meter> findByCode(String code);
     boolean existsByCode(String code);
 
+    /**
+     * 通过 (channel, point key) 反查 meter。
+     * 约定：channel 配置中 {@code points[].key} 等于该 meter 的 {@code code}。
+     * 由 {@code InfluxSampleWriter} 用于把 collector Sample 路由到正确的 meter 并写 InfluxDB。
+     */
+    Optional<Meter> findByChannelIdAndCode(Long channelId, String code);
+
     boolean existsByInfluxMeasurementAndInfluxTagKeyAndInfluxTagValue(
         String measurement, String tagKey, String tagValue);
 

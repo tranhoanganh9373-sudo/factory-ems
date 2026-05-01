@@ -1,0 +1,15 @@
+# SLO: API latency — p99 ≤ 1s for SUCCESS responses
+# Use 5m rolling window for SLI; objective is constant.
+
+groups:
+  - name: slo-latency
+    interval: 60s
+    rules:
+      - record: ems:slo:latency:p99_5m
+        expr: histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job="factory-ems",outcome="SUCCESS"}[5m])))
+      - record: ems:slo:latency:objective_seconds
+        expr: vector(1.0)
+      - record: ems:slo:latency:error_budget_remaining
+        # 1 if p99 well below objective; 0 once at/above; clamped 0..1.
+        # ratio = (objective - p99) / objective; floor at 0.
+        expr: clamp_min((ems:slo:latency:objective_seconds - ems:slo:latency:p99_5m) / ems:slo:latency:objective_seconds, 0)

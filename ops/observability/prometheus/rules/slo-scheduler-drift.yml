@@ -1,0 +1,20 @@
+# SLO: Scheduler drift — |actual_trigger - expected_trigger| ≤ 60s
+#
+# v1 NOTE: ems_app_scheduled_drift_seconds is not emitted by the application
+# (deferred per Phase B4 — see docs/product/observability-metrics-dictionary.md).
+# As a PromQL approximation, infer drift from the gap between consecutive
+# detector timer recordings. For v1, we record the SLI as a constant 0
+# placeholder so the SLO panel renders; Phase F will revisit if a real signal
+# is wired up.
+
+groups:
+  - name: slo-scheduler-drift
+    interval: 60s
+    rules:
+      - record: ems:slo:scheduler_drift:max_seconds
+        # Placeholder: 0 until ems_app_scheduled_drift_seconds is emitted.
+        expr: vector(0)
+      - record: ems:slo:scheduler_drift:objective_seconds
+        expr: vector(60)
+      - record: ems:slo:scheduler_drift:error_budget_remaining
+        expr: clamp_min((ems:slo:scheduler_drift:objective_seconds - ems:slo:scheduler_drift:max_seconds) / ems:slo:scheduler_drift:objective_seconds, 0)

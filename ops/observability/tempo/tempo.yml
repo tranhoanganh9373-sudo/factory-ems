@@ -1,0 +1,35 @@
+# Tempo single-binary trace storage for factory-ems observability stack
+# - Receives OTLP HTTP (4318) and gRPC (4317) from ems-app
+# - Local filesystem storage; 72h retention default
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:
+          endpoint: 0.0.0.0:4318
+        grpc:
+          endpoint: 0.0.0.0:4317
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 5m
+
+compactor:
+  compaction:
+    compaction_window: 1h
+    block_retention: ${OBS_TEMPO_RETENTION:72h}
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
+
+usage_report:
+  reporting_enabled: false

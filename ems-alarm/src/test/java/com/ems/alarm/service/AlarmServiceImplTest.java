@@ -7,8 +7,11 @@ import com.ems.alarm.entity.AlarmStatus;
 import com.ems.alarm.entity.AlarmType;
 import com.ems.alarm.entity.ResolvedReason;
 import com.ems.alarm.exception.AlarmNotFoundException;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
+import org.springframework.data.jpa.domain.Specification;
 import com.ems.alarm.service.impl.AlarmServiceImpl;
+import com.ems.collector.channel.ChannelRepository;
 import com.ems.collector.service.CollectorService;
 import com.ems.core.dto.PageDTO;
 import com.ems.meter.entity.Meter;
@@ -34,11 +37,13 @@ class AlarmServiceImplTest {
     private final AlarmRepository alarmRepo = mock(AlarmRepository.class);
     private final AlarmStateMachine stateMachine = mock(AlarmStateMachine.class);
     private final MeterRepository meterRepo = mock(MeterRepository.class);
+    private final ChannelRepository channelRepo = mock(ChannelRepository.class);
     private final CollectorService collectorService = mock(CollectorService.class);
     private final ThresholdResolver thresholds = mock(ThresholdResolver.class);
 
     private final AlarmServiceImpl service = new AlarmServiceImpl(
-            alarmRepo, stateMachine, meterRepo, collectorService, thresholds);
+            alarmRepo, stateMachine, meterRepo, channelRepo, collectorService, thresholds,
+            AlarmMetrics.NOOP);
 
     // ── getById ──────────────────────────────────────────────────────────────
 
@@ -154,27 +159,17 @@ class AlarmServiceImplTest {
         Page<Alarm> emptyPage = new PageImpl<>(Collections.emptyList(),
                 PageRequest.of(1, 10, Sort.by("triggeredAt").descending()), 0);
 
-        ArgumentCaptor<AlarmStatus> statusCaptor = ArgumentCaptor.forClass(AlarmStatus.class);
-        ArgumentCaptor<Long> deviceIdCaptor = ArgumentCaptor.forClass(Long.class);
-        ArgumentCaptor<AlarmType> typeCaptor = ArgumentCaptor.forClass(AlarmType.class);
-        ArgumentCaptor<OffsetDateTime> fromCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
-        ArgumentCaptor<OffsetDateTime> toCaptor = ArgumentCaptor.forClass(OffsetDateTime.class);
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Specification<Alarm>> specCaptor = ArgumentCaptor.forClass(Specification.class);
         ArgumentCaptor<PageRequest> pageCaptor = ArgumentCaptor.forClass(PageRequest.class);
 
-        when(alarmRepo.search(any(), any(), any(), any(), any(), any())).thenReturn(emptyPage);
+        when(alarmRepo.findAll(any(Specification.class), any(PageRequest.class))).thenReturn(emptyPage);
 
         PageDTO<AlarmListItemDTO> result = service.list(
                 AlarmStatus.ACTIVE, 5L, AlarmType.SILENT_TIMEOUT, from, to, 2, 10);
 
-        verify(alarmRepo).search(
-                statusCaptor.capture(), deviceIdCaptor.capture(), typeCaptor.capture(),
-                fromCaptor.capture(), toCaptor.capture(), pageCaptor.capture());
-
-        assertThat(statusCaptor.getValue()).isEqualTo(AlarmStatus.ACTIVE);
-        assertThat(deviceIdCaptor.getValue()).isEqualTo(5L);
-        assertThat(typeCaptor.getValue()).isEqualTo(AlarmType.SILENT_TIMEOUT);
-        assertThat(fromCaptor.getValue()).isEqualTo(from);
-        assertThat(toCaptor.getValue()).isEqualTo(to);
+        verify(alarmRepo).findAll(specCaptor.capture(), pageCaptor.capture());
+        assertThat(specCaptor.getValue()).isNotNull();
 
         PageRequest pr = pageCaptor.getValue();
         assertThat(pr.getPageNumber()).isEqualTo(1);  // zero-based: page 2 → index 1

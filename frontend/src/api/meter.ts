@@ -20,6 +20,7 @@ export interface MeterDTO {
   influxTagKey: string;
   influxTagValue: string;
   enabled: boolean;
+  channelId: number | null;
   parentMeterId: number | null;
   createdAt: string;
   updatedAt: string;
@@ -34,6 +35,7 @@ export interface CreateMeterReq {
   influxTagKey: string;
   influxTagValue: string;
   enabled: boolean;
+  channelId?: number | null;
 }
 
 export interface UpdateMeterReq {
@@ -44,6 +46,7 @@ export interface UpdateMeterReq {
   influxTagKey: string;
   influxTagValue: string;
   enabled: boolean;
+  channelId?: number | null;
 }
 
 export interface BindParentMeterReq {

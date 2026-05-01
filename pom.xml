@@ -18,10 +18,15 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <testcontainers.version>1.20.1</testcontainers.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
         <jjwt.version>0.12.6</jjwt.version>
         <mapstruct.version>1.6.0</mapstruct.version>
         <spotbugs.version>4.8.6</spotbugs.version>
+        <!-- JDK 25 toolchain compatibility: Spring Boot 3.3.4 pins mockito 5.11.0 / byte-buddy
+             1.14.19 which can't instrument classes loaded by JDK 25 ("Could not modify all
+             classes"). Override to versions that bundle JDK-25-aware byte-buddy 1.17.x. -->
+        <mockito.version>5.18.0</mockito.version>
+        <byte-buddy.version>1.17.5</byte-buddy.version>
     </properties>
 
     <modules>
@@ -86,7 +91,7 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.12</version>
+                <version>0.8.13</version>
                 <executions>
                     <execution>
                         <goals><goal>prepare-agent</goal></goals>

@@ -24,6 +24,10 @@ import {
   type SetPointEntry,
 } from '@/api/floorplan';
 import { meterApi, type MeterDTO } from '@/api/meter';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { useThemeStore } from '@/stores/themeStore';
+import { floorplanTokens } from '@/utils/floorplanTokens';
 
 interface PointDraft {
   meterId: number;
@@ -42,12 +46,12 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-const POINT_COLOR = '#1677ff';
-const SELECTED_COLOR = '#fa8c16';
-
 export default function FloorplanEditorPage() {
+  useDocumentTitle('设备分布图 - 编辑');
   const { message } = App.useApp();
   const { id } = useParams();
+  const mode = useThemeStore((s) => s.mode);
+  const tokens = floorplanTokens(mode);
   const fpId = Number(id);
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -155,154 +159,157 @@ export default function FloorplanEditorPage() {
   if (!data) return null;
 
   return (
-    <Card
-      title={
-        <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/floorplan')}>
-            返回列表
-          </Button>
-          <Typography.Text strong>编辑：{data.floorplan.name}</Typography.Text>
-        </Space>
-      }
-      extra={
-        <Space>
-          <Select
-            allowClear
-            showSearch
-            placeholder="选择测点放置"
-            style={{ width: 280 }}
-            value={pickMeter}
-            onChange={setPickMeter}
-            options={meters
-              .filter((m) => !points.find((p) => p.meterId === m.id))
-              .map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
-            filterOption={(input, option) =>
-              String(option?.label ?? '')
-                .toLowerCase()
-                .includes(input.toLowerCase())
-            }
-          />
-          <Button
-            type="primary"
-            icon={<SaveOutlined />}
-            onClick={handleSave}
-            loading={setPointsMut.isPending}
-          >
-            保存测点
-          </Button>
-        </Space>
-      }
-    >
-      <div ref={containerRef} style={{ width: '100%', background: '#fafafa' }}>
-        {img && (
-          <Stage
-            width={stageSize.width}
-            height={stageSize.height}
-            onClick={handleStageClick}
-            style={{ cursor: pickMeter ? 'crosshair' : 'default' }}
-          >
-            <Layer>
-              <KonvaImage image={img} width={stageSize.width} height={stageSize.height} />
-              {points.map((p, idx) => {
-                const x = p.xRatio * stageSize.width;
-                const y = p.yRatio * stageSize.height;
-                const meter = meterMap.get(p.meterId);
-                return (
-                  <Group
-                    key={idx}
-                    x={x}
-                    y={y}
-                    draggable
-                    onDragEnd={(e) => handlePointDrag(idx, e.target.x(), e.target.y())}
-                    onClick={(e) => {
-                      e.cancelBubble = true;
-                      setSelectedIdx(idx);
-                    }}
-                  >
-                    <Circle
-                      radius={10}
-                      fill={selectedIdx === idx ? SELECTED_COLOR : POINT_COLOR}
-                      stroke="white"
-                      strokeWidth={2}
-                    />
-                    <Text
-                      x={12}
-                      y={-6}
-                      text={p.label ?? meter?.code ?? `M${p.meterId}`}
-                      fontSize={12}
-                      fill="white"
-                      shadowColor="black"
-                      shadowBlur={3}
-                    />
-                  </Group>
-                );
-              })}
-            </Layer>
-          </Stage>
-        )}
-      </div>
-
+    <>
+      <PageHeader title="编辑设备分布图" />
       <Card
-        type="inner"
-        title={`已放置测点 (${points.length})`}
-        style={{ marginTop: 16 }}
-        size="small"
+        title={
+          <Space>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => nav('/floorplan')}>
+              返回列表
+            </Button>
+            <Typography.Text strong>编辑：{data.floorplan.name}</Typography.Text>
+          </Space>
+        }
+        extra={
+          <Space>
+            <Select
+              allowClear
+              showSearch
+              placeholder="选择测点放置"
+              style={{ width: 280 }}
+              value={pickMeter}
+              onChange={setPickMeter}
+              options={meters
+                .filter((m) => !points.find((p) => p.meterId === m.id))
+                .map((m) => ({ label: `${m.code} — ${m.name}`, value: m.id }))}
+              filterOption={(input, option) =>
+                String(option?.label ?? '')
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
+            />
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              onClick={handleSave}
+              loading={setPointsMut.isPending}
+            >
+              保存测点
+            </Button>
+          </Space>
+        }
       >
-        <Table<PointDraft & { idx: number }>
-          rowKey="idx"
+        <div ref={containerRef} style={{ width: '100%', background: '#fafafa' }}>
+          {img && (
+            <Stage
+              width={stageSize.width}
+              height={stageSize.height}
+              onClick={handleStageClick}
+              style={{ cursor: pickMeter ? 'crosshair' : 'default' }}
+            >
+              <Layer>
+                <KonvaImage image={img} width={stageSize.width} height={stageSize.height} />
+                {points.map((p, idx) => {
+                  const x = p.xRatio * stageSize.width;
+                  const y = p.yRatio * stageSize.height;
+                  const meter = meterMap.get(p.meterId);
+                  return (
+                    <Group
+                      key={idx}
+                      x={x}
+                      y={y}
+                      draggable
+                      onDragEnd={(e) => handlePointDrag(idx, e.target.x(), e.target.y())}
+                      onClick={(e) => {
+                        e.cancelBubble = true;
+                        setSelectedIdx(idx);
+                      }}
+                    >
+                      <Circle
+                        radius={10}
+                        fill={selectedIdx === idx ? tokens.deviceStrokeAlarm : tokens.deviceStroke}
+                        stroke={tokens.deviceFill}
+                        strokeWidth={2}
+                      />
+                      <Text
+                        x={12}
+                        y={-6}
+                        text={p.label ?? meter?.code ?? `M${p.meterId}`}
+                        fontSize={12}
+                        fill={tokens.labelText}
+                        shadowColor="black"
+                        shadowBlur={3}
+                      />
+                    </Group>
+                  );
+                })}
+              </Layer>
+            </Stage>
+          )}
+        </div>
+
+        <Card
+          type="inner"
+          title={`已放置测点 (${points.length})`}
+          style={{ marginTop: 16 }}
           size="small"
-          pagination={false}
-          dataSource={points.map((p, idx) => ({ ...p, idx }))}
-          columns={[
-            {
-              title: '测点',
-              dataIndex: 'meterId',
-              render: (mid: number) => {
-                const m = meterMap.get(mid);
-                return m ? `${m.code} — ${m.name}` : `#${mid}`;
+        >
+          <Table<PointDraft & { idx: number }>
+            rowKey="idx"
+            size="small"
+            pagination={false}
+            dataSource={points.map((p, idx) => ({ ...p, idx }))}
+            columns={[
+              {
+                title: '测点',
+                dataIndex: 'meterId',
+                render: (mid: number) => {
+                  const m = meterMap.get(mid);
+                  return m ? `${m.code} — ${m.name}` : `#${mid}`;
+                },
               },
-            },
-            {
-              title: '位置 (x, y)',
-              render: (_, p) => `(${p.xRatio.toFixed(3)}, ${p.yRatio.toFixed(3)})`,
-            },
-            {
-              title: '标签',
-              dataIndex: 'label',
-              render: (_, p) => (
-                <Input
-                  size="small"
-                  value={p.label ?? ''}
-                  style={{ width: 160 }}
-                  onChange={(e) =>
-                    setPoints((prev) =>
-                      prev.map((pt, i) => (i === p.idx ? { ...pt, label: e.target.value } : pt))
-                    )
-                  }
-                />
-              ),
-            },
-            {
-              title: '状态',
-              render: (_, p) => (selectedIdx === p.idx ? <Tag color="orange">选中</Tag> : null),
-            },
-            {
-              title: '操作',
-              width: 80,
-              render: (_, p) => (
-                <Popconfirm
-                  title="移除该测点？"
-                  onConfirm={() => setPoints((prev) => prev.filter((_, i) => i !== p.idx))}
-                >
-                  <Button size="small" danger icon={<DeleteOutlined />}>
-                    移除
-                  </Button>
-                </Popconfirm>
-              ),
-            },
-          ]}
-        />
+              {
+                title: '位置 (x, y)',
+                render: (_, p) => `(${p.xRatio.toFixed(3)}, ${p.yRatio.toFixed(3)})`,
+              },
+              {
+                title: '标签',
+                dataIndex: 'label',
+                render: (_, p) => (
+                  <Input
+                    size="small"
+                    value={p.label ?? ''}
+                    style={{ width: 160 }}
+                    onChange={(e) =>
+                      setPoints((prev) =>
+                        prev.map((pt, i) => (i === p.idx ? { ...pt, label: e.target.value } : pt))
+                      )
+                    }
+                  />
+                ),
+              },
+              {
+                title: '状态',
+                render: (_, p) => (selectedIdx === p.idx ? <Tag color="orange">选中</Tag> : null),
+              },
+              {
+                title: '操作',
+                width: 80,
+                render: (_, p) => (
+                  <Popconfirm
+                    title="移除该测点？"
+                    onConfirm={() => setPoints((prev) => prev.filter((_, i) => i !== p.idx))}
+                  >
+                    <Button size="small" danger icon={<DeleteOutlined />}>
+                      移除
+                    </Button>
+                  </Popconfirm>
+                ),
+              },
+            ]}
+          />
+        </Card>
       </Card>
-    </Card>
+    </>
   );
 }

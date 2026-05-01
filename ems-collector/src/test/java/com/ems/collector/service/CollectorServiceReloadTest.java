@@ -107,7 +107,7 @@ class CollectorServiceReloadTest {
         svc = new CollectorService(
                 new CollectorProperties(false, List.of(device("d1", 100))),
                 r -> {}, factory, Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP, null, null
+                DevicePoller.StateTransitionListener.NOOP, null, null, null, null
         );
         svc.start();
 
@@ -134,7 +134,7 @@ class CollectorServiceReloadTest {
         svc = new CollectorService(
                 new CollectorProperties(true, List.of(devs)),
                 r -> {}, factory, Clock.systemUTC(),
-                DevicePoller.StateTransitionListener.NOOP, null, null
+                DevicePoller.StateTransitionListener.NOOP, null, null, null, null
         );
         svc.start();
     }

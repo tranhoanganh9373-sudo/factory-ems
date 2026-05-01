@@ -10,6 +10,7 @@ import java.util.Map;
 public record AlarmDTO(
         Long id,
         Long deviceId,
+        String deviceType,
         String deviceCode,
         String deviceName,
         AlarmType alarmType,

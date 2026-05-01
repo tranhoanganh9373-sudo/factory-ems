@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, Table, Select, TreeSelect, Space, Empty, Tag, Button, App } from 'antd';
+import { Card, Table, Select, TreeSelect, Space, Empty, Button, App } from 'antd';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { DownloadOutlined } from '@ant-design/icons';
@@ -8,11 +8,14 @@ import { billsApi, type BillDTO, type BillPeriodStatus } from '@/api/bills';
 import { type EnergyTypeCode } from '@/api/cost';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { submitExport, pollExport, downloadBlob } from '@/api/reportPreset';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const PERIOD_STATUS_COLOR: Record<BillPeriodStatus, string> = {
-  OPEN: 'default',
-  CLOSED: 'success',
-  LOCKED: 'red',
+const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
+  OPEN: { tone: 'info', label: '开放' },
+  CLOSED: { tone: 'success', label: '已关闭' },
+  LOCKED: { tone: 'error', label: '已锁定' },
 };
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
@@ -43,6 +46,7 @@ function fmtNum(v: string | null): string {
 }
 
 export default function BillsListPage() {
+  useDocumentTitle('账单 - 列表');
   const { message } = App.useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialPeriodId = (() => {
@@ -145,117 +149,125 @@ export default function BillsListPage() {
   }
 
   return (
-    <Card
-      title="账单"
-      extra={
-        <Button
-          type="primary"
-          icon={<DownloadOutlined />}
-          loading={exporting}
-          disabled={!periodId}
-          onClick={handleExport}
-        >
-          导出 Excel (COST_MONTHLY)
-        </Button>
-      }
-    >
-      <Space wrap style={{ marginBottom: 16 }}>
-        <Select
-          placeholder="选择账期"
-          style={{ width: 240 }}
-          value={periodId}
-          onChange={setPeriodId}
-          options={periods.map((p) => ({
-            value: p.id,
-            label: (
-              <span>
-                {p.yearMonth} <Tag color={PERIOD_STATUS_COLOR[p.status]}>{p.status}</Tag>
-              </span>
-            ),
-          }))}
-        />
-        <TreeSelect
-          allowClear
-          placeholder="组织过滤"
-          treeData={buildTreeData(orgTree)}
-          treeDefaultExpandAll
-          style={{ width: 220 }}
-          value={orgNodeId}
-          onChange={setOrgNodeId}
-        />
-        <Select
-          allowClear
-          placeholder="能源过滤"
-          style={{ width: 160 }}
-          value={energyType}
-          onChange={setEnergyType}
-          options={[
-            { value: 'ELEC', label: '电' },
-            { value: 'WATER', label: '水' },
-            { value: 'GAS', label: '气' },
-            { value: 'STEAM', label: '汽' },
-            { value: 'OIL', label: '油' },
-          ]}
-        />
-      </Space>
+    <>
+      <PageHeader title="账单列表" />
+      <Card
+        extra={
+          <Button
+            type="primary"
+            icon={<DownloadOutlined />}
+            loading={exporting}
+            disabled={!periodId}
+            onClick={handleExport}
+          >
+            导出 Excel (COST_MONTHLY)
+          </Button>
+        }
+      >
+        <Space wrap style={{ marginBottom: 16 }}>
+          <Select
+            placeholder="选择账期"
+            style={{ width: 240 }}
+            value={periodId}
+            onChange={setPeriodId}
+            options={periods.map((p) => {
+              const cfg = PERIOD_STATUS[p.status] ?? {
+                tone: 'default' as StatusTone,
+                label: p.status,
+              };
+              return {
+                value: p.id,
+                label: (
+                  <span>
+                    {p.yearMonth} <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>
+                  </span>
+                ),
+              };
+            })}
+          />
+          <TreeSelect
+            allowClear
+            placeholder="组织过滤"
+            treeData={buildTreeData(orgTree)}
+            treeDefaultExpandAll
+            style={{ width: 220 }}
+            value={orgNodeId}
+            onChange={setOrgNodeId}
+          />
+          <Select
+            allowClear
+            placeholder="能源过滤"
+            style={{ width: 160 }}
+            value={energyType}
+            onChange={setEnergyType}
+            options={[
+              { value: 'ELEC', label: '电' },
+              { value: 'WATER', label: '水' },
+              { value: 'GAS', label: '气' },
+              { value: 'STEAM', label: '汽' },
+              { value: 'OIL', label: '油' },
+            ]}
+          />
+        </Space>
 
-      {!periodId ? (
-        <Empty description="选一个账期" />
-      ) : bills.length === 0 && !isLoading ? (
-        <Empty description="该账期暂无账单（账期未关或无数据）" />
-      ) : (
-        <Table<BillDTO>
-          rowKey="id"
-          loading={isLoading}
-          dataSource={bills}
-          pagination={{ pageSize: 50 }}
-          scroll={{ x: 'max-content' }}
-          columns={[
-            {
-              title: 'ID',
-              dataIndex: 'id',
-              width: 80,
-              render: (id: number) => <Link to={`/bills/${id}`}>#{id}</Link>,
-            },
-            {
-              title: '组织',
-              dataIndex: 'orgNodeId',
-              width: 180,
-              render: (id: number) => orgNameById.get(id) ?? `#${id}`,
-            },
-            { title: '能源', dataIndex: 'energyType', width: 80 },
-            {
-              title: '用量',
-              dataIndex: 'quantity',
-              width: 100,
-              render: fmtNum,
-            },
-            { title: '尖', dataIndex: 'sharpAmount', width: 90, render: fmtNum },
-            { title: '峰', dataIndex: 'peakAmount', width: 90, render: fmtNum },
-            { title: '平', dataIndex: 'flatAmount', width: 90, render: fmtNum },
-            { title: '谷', dataIndex: 'valleyAmount', width: 90, render: fmtNum },
-            { title: '金额', dataIndex: 'amount', width: 100, render: fmtNum },
-            {
-              title: '产量',
-              dataIndex: 'productionQty',
-              width: 100,
-              render: (v: string | null) => (v == null ? '—' : fmtNum(v)),
-            },
-            {
-              title: '单位成本',
-              dataIndex: 'unitCost',
-              width: 110,
-              render: (v: string | null) => (v == null ? '—' : Number(v).toFixed(4)),
-            },
-            {
-              title: '更新',
-              dataIndex: 'updatedAt',
-              width: 160,
-              render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
-            },
-          ]}
-        />
-      )}
-    </Card>
+        {!periodId ? (
+          <Empty description="选一个账期" />
+        ) : bills.length === 0 && !isLoading ? (
+          <Empty description="该账期暂无账单（账期未关或无数据）" />
+        ) : (
+          <Table<BillDTO>
+            rowKey="id"
+            loading={isLoading}
+            dataSource={bills}
+            pagination={{ pageSize: 50 }}
+            scroll={{ x: 'max-content' }}
+            columns={[
+              {
+                title: 'ID',
+                dataIndex: 'id',
+                width: 80,
+                render: (id: number) => <Link to={`/bills/${id}`}>#{id}</Link>,
+              },
+              {
+                title: '组织',
+                dataIndex: 'orgNodeId',
+                width: 180,
+                render: (id: number) => orgNameById.get(id) ?? `#${id}`,
+              },
+              { title: '能源', dataIndex: 'energyType', width: 80 },
+              {
+                title: '用量',
+                dataIndex: 'quantity',
+                width: 100,
+                render: fmtNum,
+              },
+              { title: '尖', dataIndex: 'sharpAmount', width: 90, render: fmtNum },
+              { title: '峰', dataIndex: 'peakAmount', width: 90, render: fmtNum },
+              { title: '平', dataIndex: 'flatAmount', width: 90, render: fmtNum },
+              { title: '谷', dataIndex: 'valleyAmount', width: 90, render: fmtNum },
+              { title: '金额', dataIndex: 'amount', width: 100, render: fmtNum },
+              {
+                title: '产量',
+                dataIndex: 'productionQty',
+                width: 100,
+                render: (v: string | null) => (v == null ? '—' : fmtNum(v)),
+              },
+              {
+                title: '单位成本',
+                dataIndex: 'unitCost',
+                width: 110,
+                render: (v: string | null) => (v == null ? '—' : Number(v).toFixed(4)),
+              },
+              {
+                title: '更新',
+                dataIndex: 'updatedAt',
+                width: 160,
+                render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
+              },
+            ]}
+          />
+        )}
+      </Card>
+    </>
   );
 }

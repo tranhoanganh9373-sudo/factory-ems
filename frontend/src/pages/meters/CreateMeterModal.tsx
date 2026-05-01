@@ -2,6 +2,7 @@ import { Modal, Form, Input, Select, Switch, message } from 'antd';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { meterApi, CreateMeterReq } from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
+import { channelApi } from '@/api/channel';
 
 function flattenTree(nodes: OrgNodeDTO[]): OrgNodeDTO[] {
   const result: OrgNodeDTO[] = [];
@@ -29,6 +30,11 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
     queryFn: () => meterApi.listEnergyTypes(),
   });
 
+  const { data: channels = [] } = useQuery({
+    queryKey: ['channel', 'list'],
+    queryFn: () => channelApi.list(),
+  });
+
   const mut = useMutation({
     mutationFn: (req: CreateMeterReq) => meterApi.createMeter(req),
     onSuccess: () => {
@@ -41,7 +47,7 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
 
   return (
     <Modal
-      title="新建测点"
+      title="新增表计"
       open={open}
       onCancel={onClose}
       onOk={() =>
@@ -86,18 +92,23 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
             }))}
           />
         </Form.Item>
-        <Form.Item
-          name="influxMeasurement"
-          label="InfluxDB Measurement"
-          rules={[{ required: true, max: 128 }]}
-        >
+        <Form.Item name="influxMeasurement" label="测量名称" rules={[{ required: true, max: 128 }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="influxTagKey" label="Tag Key" rules={[{ required: true, max: 64 }]}>
+        <Form.Item name="influxTagKey" label="标签键" rules={[{ required: true, max: 64 }]}>
           <Input />
         </Form.Item>
-        <Form.Item name="influxTagValue" label="Tag Value" rules={[{ required: true, max: 128 }]}>
+        <Form.Item name="influxTagValue" label="标签值" rules={[{ required: true, max: 128 }]}>
           <Input />
+        </Form.Item>
+        <Form.Item name="channelId" label="关联通道">
+          <Select
+            allowClear
+            placeholder="可选；不绑则该测点不接收 collector 数据"
+            options={channels
+              .filter((c) => c.enabled)
+              .map((c) => ({ value: c.id, label: `${c.name} (${c.protocol})` }))}
+          />
         </Form.Item>
         <Form.Item name="enabled" label="启用" valuePropName="checked">
           <Switch />

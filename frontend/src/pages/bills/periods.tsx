@@ -1,30 +1,22 @@
 import { useState } from 'react';
-import {
-  Card,
-  Table,
-  Tag,
-  Button,
-  Space,
-  Modal,
-  Form,
-  Input,
-  message,
-  App,
-  DatePicker,
-} from 'antd';
+import { Card, Table, Button, Space, Modal, Form, Input, message, App, DatePicker } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import dayjs, { type Dayjs } from 'dayjs';
 import { billsApi, type BillPeriodDTO, type BillPeriodStatus } from '@/api/bills';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
-const STATUS_COLOR: Record<BillPeriodStatus, string> = {
-  OPEN: 'default',
-  CLOSED: 'success',
-  LOCKED: 'red',
+const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
+  OPEN: { tone: 'info', label: '开放' },
+  CLOSED: { tone: 'success', label: '已关闭' },
+  LOCKED: { tone: 'error', label: '已锁定' },
 };
 
 export default function BillPeriodsPage() {
+  useDocumentTitle('账单 - 账期管理');
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { canUnlockPeriod } = usePermissions();
@@ -133,127 +125,132 @@ export default function BillPeriodsPage() {
   };
 
   return (
-    <Card
-      title="账期管理"
-      extra={
-        <Button type="primary" onClick={() => setCreateOpen(true)}>
-          创建账期
-        </Button>
-      }
-    >
-      <Table<BillPeriodDTO>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={periods}
-        pagination={{ pageSize: 50 }}
-        columns={[
-          { title: 'ID', dataIndex: 'id', width: 80 },
-          { title: '账期', dataIndex: 'yearMonth', width: 100 },
-          {
-            title: '状态',
-            dataIndex: 'status',
-            width: 100,
-            render: (s: BillPeriodStatus) => <Tag color={STATUS_COLOR[s]}>{s}</Tag>,
-          },
-          {
-            title: '关闭',
-            dataIndex: 'closedAt',
-            width: 160,
-            render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'),
-          },
-          { title: '关闭人', dataIndex: 'closedBy', width: 90 },
-          {
-            title: '锁定',
-            dataIndex: 'lockedAt',
-            width: 160,
-            render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'),
-          },
-          { title: '锁定人', dataIndex: 'lockedBy', width: 90 },
-          {
-            title: '操作',
-            width: 360,
-            fixed: 'right',
-            render: (_, p) => (
-              <Space>
-                {p.status !== 'OPEN' && (
-                  <Button
-                    size="small"
-                    type="link"
-                    onClick={() => navigate(`/bills?periodId=${p.id}`)}
-                  >
-                    查看账单
-                  </Button>
-                )}
-                {p.status === 'OPEN' && (
-                  <Button
-                    size="small"
-                    type="primary"
-                    loading={closeMu.isPending}
-                    onClick={() => closeMu.mutate(p.id)}
-                  >
-                    关账期 + 生成账单
-                  </Button>
-                )}
-                {p.status === 'CLOSED' && (
-                  <>
+    <>
+      <PageHeader title="账期管理" />
+      <Card
+        extra={
+          <Button type="primary" onClick={() => setCreateOpen(true)}>
+            创建账期
+          </Button>
+        }
+      >
+        <Table<BillPeriodDTO>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={periods}
+          pagination={{ pageSize: 50 }}
+          columns={[
+            { title: 'ID', dataIndex: 'id', width: 80 },
+            { title: '账期', dataIndex: 'yearMonth', width: 100 },
+            {
+              title: '状态',
+              dataIndex: 'status',
+              width: 100,
+              render: (s: BillPeriodStatus) => {
+                const cfg = PERIOD_STATUS[s] ?? { tone: 'default' as StatusTone, label: s };
+                return <StatusTag tone={cfg.tone}>{cfg.label}</StatusTag>;
+              },
+            },
+            {
+              title: '关闭',
+              dataIndex: 'closedAt',
+              width: 160,
+              render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'),
+            },
+            { title: '关闭人', dataIndex: 'closedBy', width: 90 },
+            {
+              title: '锁定',
+              dataIndex: 'lockedAt',
+              width: 160,
+              render: (v: string | null) => (v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '—'),
+            },
+            { title: '锁定人', dataIndex: 'lockedBy', width: 90 },
+            {
+              title: '操作',
+              width: 360,
+              fixed: 'right',
+              render: (_, p) => (
+                <Space>
+                  {p.status !== 'OPEN' && (
                     <Button
                       size="small"
+                      type="link"
+                      onClick={() => navigate(`/bills?periodId=${p.id}`)}
+                    >
+                      查看账单
+                    </Button>
+                  )}
+                  {p.status === 'OPEN' && (
+                    <Button
+                      size="small"
+                      type="primary"
                       loading={closeMu.isPending}
                       onClick={() => closeMu.mutate(p.id)}
                     >
-                      重新生成
+                      关账期 + 生成账单
                     </Button>
+                  )}
+                  {p.status === 'CLOSED' && (
+                    <>
+                      <Button
+                        size="small"
+                        loading={closeMu.isPending}
+                        onClick={() => closeMu.mutate(p.id)}
+                      >
+                        重新生成
+                      </Button>
+                      <Button
+                        size="small"
+                        danger
+                        loading={lockMu.isPending}
+                        onClick={() => confirmLock(p)}
+                      >
+                        锁定
+                      </Button>
+                    </>
+                  )}
+                  {p.status === 'LOCKED' && (
                     <Button
                       size="small"
-                      danger
-                      loading={lockMu.isPending}
-                      onClick={() => confirmLock(p)}
+                      disabled={!canUnlockPeriod}
+                      loading={unlockMu.isPending}
+                      onClick={() => confirmUnlock(p)}
                     >
-                      锁定
+                      {canUnlockPeriod ? '解锁 (ADMIN)' : '已锁 (仅 ADMIN 可解)'}
                     </Button>
-                  </>
-                )}
-                {p.status === 'LOCKED' && (
-                  <Button
-                    size="small"
-                    disabled={!canUnlockPeriod}
-                    loading={unlockMu.isPending}
-                    onClick={() => confirmUnlock(p)}
-                  >
-                    {canUnlockPeriod ? '解锁 (ADMIN)' : '已锁 (仅 ADMIN 可解)'}
-                  </Button>
-                )}
-              </Space>
-            ),
-          },
-        ]}
-      />
+                  )}
+                </Space>
+              ),
+            },
+          ]}
+        />
 
-      <Modal
-        title="创建账期"
-        open={createOpen}
-        onCancel={() => setCreateOpen(false)}
-        onOk={() => {
-          if (!createMonth) {
-            message.error('请选择月份');
-            return;
-          }
-          ensureMu.mutate(createMonth.format('YYYY-MM'));
-        }}
-        confirmLoading={ensureMu.isPending}
-        destroyOnClose
-      >
-        <Form layout="vertical">
-          <Form.Item label="账期月份">
-            <DatePicker
-              picker="month"
-              value={createMonth}
-              onChange={setCreateMonth}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        <Modal
+          title="创建账期"
+          open={createOpen}
+          onCancel={() => setCreateOpen(false)}
+          onOk={() => {
+            if (!createMonth) {
+              message.error('请选择月份');
+              return;
+            }
+            ensureMu.mutate(createMonth.format('YYYY-MM'));
+          }}
+          confirmLoading={ensureMu.isPending}
+          destroyOnClose
+        >
+          <Form layout="vertical">
+            <Form.Item label="账期月份">
+              <DatePicker
+                picker="month"
+                value={createMonth}
+                onChange={setCreateMonth}
+                style={{ width: '100%' }}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </Card>
+    </>
   );
 }

@@ -15,6 +15,9 @@ import {
   Table,
   TimePicker,
 } from 'antd';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { translate, TARIFF_PERIOD_LABEL } from '@/utils/i18n-dict';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -50,9 +53,12 @@ interface PlanFormValues {
 function defaultPeriods(): PeriodFormValue[] {
   return PERIOD_TYPES.map((pt, i) => ({
     periodType: pt,
-    timeStart: dayjs().hour(i * 6).minute(0).second(0),
+    timeStart: dayjs()
+      .hour(i * 6)
+      .minute(0)
+      .second(0),
     timeEnd: dayjs()
-      .hour((i + 1) * 6 % 24)
+      .hour(((i + 1) * 6) % 24)
       .minute(0)
       .second(0),
     pricePerUnit: 1,
@@ -78,6 +84,7 @@ function wireToPeriods(ps: TariffPeriodDTO[]): PeriodFormValue[] {
 }
 
 export default function TariffPage() {
+  useDocumentTitle('电价方案');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [editing, setEditing] = useState<TariffPlanDTO | null>(null);
@@ -184,180 +191,181 @@ export default function TariffPage() {
   const open = creating || editing != null;
 
   return (
-    <Card
-      title="尖峰平谷电价"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新建电价方案
-        </Button>
-      }
-    >
-      <Table<TariffPlanDTO>
-        rowKey="id"
-        loading={isLoading}
-        dataSource={plans}
-        pagination={false}
-        columns={[
-          { title: '名称', dataIndex: 'name', width: 200 },
-          {
-            title: '能源类型',
-            dataIndex: 'energyTypeId',
-            width: 140,
-            render: (id: number) => energyTypeName.get(id) ?? id,
-          },
-          {
-            title: '生效期',
-            width: 220,
-            render: (_, p) =>
-              `${p.effectiveFrom} ~ ${p.effectiveTo || '∞'}`,
-          },
-          {
-            title: '24h 时段覆盖',
-            render: (_, p) => <TariffTimeline periods={p.periods} />,
-          },
-          {
-            title: '启用',
-            dataIndex: 'enabled',
-            width: 70,
-            render: (e: boolean) => (e ? '✓' : '—'),
-          },
-          {
-            title: '操作',
-            width: 160,
-            render: (_, p) => (
-              <Space>
-                <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(p)}>
-                  编辑
-                </Button>
-                <Popconfirm title={`确认删除 ${p.name}？`} onConfirm={() => deleteMut.mutate(p.id)}>
-                  <Button size="small" danger icon={<DeleteOutlined />}>
-                    删除
-                  </Button>
-                </Popconfirm>
-              </Space>
-            ),
-          },
-        ]}
-      />
-
-      <Modal
-        title={creating ? '新建电价方案' : `编辑：${editing?.name}`}
-        open={open}
-        width={760}
-        onOk={handleSubmit}
-        onCancel={() => {
-          setCreating(false);
-          setEditing(null);
-        }}
-        confirmLoading={createMut.isPending || updateMut.isPending}
-        destroyOnClose
+    <>
+      <PageHeader title="电价方案" />
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
+            新建电价方案
+          </Button>
+        }
       >
-        <Form<PlanFormValues> form={form} layout="vertical">
-          <Space style={{ display: 'flex' }}>
-            <Form.Item
-              name="name"
-              label="名称"
-              style={{ flex: 1 }}
-              rules={[{ required: true, max: 64 }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              name="energyTypeId"
-              label="能源类型"
-              rules={[{ required: true }]}
-            >
-              <Select
-                disabled={!creating}
-                style={{ width: 200 }}
-                options={energyTypes.map((e) => ({
-                  label: `${e.name} (${e.unit})`,
-                  value: e.id,
-                }))}
-              />
-            </Form.Item>
-          </Space>
-          <Space>
-            <Form.Item
-              name="effectiveFrom"
-              label="生效起"
-              rules={[{ required: true }]}
-            >
-              <DatePicker disabled={!creating} />
-            </Form.Item>
-            <Form.Item name="effectiveTo" label="生效止（可空）">
-              <DatePicker />
-            </Form.Item>
-            {!creating && (
-              <Form.Item name="enabled" label="启用" valuePropName="checked">
-                <Switch />
-              </Form.Item>
-            )}
-          </Space>
-
-          <Form.List
-            name="periods"
-            rules={[
-              {
-                validator: async (_, periods: PeriodFormValue[]) => {
-                  if (!periods?.length) throw new Error('至少需要 1 个时段');
-                },
-              },
-            ]}
-          >
-            {(fields, { add, remove }) => (
-              <>
-                <div style={{ marginBottom: 8, fontWeight: 500 }}>
-                  时段列表（SHARP/PEAK/FLAT/VALLEY，时段可跨零点）
-                </div>
-                {fields.map((f) => (
-                  <Space key={f.key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
-                    <Form.Item
-                      name={[f.name, 'periodType']}
-                      rules={[{ required: true }]}
-                    >
-                      <Select
-                        style={{ width: 100 }}
-                        options={PERIOD_TYPES.map((pt) => ({ label: pt, value: pt }))}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      name={[f.name, 'timeStart']}
-                      rules={[{ required: true }]}
-                    >
-                      <TimePicker format="HH:mm" minuteStep={15} />
-                    </Form.Item>
-                    <span>→</span>
-                    <Form.Item
-                      name={[f.name, 'timeEnd']}
-                      rules={[{ required: true }]}
-                    >
-                      <TimePicker format="HH:mm" minuteStep={15} />
-                    </Form.Item>
-                    <Form.Item
-                      name={[f.name, 'pricePerUnit']}
-                      rules={[{ required: true, type: 'number', min: 0 }]}
-                    >
-                      <InputNumber addonBefore="¥" min={0} step={0.01} style={{ width: 140 }} />
-                    </Form.Item>
-                    <Button danger type="text" onClick={() => remove(f.name)}>
-                      移除
+        <Table<TariffPlanDTO>
+          rowKey="id"
+          loading={isLoading}
+          dataSource={plans}
+          pagination={false}
+          columns={[
+            { title: '名称', dataIndex: 'name', width: 200 },
+            {
+              title: '能源类型',
+              dataIndex: 'energyTypeId',
+              width: 140,
+              render: (id: number) => energyTypeName.get(id) ?? id,
+            },
+            {
+              title: '生效期',
+              width: 220,
+              render: (_, p) => `${p.effectiveFrom} ~ ${p.effectiveTo || '∞'}`,
+            },
+            {
+              title: '24h 时段覆盖',
+              render: (_, p) => <TariffTimeline periods={p.periods} />,
+            },
+            {
+              title: '启用',
+              dataIndex: 'enabled',
+              width: 70,
+              render: (e: boolean) => (e ? '✓' : '—'),
+            },
+            {
+              title: '操作',
+              width: 160,
+              render: (_, p) => (
+                <Space>
+                  <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(p)}>
+                    编辑
+                  </Button>
+                  <Popconfirm
+                    title={`确认删除 ${p.name}？`}
+                    onConfirm={() => deleteMut.mutate(p.id)}
+                  >
+                    <Button size="small" danger icon={<DeleteOutlined />}>
+                      删除
                     </Button>
-                  </Space>
-                ))}
-                <Button type="dashed" onClick={() => add({
-                  periodType: 'FLAT',
-                  timeStart: dayjs().hour(0).minute(0),
-                  timeEnd: dayjs().hour(0).minute(0),
-                  pricePerUnit: 1,
-                })} block icon={<PlusOutlined />}>
-                  新增时段
-                </Button>
-              </>
-            )}
-          </Form.List>
-        </Form>
-      </Modal>
-    </Card>
+                  </Popconfirm>
+                </Space>
+              ),
+            },
+          ]}
+        />
+
+        <Modal
+          title={creating ? '新建电价方案' : `编辑：${editing?.name}`}
+          open={open}
+          width={760}
+          onOk={handleSubmit}
+          onCancel={() => {
+            setCreating(false);
+            setEditing(null);
+          }}
+          confirmLoading={createMut.isPending || updateMut.isPending}
+          destroyOnClose
+        >
+          <Form<PlanFormValues> form={form} layout="vertical">
+            <Space style={{ display: 'flex' }}>
+              <Form.Item
+                name="name"
+                label="名称"
+                style={{ flex: 1 }}
+                rules={[{ required: true, max: 64 }]}
+              >
+                <Input />
+              </Form.Item>
+              <Form.Item name="energyTypeId" label="能源类型" rules={[{ required: true }]}>
+                <Select
+                  disabled={!creating}
+                  style={{ width: 200 }}
+                  options={energyTypes.map((e) => ({
+                    label: `${e.name} (${e.unit})`,
+                    value: e.id,
+                  }))}
+                />
+              </Form.Item>
+            </Space>
+            <Space>
+              <Form.Item name="effectiveFrom" label="生效起" rules={[{ required: true }]}>
+                <DatePicker disabled={!creating} />
+              </Form.Item>
+              <Form.Item name="effectiveTo" label="生效止（可空）">
+                <DatePicker />
+              </Form.Item>
+              {!creating && (
+                <Form.Item name="enabled" label="启用" valuePropName="checked">
+                  <Switch />
+                </Form.Item>
+              )}
+            </Space>
+
+            <Form.List
+              name="periods"
+              rules={[
+                {
+                  validator: async (_, periods: PeriodFormValue[]) => {
+                    if (!periods?.length) throw new Error('至少需要 1 个时段');
+                  },
+                },
+              ]}
+            >
+              {(fields, { add, remove }) => (
+                <>
+                  <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                    时段列表（尖峰/高峰/平段/低谷，时段可跨零点）
+                  </div>
+                  {fields.map((f) => (
+                    <Space
+                      key={f.key}
+                      style={{ display: 'flex', marginBottom: 8 }}
+                      align="baseline"
+                    >
+                      <Form.Item name={[f.name, 'periodType']} rules={[{ required: true }]}>
+                        <Select
+                          style={{ width: 100 }}
+                          options={PERIOD_TYPES.map((pt) => ({
+                            label: translate(TARIFF_PERIOD_LABEL, pt),
+                            value: pt,
+                          }))}
+                        />
+                      </Form.Item>
+                      <Form.Item name={[f.name, 'timeStart']} rules={[{ required: true }]}>
+                        <TimePicker format="HH:mm" minuteStep={15} />
+                      </Form.Item>
+                      <span>→</span>
+                      <Form.Item name={[f.name, 'timeEnd']} rules={[{ required: true }]}>
+                        <TimePicker format="HH:mm" minuteStep={15} />
+                      </Form.Item>
+                      <Form.Item
+                        name={[f.name, 'pricePerUnit']}
+                        rules={[{ required: true, type: 'number', min: 0 }]}
+                      >
+                        <InputNumber addonBefore="¥" min={0} step={0.01} style={{ width: 140 }} />
+                      </Form.Item>
+                      <Button danger type="text" onClick={() => remove(f.name)}>
+                        移除
+                      </Button>
+                    </Space>
+                  ))}
+                  <Button
+                    type="dashed"
+                    onClick={() =>
+                      add({
+                        periodType: 'FLAT',
+                        timeStart: dayjs().hour(0).minute(0),
+                        timeEnd: dayjs().hour(0).minute(0),
+                        pricePerUnit: 1,
+                      })
+                    }
+                    block
+                    icon={<PlusOutlined />}
+                  >
+                    新增时段
+                  </Button>
+                </>
+              )}
+            </Form.List>
+          </Form>
+        </Modal>
+      </Card>
+    </>
   );
 }

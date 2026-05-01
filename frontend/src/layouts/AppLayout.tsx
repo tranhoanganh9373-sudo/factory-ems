@@ -1,20 +1,24 @@
-import { useMemo } from 'react';
-import { Layout, Menu, Avatar, Dropdown, Typography, Space } from 'antd';
+import { useMemo, useState } from 'react';
+import { Button, ConfigProvider, Layout, Menu, Avatar, Dropdown, Space } from 'antd';
 import {
   UserOutlined,
-  LogoutOutlined,
-  SettingOutlined,
-  ApiOutlined,
   DashboardOutlined,
   FileTextOutlined,
   DollarOutlined,
   AccountBookOutlined,
   BellOutlined,
+  SettingOutlined,
+  BuildOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { authApi } from '@/api/auth';
 import { AlarmBell } from '@/components/AlarmBell';
+import { BrandLockup } from '@/components/BrandLockup';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { useDensity } from '@/hooks/useDensity';
 
 const { Header, Sider, Content } = Layout;
 
@@ -22,38 +26,25 @@ export default function AppLayout() {
   const { user, clear, hasRole } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const density = useDensity();
+  const [collapsed, setCollapsed] = useState(false);
 
   const menuItems = useMemo(() => {
     const items: {
       key: string;
+      icon?: React.ReactNode;
       label: React.ReactNode;
       children?: { key: string; label: React.ReactNode }[];
     }[] = [
       {
         key: '/dashboard',
-        label: (
-          <Link to="/dashboard">
-            <DashboardOutlined /> 实时看板
-          </Link>
-        ),
-      },
-      { key: '/home', label: <Link to="/home">首页</Link> },
-      { key: '/orgtree', label: <Link to="/orgtree">组织树</Link> },
-      {
-        key: '/meters',
-        label: (
-          <Link to="/meters">
-            <ApiOutlined /> 测点管理
-          </Link>
-        ),
+        icon: <DashboardOutlined />,
+        label: <Link to="/dashboard">实时看板</Link>,
       },
       {
         key: 'report',
-        label: (
-          <span>
-            <FileTextOutlined /> 报表
-          </span>
-        ),
+        icon: <FileTextOutlined />,
+        label: '报表',
         children: [
           { key: '/report', label: <Link to="/report">即席查询</Link> },
           { key: '/report/daily', label: <Link to="/report/daily">日报</Link> },
@@ -63,37 +54,31 @@ export default function AppLayout() {
           { key: '/report/export', label: <Link to="/report/export">异步导出</Link> },
         ],
       },
-      { key: '/tariff', label: <Link to="/tariff">电价方案</Link> },
       {
         key: 'production',
+        icon: <BuildOutlined />,
         label: '生产',
         children: [
           { key: '/production/shifts', label: <Link to="/production/shifts">班次管理</Link> },
           { key: '/production/entry', label: <Link to="/production/entry">日产量录入</Link> },
         ],
       },
-      { key: '/floorplan', label: <Link to="/floorplan">平面图</Link> },
     ];
     if (hasRole('ADMIN') || hasRole('FINANCE')) {
       items.push({
         key: 'cost',
-        label: (
-          <span>
-            <DollarOutlined /> 成本分摊
-          </span>
-        ),
+        icon: <DollarOutlined />,
+        label: '成本分摊',
         children: [
+          { key: '/tariff', label: <Link to="/tariff">电价方案</Link> },
           { key: '/cost/rules', label: <Link to="/cost/rules">分摊规则</Link> },
           { key: '/cost/runs', label: <Link to="/cost/runs">分摊批次</Link> },
         ],
       });
       items.push({
         key: 'bills',
-        label: (
-          <span>
-            <AccountBookOutlined /> 账单
-          </span>
-        ),
+        icon: <AccountBookOutlined />,
+        label: '账单',
         children: [
           { key: '/bills', label: <Link to="/bills">账单列表</Link> },
           { key: '/bills/periods', label: <Link to="/bills/periods">账期管理</Link> },
@@ -103,11 +88,8 @@ export default function AppLayout() {
     if (hasRole('ADMIN') || hasRole('OPERATOR')) {
       items.push({
         key: 'alarms',
-        label: (
-          <span>
-            <BellOutlined /> 系统健康
-          </span>
-        ),
+        icon: <BellOutlined />,
+        label: '系统健康',
         children: [
           {
             key: '/alarms/health',
@@ -135,12 +117,16 @@ export default function AppLayout() {
     if (hasRole('ADMIN')) {
       items.push({
         key: 'admin',
-        label: '管理',
+        icon: <SettingOutlined />,
+        label: '系统管理',
         children: [
+          { key: '/meters', label: <Link to="/meters">测点管理</Link> },
+          { key: '/orgtree', label: <Link to="/orgtree">组织树</Link> },
+          { key: '/floorplan', label: <Link to="/floorplan">平面图</Link> },
+          { key: '/collector', label: <Link to="/collector">采集器状态</Link> },
           { key: '/admin/users', label: <Link to="/admin/users">用户</Link> },
           { key: '/admin/roles', label: <Link to="/admin/roles">角色</Link> },
           { key: '/admin/audit', label: <Link to="/admin/audit">审计日志</Link> },
-          { key: '/collector', label: <Link to="/collector">采集器状态</Link> },
         ],
       });
     }
@@ -149,17 +135,13 @@ export default function AppLayout() {
 
   const userMenu = {
     items: [
-      { key: 'profile', icon: <SettingOutlined />, label: <Link to="/profile">修改密码</Link> },
+      { key: 'profile', label: '个人中心', onClick: () => navigate('/profile') },
+      { type: 'divider' as const },
       {
         key: 'logout',
-        icon: <LogoutOutlined />,
         label: '退出登录',
         onClick: async () => {
-          try {
-            await authApi.logout();
-          } catch {
-            // ignore
-          }
+          await authApi.logout().catch(() => {});
           clear();
           navigate('/login');
         },
@@ -168,41 +150,64 @@ export default function AppLayout() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 24px',
-        }}
-      >
-        <Typography.Title level={4} style={{ color: 'white', margin: 0 }}>
-          工厂能源管理系统
-        </Typography.Title>
-        <Space size="middle">
-          <AlarmBell />
-          <Dropdown menu={userMenu} trigger={['click']}>
-            <span style={{ color: 'white', cursor: 'pointer' }}>
-              <Avatar icon={<UserOutlined />} /> {user?.displayName || user?.username}
-            </span>
-          </Dropdown>
-        </Space>
-      </Header>
-      <Layout>
-        <Sider width={220} theme="light">
-          <Menu
-            mode="inline"
-            selectedKeys={[location.pathname]}
-            defaultOpenKeys={['admin']}
-            items={menuItems}
-            style={{ height: '100%', borderRight: 0 }}
-          />
-        </Sider>
-        <Content style={{ padding: 24, background: '#fff', margin: 16 }}>
-          <Outlet />
-        </Content>
+    <ConfigProvider componentSize={density}>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 24px',
+            background: 'var(--ems-color-bg-header)',
+            height: 80,
+            lineHeight: '80px',
+          }}
+        >
+          <Space size="middle" align="center">
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              style={{ color: '#FFFFFF', fontSize: 18 }}
+            />
+            <BrandLockup variant="header" />
+          </Space>
+          <Space size="middle">
+            <ThemeToggle />
+            <AlarmBell />
+            <Dropdown menu={userMenu} placement="bottomRight">
+              <Space style={{ color: '#FFFFFF', cursor: 'pointer' }}>
+                <Avatar size="small" icon={<UserOutlined />} />
+                <span>{user?.username ?? '用户'}</span>
+              </Space>
+            </Dropdown>
+          </Space>
+        </Header>
+        <Layout>
+          <Sider
+            width={240}
+            collapsed={collapsed}
+            trigger={null}
+            theme="light"
+            style={{ background: 'var(--ems-color-bg-sider)' }}
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[location.pathname]}
+              items={menuItems}
+              style={{ borderInlineEnd: 0, paddingTop: 8 }}
+            />
+          </Sider>
+          <Content
+            style={{
+              padding: density === 'small' ? 16 : 24,
+              background: 'var(--ems-color-bg-page)',
+            }}
+          >
+            <Outlet />
+          </Content>
+        </Layout>
       </Layout>
-    </Layout>
+    </ConfigProvider>
   );
 }

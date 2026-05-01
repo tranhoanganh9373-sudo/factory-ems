@@ -79,7 +79,7 @@ export function BindParentModal({
 
   return (
     <Modal
-      title={`绑定父测点 — ${meter.code}`}
+      title="绑定上级"
       open={open}
       onCancel={onClose}
       footer={

@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useDashboardSearchParams } from '@/stores/dashboardFilter';
 import { alarmApi } from '@/api/alarm';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import FilterBar from './FilterBar';
 import KpiPanel from './KpiPanel';
 import RealtimeSeriesPanel from './RealtimeSeriesPanel';
@@ -18,6 +19,7 @@ import CostDistributionPanel from './CostDistributionPanel';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
+  useDocumentTitle('综合看板');
 
   const nav = useNavigate();
 

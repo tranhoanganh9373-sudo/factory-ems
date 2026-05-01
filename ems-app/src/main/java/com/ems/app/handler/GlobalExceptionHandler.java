@@ -1,5 +1,6 @@
 package com.ems.app.handler;
 
+import com.ems.app.observability.AppMetrics;
 import com.ems.core.constant.ErrorCode;
 import com.ems.core.dto.Result;
 import com.ems.core.exception.*;
@@ -23,6 +24,12 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    private final AppMetrics appMetrics;
+
+    public GlobalExceptionHandler(AppMetrics appMetrics) {
+        this.appMetrics = appMetrics;
+    }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<Result<?>> biz(BusinessException ex) {
@@ -129,7 +136,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Result<?>> unknown(Exception ex) {
+        // 必须先记日志再埋点：metrics 失败不能吞掉原异常的 stack trace（Key Invariant #2）。
         log.error("unhandled_ex", ex);
+        try {
+            appMetrics.incrementException(ex.getClass().getSimpleName());
+        } catch (Throwable metricsEx) {
+            log.warn("metrics increment failed (non-fatal): {}", metricsEx.toString());
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
             .body(Result.error(ErrorCode.INTERNAL_ERROR, "服务器错误，请联系管理员"));
     }

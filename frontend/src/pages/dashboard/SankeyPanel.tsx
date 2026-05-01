@@ -57,7 +57,7 @@ export default function SankeyPanel() {
   return (
     <div>
       <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>
-        能流 Sankey
+        能流图
       </Typography.Text>
       <ReactECharts option={buildOption(data)} style={{ height: 360 }} />
     </div>

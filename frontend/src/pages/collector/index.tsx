@@ -1,158 +1,174 @@
-import { App, Button, Card, Empty, Modal, Popconfirm, Space, Table, Tag, Tooltip, Typography } from 'antd';
-import { ReloadOutlined } from '@ant-design/icons';
+import { App as AntApp, Button, Card, Progress, Space, Table, Tag, Tooltip } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import { collectorApi, type DeviceState, type DeviceStatusDTO } from '@/api/collector';
+import 'dayjs/locale/zh-cn';
+import { useState } from 'react';
+import { collectorDiagApi, type ChannelRuntimeState } from '@/api/collectorDiag';
+import { channelApi, type ChannelDTO } from '@/api/channel';
+import { translate, COLLECTOR_PROTOCOL_LABEL, CONNECTION_STATE_LABEL } from '@/utils/i18n-dict';
+import { ChannelDetailDrawer } from './ChannelDetailDrawer';
+import { ChannelEditor } from './ChannelEditor';
+import { PageHeader } from '@/components/PageHeader';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 dayjs.extend(relativeTime);
+dayjs.locale('zh-cn');
 
-const STATE_COLOR: Record<DeviceState, string> = {
-  HEALTHY: 'success',
-  DEGRADED: 'warning',
-  UNREACHABLE: 'error',
+const STATE_COLORS: Record<string, string> = {
+  CONNECTED: 'green',
+  CONNECTING: 'gold',
+  DISCONNECTED: 'red',
+  ERROR: 'red',
 };
 
-const STATE_LABEL: Record<DeviceState, string> = {
-  HEALTHY: '正常',
-  DEGRADED: '降级',
-  UNREACHABLE: '不可达',
-};
-
-function fmtRelative(iso: string | null): string {
-  if (!iso) return '—';
-  return dayjs(iso).fromNow();
-}
-
-function fmtAbsolute(iso: string | null): string {
-  if (!iso) return '—';
-  return dayjs(iso).format('YYYY-MM-DD HH:mm:ss');
-}
-
-export default function CollectorStatusPage() {
-  const { message } = App.useApp();
+export default function CollectorPage() {
+  useDocumentTitle('数据采集');
+  const { message } = AntApp.useApp();
   const qc = useQueryClient();
-  const { data: running } = useQuery({
-    queryKey: ['collector', 'running'],
-    queryFn: collectorApi.running,
-    refetchInterval: 5_000,
-  });
-  const { data = [], isLoading } = useQuery({
-    queryKey: ['collector', 'status'],
-    queryFn: collectorApi.status,
-    refetchInterval: 5_000,
-    refetchIntervalInBackground: false,
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<ChannelDTO | undefined>(undefined);
+
+  const { data: states = [], isLoading } = useQuery({
+    queryKey: ['collector', 'state'],
+    queryFn: collectorDiagApi.list,
+    refetchInterval: 5000,
   });
 
-  const reloadMu = useMutation({
-    mutationFn: collectorApi.reload,
-    onSuccess: (r) => {
-      const summary =
-        `+${r.added.length} ~${r.modified.length} -${r.removed.length} ` +
-        `(unchanged ${r.unchanged})`;
-      Modal.success({
-        title: '重新加载完成',
-        content: (
-          <div>
-            <p style={{ marginBottom: 8 }}>{summary}</p>
-            {r.added.length > 0 && <p>新增：{r.added.join(', ')}</p>}
-            {r.modified.length > 0 && <p>修改：{r.modified.join(', ')}</p>}
-            {r.removed.length > 0 && <p>移除：{r.removed.join(', ')}</p>}
-          </div>
-        ),
-      });
+  const test = useMutation({
+    mutationFn: (id: number) => collectorDiagApi.test(id),
+    onSuccess: (res) => {
+      if (res.success) message.success(`测试成功 (${res.latencyMs ?? 0} ms)`);
+      else message.error(`测试失败：${res.message}`);
+    },
+  });
+
+  const reconnect = useMutation({
+    mutationFn: (id: number) => collectorDiagApi.reconnect(id),
+    onSuccess: () => {
+      message.success('已触发重连');
       qc.invalidateQueries({ queryKey: ['collector'] });
     },
-    onError: (e: unknown) => {
-      const msg = e instanceof Error ? e.message : 'reload 失败';
-      message.error(msg);
-    },
   });
 
+  const openEditor = async (channelId?: number) => {
+    if (channelId !== undefined) {
+      const ch = await channelApi.get(channelId);
+      setEditing(ch);
+    } else {
+      setEditing(undefined);
+    }
+    setEditorOpen(true);
+  };
+
   return (
-    <Card
-      title={
-        <Space>
-          <Typography.Text strong>采集器状态</Typography.Text>
-          {running && (
-            <Tag color={running.running ? 'green' : 'default'}>
-              {running.running ? `运行中 · ${running.deviceCount} 台设备` : '未运行'}
-            </Tag>
-          )}
-        </Space>
-      }
-      extra={
-        <Popconfirm
-          title="重新加载 collector.yml"
-          description="服务端会从磁盘重读配置；不变的 device 不受影响。"
-          onConfirm={() => reloadMu.mutate()}
-          okText="确认"
-        >
-          <Button icon={<ReloadOutlined />} loading={reloadMu.isPending} type="primary">
-            重新加载
+    <>
+      <PageHeader
+        title="数据采集"
+        extra={
+          <Button type="primary" onClick={() => openEditor()}>
+            新增通道
           </Button>
-        </Popconfirm>
-      }
-    >
-      {data.length === 0 && !isLoading ? (
-        <Empty description="无采集设备配置（ems.collector.devices 为空或 enabled=false）" />
-      ) : (
-        <Table<DeviceStatusDTO>
-          rowKey="deviceId"
-          dataSource={data}
+        }
+      />
+      <Card>
+        <Table<ChannelRuntimeState>
+          rowKey="channelId"
           loading={isLoading}
-          pagination={{ pageSize: 50 }}
+          dataSource={states}
           columns={[
-            { title: '设备 ID', dataIndex: 'deviceId', width: 160 },
-            { title: '关联测点', dataIndex: 'meterCode', width: 200 },
+            {
+              title: '协议',
+              dataIndex: 'protocol',
+              render: (p: string) => <Tag>{translate(COLLECTOR_PROTOCOL_LABEL, p)}</Tag>,
+            },
+            { title: '通道 ID', dataIndex: 'channelId', width: 80 },
             {
               title: '状态',
-              dataIndex: 'state',
-              width: 100,
-              render: (s: DeviceState) => <Tag color={STATE_COLOR[s]}>{STATE_LABEL[s]}</Tag>,
-            },
-            {
-              title: '上次读取',
-              dataIndex: 'lastReadAt',
-              width: 180,
-              render: (v: string | null) => (
-                <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
+              dataIndex: 'connState',
+              render: (s: string) => (
+                <Tag color={STATE_COLORS[s] ?? 'default'}>
+                  {translate(CONNECTION_STATE_LABEL, s)}
+                </Tag>
               ),
             },
             {
-              title: '上次状态切换',
-              dataIndex: 'lastTransitionAt',
-              width: 180,
-              render: (v: string | null) => (
-                <Tooltip title={fmtAbsolute(v)}>{fmtRelative(v)}</Tooltip>
-              ),
-            },
-            { title: '成功', dataIndex: 'successCount', width: 90 },
-            { title: '失败', dataIndex: 'failureCount', width: 90 },
-            {
-              title: '连错',
-              dataIndex: 'consecutiveErrors',
-              width: 80,
-              render: (n: number) => (n > 0 ? <Tag color="red">{n}</Tag> : <span>0</span>),
-            },
-            {
-              title: '最近错误',
-              dataIndex: 'lastError',
-              ellipsis: true,
-              render: (v: string | null) =>
-                v ? (
-                  <Tooltip title={v}>
-                    <Typography.Text type="danger" ellipsis style={{ maxWidth: 280 }}>
-                      {v}
-                    </Typography.Text>
+              title: '最近成功',
+              dataIndex: 'lastSuccessAt',
+              render: (t?: string) =>
+                t ? (
+                  <Tooltip title={dayjs(t).format('YYYY-MM-DD HH:mm:ss')}>
+                    {dayjs(t).fromNow()}
                   </Tooltip>
                 ) : (
-                  <span style={{ color: '#999' }}>—</span>
+                  '-'
                 ),
+            },
+            {
+              title: '24h 成功率',
+              render: (_, r) => {
+                const tot = r.successCount24h + r.failureCount24h;
+                const rate = tot ? (r.successCount24h / tot) * 100 : 100;
+                return (
+                  <Progress
+                    percent={Math.round(rate)}
+                    size="small"
+                    strokeColor={rate < 95 ? '#cf1322' : '#52c41a'}
+                  />
+                );
+              },
+            },
+            {
+              title: '平均延迟',
+              dataIndex: 'avgLatencyMs',
+              render: (v: number) => `${v} ms`,
+            },
+            {
+              title: '最后错误',
+              dataIndex: 'lastErrorMessage',
+              render: (m?: string) =>
+                m ? <Tooltip title={m}>{m.length > 30 ? `${m.slice(0, 30)}…` : m}</Tooltip> : '-',
+            },
+            {
+              title: '操作',
+              render: (_, r) => (
+                <Space>
+                  <Button
+                    size="small"
+                    onClick={() => test.mutate(r.channelId)}
+                    loading={test.isPending}
+                  >
+                    测试
+                  </Button>
+                  <Button
+                    size="small"
+                    onClick={() => reconnect.mutate(r.channelId)}
+                    loading={reconnect.isPending}
+                  >
+                    重连
+                  </Button>
+                  <Button size="small" type="link" onClick={() => openEditor(r.channelId)}>
+                    编辑
+                  </Button>
+                  <Button size="small" type="link" onClick={() => setDetailId(r.channelId)}>
+                    详情
+                  </Button>
+                </Space>
+              ),
             },
           ]}
         />
-      )}
-    </Card>
+      </Card>
+      <ChannelDetailDrawer channelId={detailId} onClose={() => setDetailId(null)} />
+      <ChannelEditor
+        channel={editing}
+        open={editorOpen}
+        onClose={() => {
+          setEditorOpen(false);
+          setEditing(undefined);
+        }}
+      />
+    </>
   );
 }

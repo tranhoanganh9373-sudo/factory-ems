@@ -1,0 +1,15 @@
+# SLO: Availability — 99.5% over 30 days
+# SLI = avg(up{job="factory-ems"}[30d])
+
+groups:
+  - name: slo-availability
+    interval: 60s
+    rules:
+      - record: ems:slo:availability:sli_30d
+        expr: avg_over_time(up{job="factory-ems"}[30d])
+      - record: ems:slo:availability:objective
+        expr: vector(0.995)
+      - record: ems:slo:availability:error_budget_remaining
+        # Range 0..1 — fraction of error budget left.
+        # When SLI == objective → 0; SLI == 1 → 1.
+        expr: clamp_min((ems:slo:availability:sli_30d - ems:slo:availability:objective) / (1 - ems:slo:availability:objective), 0)

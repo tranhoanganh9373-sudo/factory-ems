@@ -60,7 +60,7 @@ class MeterServiceUnitTest {
     void create_duplicateCode_throwsConflict() {
         when(meters.existsByCode("M1")).thenReturn(true);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", true)))
+                "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", true, null)))
             .isInstanceOf(BusinessException.class);
     }
 
@@ -70,7 +70,7 @@ class MeterServiceUnitTest {
         when(meters.existsByInfluxMeasurementAndInfluxTagKeyAndInfluxTagValue(
                 "energy", "meter", "M1")).thenReturn(true);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", true)))
+                "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", true, null)))
             .isInstanceOf(BusinessException.class);
     }
 
@@ -81,7 +81,7 @@ class MeterServiceUnitTest {
             .thenReturn(false);
         when(energyTypes.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 99L, 10L, "energy", "meter", "M1", true)))
+                "M1", "x", 99L, 10L, "energy", "meter", "M1", true, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -93,7 +93,7 @@ class MeterServiceUnitTest {
         when(energyTypes.findById(1L)).thenReturn(Optional.of(elec()));
         when(orgNodes.existsById(99L)).thenReturn(false);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 1L, 99L, "energy", "meter", "M1", true)))
+                "M1", "x", 1L, 99L, "energy", "meter", "M1", true, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -108,11 +108,29 @@ class MeterServiceUnitTest {
             .when(meters).save(any());
 
         var dto = svc.create(new CreateMeterReq(
-            "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", null));
+            "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", null, null));
 
         assert dto.id() == 42L;
         assert "ELEC".equals(dto.energyTypeCode());
         assert dto.enabled();
+    }
+
+    @Test
+    void create_withChannelId_persistsChannelId() {
+        when(meters.existsByCode("M1")).thenReturn(false);
+        when(meters.existsByInfluxMeasurementAndInfluxTagKeyAndInfluxTagValue(any(), any(), any()))
+            .thenReturn(false);
+        when(energyTypes.findById(1L)).thenReturn(Optional.of(elec()));
+        when(orgNodes.existsById(10L)).thenReturn(true);
+        org.mockito.ArgumentCaptor<Meter> captor = org.mockito.ArgumentCaptor.forClass(Meter.class);
+        doAnswer(inv -> { ((Meter) inv.getArgument(0)).setId(42L); return inv.getArgument(0); })
+            .when(meters).save(captor.capture());
+
+        var dto = svc.create(new CreateMeterReq(
+            "M1", "电表 1", 1L, 10L, "energy", "meter", "M1", true, 7L));
+
+        assert captor.getValue().getChannelId() == 7L;
+        assert dto.channelId() != null && dto.channelId() == 7L;
     }
 
     @Test
@@ -145,7 +163,7 @@ class MeterServiceUnitTest {
         when(meters.existsByInfluxMeasurementAndInfluxTagKeyAndInfluxTagValue("b", "k", "v"))
             .thenReturn(true);
         assertThatThrownBy(() -> svc.update(1L, new UpdateMeterReq(
-                "x", 1L, 10L, "b", "k", "v", true)))
+                "x", 1L, 10L, "b", "k", "v", true, null)))
             .isInstanceOf(BusinessException.class);
     }
 

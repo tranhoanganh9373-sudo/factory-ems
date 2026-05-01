@@ -1,12 +1,16 @@
 import { useState } from 'react';
-import { Card, Form, Input, Button, Typography, message } from 'antd';
+import { Form, Input, Button, message, Alert } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
+import { BrandLockup } from '@/components/BrandLockup';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 export default function LoginPage() {
+  useDocumentTitle('登录');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -14,44 +18,68 @@ export default function LoginPage() {
 
   const onFinish = async (v: { username: string; password: string }) => {
     setLoading(true);
+    setErrorMsg(null);
     try {
       const r = await authApi.login(v.username, v.password);
       setAuth({ accessToken: r.accessToken, user: r.user, expiresIn: r.expiresIn });
       message.success('登录成功');
       navigate(from, { replace: true });
-    } catch {
-      /* 拦截器已弹消息 */
+    } catch (e: unknown) {
+      setErrorMsg((e as { message?: string })?.message ?? '登录失败');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'linear-gradient(135deg, #001529 0%, #003a7a 100%)',
-      }}
-    >
-      <Card style={{ width: 380 }}>
-        <Typography.Title level={3} style={{ textAlign: 'center', marginBottom: 24 }}>
-          工厂能源管理系统
-        </Typography.Title>
-        <Form layout="vertical" onFinish={onFinish} autoComplete="off">
-          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input prefix={<UserOutlined />} placeholder="用户名" size="large" />
-          </Form.Item>
-          <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password prefix={<LockOutlined />} placeholder="密码" size="large" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading} block size="large">
-            登录
-          </Button>
-        </Form>
-      </Card>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <div
+        style={{
+          flex: '0 0 60%',
+          background: '#0E1A2B',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <BrandLockup variant="login" />
+      </div>
+      <div
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--ems-color-bg-container)',
+          padding: 32,
+        }}
+      >
+        <div style={{ width: 400, maxWidth: '100%' }}>
+          <h2 style={{ marginBottom: 24, fontSize: 20, fontWeight: 600 }}>登录系统</h2>
+          {errorMsg && <Alert type="error" message={errorMsg} style={{ marginBottom: 16 }} />}
+          <Form layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
+            <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+              <Input prefix={<UserOutlined />} placeholder="用户名" />
+            </Form.Item>
+            <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
+              <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} block>
+              登录
+            </Button>
+          </Form>
+          <div
+            style={{
+              marginTop: 32,
+              textAlign: 'center',
+              color: 'var(--ems-color-text-tertiary)',
+              fontSize: 12,
+            }}
+          >
+            © 2026 松羽科技集团 · 能源管理系统
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

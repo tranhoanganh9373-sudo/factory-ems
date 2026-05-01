@@ -25,6 +25,8 @@ import {
   type FloorplanDTO,
 } from '@/api/floorplan';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
   return nodes.map((n) => ({
@@ -42,6 +44,7 @@ interface UploadFormValues {
 }
 
 export default function FloorplanListPage() {
+  useDocumentTitle('设备分布图 - 列表');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -94,103 +97,105 @@ export default function FloorplanListPage() {
   }
 
   return (
-    <Card
-      title="平面图列表"
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-          上传新图
-        </Button>
-      }
-    >
-      {isLoading ? (
-        <Spin />
-      ) : list.length === 0 ? (
-        <Empty description="暂无平面图" />
-      ) : (
-        <Row gutter={[16, 16]}>
-          {list.map((f: FloorplanDTO) => (
-            <Col key={f.id} xs={24} sm={12} md={8} lg={6}>
-              <Card
-                hoverable
-                cover={
-                  <div
-                    style={{
-                      height: 160,
-                      background: `#f0f0f0 url(${floorplanImageUrl(f.id)}) center/contain no-repeat`,
-                    }}
-                  />
-                }
-                actions={[
-                  <Link key="edit" to={`/floorplan/editor/${f.id}`}>
-                    <EditOutlined /> 编辑测点
-                  </Link>,
-                  <Popconfirm
-                    key="del"
-                    title={`删除 ${f.name}？`}
-                    onConfirm={() => deleteMut.mutate(f.id)}
-                  >
-                    <a style={{ color: '#cf1322' }}>
-                      <DeleteOutlined /> 删除
-                    </a>
-                  </Popconfirm>,
-                ]}
-              >
-                <Card.Meta
-                  title={f.name}
-                  description={`${f.widthPx}×${f.heightPx} · ${(f.fileSizeBytes / 1024).toFixed(1)} KB`}
-                />
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-
-      <Modal
-        title="上传平面图"
-        open={open}
-        onOk={handleUpload}
-        confirmLoading={uploadMut.isPending}
-        onCancel={() => {
-          setOpen(false);
-          setPickedFile(null);
-        }}
-        destroyOnClose
+    <>
+      <PageHeader title="设备分布图" />
+      <Card
+        extra={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
+            上传新图
+          </Button>
+        }
       >
-        <Form<UploadFormValues> form={form} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true, max: 64 }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
-            <TreeSelect
-              treeData={buildTreeData(tree)}
-              treeDefaultExpandAll
-              showSearch
-              placeholder="选择车间"
-            />
-          </Form.Item>
-          <Form.Item label="图片文件" required>
-            <Upload
-              accept="image/*"
-              beforeUpload={(f) => {
-                setPickedFile(f);
-                return false;
-              }}
-              maxCount={1}
-              fileList={
-                pickedFile
-                  ? [{ uid: '-1', name: pickedFile.name, status: 'done', size: pickedFile.size }]
-                  : []
-              }
-              onRemove={() => setPickedFile(null)}
-            >
-              <Button icon={<PlusOutlined />}>选择文件</Button>
-            </Upload>
-            <Space style={{ marginTop: 4, color: '#888', fontSize: 12 }}>
-              支持 PNG/JPG/SVG 等图片格式
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-    </Card>
+        {isLoading ? (
+          <Spin />
+        ) : list.length === 0 ? (
+          <Empty description="暂无平面图" />
+        ) : (
+          <Row gutter={[16, 16]}>
+            {list.map((f: FloorplanDTO) => (
+              <Col key={f.id} xs={24} sm={12} md={8} lg={6}>
+                <Card
+                  hoverable
+                  cover={
+                    <div
+                      style={{
+                        height: 160,
+                        background: `#f0f0f0 url(${floorplanImageUrl(f.id)}) center/contain no-repeat`,
+                      }}
+                    />
+                  }
+                  actions={[
+                    <Link key="edit" to={`/floorplan/editor/${f.id}`}>
+                      <EditOutlined /> 编辑测点
+                    </Link>,
+                    <Popconfirm
+                      key="del"
+                      title={`删除 ${f.name}？`}
+                      onConfirm={() => deleteMut.mutate(f.id)}
+                    >
+                      <a style={{ color: '#cf1322' }}>
+                        <DeleteOutlined /> 删除
+                      </a>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <Card.Meta
+                    title={f.name}
+                    description={`${f.widthPx}×${f.heightPx} · ${(f.fileSizeBytes / 1024).toFixed(1)} KB`}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        )}
+
+        <Modal
+          title="上传平面图"
+          open={open}
+          onOk={handleUpload}
+          confirmLoading={uploadMut.isPending}
+          onCancel={() => {
+            setOpen(false);
+            setPickedFile(null);
+          }}
+          destroyOnClose
+        >
+          <Form<UploadFormValues> form={form} layout="vertical">
+            <Form.Item name="name" label="名称" rules={[{ required: true, max: 64 }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
+              <TreeSelect
+                treeData={buildTreeData(tree)}
+                treeDefaultExpandAll
+                showSearch
+                placeholder="选择车间"
+              />
+            </Form.Item>
+            <Form.Item label="图片文件" required>
+              <Upload
+                accept="image/*"
+                beforeUpload={(f) => {
+                  setPickedFile(f);
+                  return false;
+                }}
+                maxCount={1}
+                fileList={
+                  pickedFile
+                    ? [{ uid: '-1', name: pickedFile.name, status: 'done', size: pickedFile.size }]
+                    : []
+                }
+                onRemove={() => setPickedFile(null)}
+              >
+                <Button icon={<PlusOutlined />}>选择文件</Button>
+              </Upload>
+              <Space style={{ marginTop: 4, color: '#888', fontSize: 12 }}>
+                支持 PNG/JPG/SVG 等图片格式
+              </Space>
+            </Form.Item>
+          </Form>
+        </Modal>
+      </Card>
+    </>
   );
 }

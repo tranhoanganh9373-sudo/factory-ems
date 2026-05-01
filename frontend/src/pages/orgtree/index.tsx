@@ -7,6 +7,8 @@ import { CreateNodeModal } from './CreateNodeModal';
 import { EditNodeModal } from './EditNodeModal';
 import { MoveNodeModal } from './MoveNodeModal';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 
 interface DisplayNode {
   title: React.ReactNode;
@@ -16,6 +18,7 @@ interface DisplayNode {
 }
 
 export default function OrgTreePage() {
+  useDocumentTitle('组织树');
   const { isAdmin } = usePermissions();
   const qc = useQueryClient();
   const { data: tree = [] } = useQuery({
@@ -46,52 +49,62 @@ export default function OrgTreePage() {
     }));
 
   return (
-    <Card
-      title="组织树"
-      extra={
-        isAdmin && (
-          <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-              新建节点
-            </Button>
-            <Button icon={<EditOutlined />} disabled={!selected} onClick={() => setEditOpen(true)}>
-              编辑
-            </Button>
-            <Button icon={<SwapOutlined />} disabled={!selected} onClick={() => setMoveOpen(true)}>
-              移动
-            </Button>
-            <Popconfirm
-              title="确认删除？"
-              disabled={!selected}
-              onConfirm={() => selected && del.mutate(selected.id)}
-            >
-              <Button danger icon={<DeleteOutlined />} disabled={!selected}>
-                删除
+    <>
+      <PageHeader title="组织树" />
+      <Card
+        extra={
+          isAdmin && (
+            <Space>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+                新建节点
               </Button>
-            </Popconfirm>
-          </Space>
-        )
-      }
-    >
-      <Tree
-        treeData={toTreeData(tree)}
-        defaultExpandAll
-        onSelect={(_, info) => setSelected((info.node as unknown as DisplayNode).raw)}
-        selectedKeys={selected ? [String(selected.id)] : []}
-      />
-      {selected && (
-        <Typography.Paragraph style={{ marginTop: 16 }}>
-          当前选中：<b>{selected.name}</b> ({selected.code})
-        </Typography.Paragraph>
-      )}
-      <CreateNodeModal open={createOpen} parent={selected} onClose={() => setCreateOpen(false)} />
-      <EditNodeModal open={editOpen} node={selected} onClose={() => setEditOpen(false)} />
-      <MoveNodeModal
-        open={moveOpen}
-        node={selected}
-        tree={tree}
-        onClose={() => setMoveOpen(false)}
-      />
-    </Card>
+              <Button
+                icon={<EditOutlined />}
+                disabled={!selected}
+                onClick={() => setEditOpen(true)}
+              >
+                编辑
+              </Button>
+              <Button
+                icon={<SwapOutlined />}
+                disabled={!selected}
+                onClick={() => setMoveOpen(true)}
+              >
+                移动
+              </Button>
+              <Popconfirm
+                title="确认删除？"
+                disabled={!selected}
+                onConfirm={() => selected && del.mutate(selected.id)}
+              >
+                <Button danger icon={<DeleteOutlined />} disabled={!selected}>
+                  删除
+                </Button>
+              </Popconfirm>
+            </Space>
+          )
+        }
+      >
+        <Tree
+          treeData={toTreeData(tree)}
+          defaultExpandAll
+          onSelect={(_, info) => setSelected((info.node as unknown as DisplayNode).raw)}
+          selectedKeys={selected ? [String(selected.id)] : []}
+        />
+        {selected && (
+          <Typography.Paragraph style={{ marginTop: 16 }}>
+            当前选中：<b>{selected.name}</b> ({selected.code})
+          </Typography.Paragraph>
+        )}
+        <CreateNodeModal open={createOpen} parent={selected} onClose={() => setCreateOpen(false)} />
+        <EditNodeModal open={editOpen} node={selected} onClose={() => setEditOpen(false)} />
+        <MoveNodeModal
+          open={moveOpen}
+          node={selected}
+          tree={tree}
+          onClose={() => setMoveOpen(false)}
+        />
+      </Card>
+    </>
   );
 }

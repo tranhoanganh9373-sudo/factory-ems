@@ -10,7 +10,6 @@ import {
   Select,
   Space,
   Table,
-  Tag,
 } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
@@ -18,6 +17,9 @@ import { useSearchParams } from 'react-router-dom';
 import { alarmApi, type AlarmListItemDTO, type AlarmStatus, type AlarmType } from '@/api/alarm';
 import { useAuthStore } from '@/stores/authStore';
 import dayjs, { type Dayjs } from 'dayjs';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
+import { StatusTag } from '@/components/StatusTag';
 
 interface FilterValues {
   status?: AlarmStatus;
@@ -26,6 +28,7 @@ interface FilterValues {
 }
 
 export default function AlarmHistoryPage() {
+  useDocumentTitle('告警 - 历史');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { hasRole } = useAuthStore();
@@ -101,12 +104,21 @@ export default function AlarmHistoryPage() {
   };
 
   const statusTag = (s: AlarmStatus) => {
-    if (s === 'ACTIVE') return <Tag color="error">告警中</Tag>;
-    if (s === 'ACKED') return <Tag color="warning">已确认</Tag>;
-    return <Tag color="success">已恢复</Tag>;
+    const tone = s === 'ACTIVE' ? 'error' : s === 'ACKED' ? 'warning' : 'success';
+    const label = s === 'ACTIVE' ? '告警中' : s === 'ACKED' ? '已确认' : '已恢复';
+    return <StatusTag tone={tone}>{label}</StatusTag>;
   };
 
-  const typeText = (t: AlarmType) => (t === 'SILENT_TIMEOUT' ? '采集中断' : '连续失败');
+  const typeText = (t: AlarmType) => {
+    switch (t) {
+      case 'SILENT_TIMEOUT':
+        return '采集中断';
+      case 'CONSECUTIVE_FAIL':
+        return '连续失败';
+      case 'COMMUNICATION_FAULT':
+        return '通讯故障';
+    }
+  };
 
   const durationOf = (a: AlarmListItemDTO) => {
     const start = dayjs(a.triggeredAt);
@@ -119,7 +131,7 @@ export default function AlarmHistoryPage() {
 
   return (
     <div>
-      <h2>告警历史</h2>
+      <PageHeader title="告警历史" />
 
       <Card style={{ marginBottom: 16 }}>
         <Form<FilterValues>
@@ -149,6 +161,7 @@ export default function AlarmHistoryPage() {
               options={[
                 { value: 'SILENT_TIMEOUT', label: '采集中断' },
                 { value: 'CONSECUTIVE_FAIL', label: '连续失败' },
+                { value: 'COMMUNICATION_FAULT', label: '通讯故障' },
               ]}
               placeholder="全部"
             />

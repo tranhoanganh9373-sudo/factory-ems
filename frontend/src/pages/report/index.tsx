@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { App, Button, Card, Col, DatePicker, Divider, Form, Radio, Row, Select, Space } from 'antd';
 import { FileTextOutlined } from '@ant-design/icons';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { PageHeader } from '@/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { meterApi } from '@/api/meter';
@@ -41,6 +43,7 @@ function flattenOrgTree(
 
 // Note: /report endpoints are NOT ADMIN-gated — all authenticated roles may access.
 export default function ReportPage() {
+  useDocumentTitle('报表 - 即席查询');
   const { message } = App.useApp();
   const [form] = Form.useForm<FormValues>();
   const [submitting, setSubmitting] = useState(false);
@@ -132,115 +135,112 @@ export default function ReportPage() {
   }
 
   return (
-    <Card
-      title={
-        <>
-          <FileTextOutlined /> 报表导出
-        </>
-      }
-    >
-      <Form<FormValues>
-        form={form}
-        layout="vertical"
-        initialValues={{ granularity: 'DAY', mode: 'sync' }}
-      >
-        <Row gutter={16}>
-          <Col xs={24} md={12} lg={8}>
-            <Form.Item
-              name="timeRange"
-              label="时间范围"
-              rules={[{ required: true, message: '请选择时间范围' }]}
-            >
-              <RangePicker showTime style={{ width: '100%' }} />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={6} lg={4}>
-            <Form.Item name="granularity" label="聚合粒度" rules={[{ required: true }]}>
-              <Select
-                options={[
-                  { label: '小时', value: 'HOUR' },
-                  { label: '天', value: 'DAY' },
-                  { label: '月', value: 'MONTH' },
-                ]}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={6} lg={4}>
-            <Form.Item name="orgNodeId" label="组织节点">
-              <Select
-                allowClear
-                showSearch
-                placeholder="全部节点"
-                style={{ width: '100%' }}
-                options={orgTreeData.map((n) => ({ label: n.title, value: n.value }))}
-                filterOption={(input, option) =>
-                  String(option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12} lg={8}>
-            <Form.Item name="energyTypes" label="能源类型">
-              <Select
-                mode="multiple"
-                allowClear
-                placeholder="全部类型"
-                options={energyTypeList.map((e) => ({
-                  label: `${e.name} (${e.unit})`,
-                  value: e.code,
-                }))}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} md={12} lg={8}>
-            <Form.Item name="meterIds" label="测点">
-              <Select
-                mode="multiple"
-                allowClear
-                placeholder="全部测点"
-                options={filteredMeters.map((m) => ({
-                  label: `${m.code} — ${m.name}`,
-                  value: m.id,
-                }))}
-                filterOption={(input, option) =>
-                  String(option?.label ?? '')
-                    .toLowerCase()
-                    .includes(input.toLowerCase())
-                }
-                showSearch
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24}>
-            <Form.Item name="mode" label="导出模式">
-              <Radio.Group>
-                <Radio value="sync">同步导出</Radio>
-                <Radio value="async">异步任务</Radio>
-              </Radio.Group>
-            </Form.Item>
-          </Col>
-        </Row>
+    <>
+      <PageHeader title="即席查询" />
+      <Card>
+        <Form<FormValues>
+          form={form}
+          layout="vertical"
+          initialValues={{ granularity: 'DAY', mode: 'sync' }}
+        >
+          <Row gutter={16}>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item
+                name="timeRange"
+                label="时间范围"
+                rules={[{ required: true, message: '请选择时间范围' }]}
+              >
+                <RangePicker showTime style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6} lg={4}>
+              <Form.Item name="granularity" label="聚合粒度" rules={[{ required: true }]}>
+                <Select
+                  options={[
+                    { label: '小时', value: 'HOUR' },
+                    { label: '天', value: 'DAY' },
+                    { label: '月', value: 'MONTH' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6} lg={4}>
+              <Form.Item name="orgNodeId" label="组织节点">
+                <Select
+                  allowClear
+                  showSearch
+                  placeholder="全部节点"
+                  style={{ width: '100%' }}
+                  options={orgTreeData.map((n) => ({ label: n.title, value: n.value }))}
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="energyTypes" label="能源类型">
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="全部类型"
+                  options={energyTypeList.map((e) => ({
+                    label: `${e.name} (${e.unit})`,
+                    value: e.code,
+                  }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="meterIds" label="测点">
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="全部测点"
+                  options={filteredMeters.map((m) => ({
+                    label: `${m.code} — ${m.name}`,
+                    value: m.id,
+                  }))}
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '')
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                  showSearch
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24}>
+              <Form.Item name="mode" label="导出模式">
+                <Radio.Group>
+                  <Radio value="sync">同步导出</Radio>
+                  <Radio value="async">异步任务</Radio>
+                </Radio.Group>
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Form.Item>
-          <Space>
-            <Button
-              type="primary"
-              onClick={handleExport}
-              loading={submitting}
-              icon={<FileTextOutlined />}
-            >
-              导出
-            </Button>
-            <Button onClick={handleReset}>重置</Button>
-          </Space>
-        </Form.Item>
-      </Form>
+          <Form.Item>
+            <Space>
+              <Button
+                type="primary"
+                onClick={handleExport}
+                loading={submitting}
+                icon={<FileTextOutlined />}
+              >
+                导出
+              </Button>
+              <Button onClick={handleReset}>重置</Button>
+            </Space>
+          </Form.Item>
+        </Form>
 
-      <Divider />
+        <Divider />
 
-      <AsyncTaskList />
-    </Card>
+        <AsyncTaskList />
+      </Card>
+    </>
   );
 }

@@ -2,6 +2,7 @@ package com.ems.alarm.service.impl;
 
 import com.ems.alarm.config.AlarmProperties;
 import com.ems.alarm.entity.*;
+import com.ems.alarm.observability.AlarmMetrics;
 import com.ems.alarm.repository.AlarmRepository;
 import com.ems.alarm.service.AlarmDetector;
 import com.ems.alarm.service.AlarmDispatcher;
@@ -13,6 +14,7 @@ import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.MeterRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +23,7 @@ import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -37,11 +40,13 @@ public class AlarmDetectorImpl implements AlarmDetector {
     private final AlarmDispatcher dispatcher;
     private final AlarmProperties props;
     private final Clock clock;
+    private final AlarmMetrics metrics;
 
     public AlarmDetectorImpl(CollectorService collector, MeterRepository meters,
                              AlarmRepository alarms, ThresholdResolver thresholds,
                              AlarmStateMachine sm, AlarmDispatcher dispatcher,
-                             AlarmProperties props, Clock clock) {
+                             AlarmProperties props, @Qualifier("alarmClock") Clock clock,
+                             AlarmMetrics metrics) {
         this.collector = collector;
         this.meters = meters;
         this.alarms = alarms;
@@ -50,17 +55,40 @@ public class AlarmDetectorImpl implements AlarmDetector {
         this.dispatcher = dispatcher;
         this.props = props;
         this.clock = clock;
+        this.metrics = metrics == null ? AlarmMetrics.NOOP : metrics;
     }
 
     @Override
     @Scheduled(fixedDelayString = "#{${ems.alarm.poll-interval-seconds:60} * 1000}")
     public void scan() {
-        for (DeviceSnapshot snap : collector.snapshots()) {
-            try {
-                scanOne(snap);
-            } catch (Exception e) {
-                log.warn("Scan failed for device {}: {}", snap.deviceId(), e.getMessage(), e);
+        long startNanos = System.nanoTime();
+        try {
+            for (DeviceSnapshot snap : collector.snapshots()) {
+                try {
+                    scanOne(snap);
+                } catch (Exception e) {
+                    log.warn("Scan failed for device {}: {}", snap.deviceId(), e.getMessage(), e);
+                }
             }
+        } finally {
+            metrics.recordDetectorScan(Duration.ofNanos(System.nanoTime() - startNanos));
+            refreshActiveGauges();
+        }
+    }
+
+    /**
+     * 把 ACTIVE+ACKED 计数同步到 {@code ems.alarm.active.count{type}} gauge。
+     * <p>本方法在 {@link #scan()} 的 finally 块中调用——必须保证不抛出，
+     * 否则会吞掉 scan 主体的原异常（Java finally 抛出会覆盖 try 块的异常）。
+     */
+    private void refreshActiveGauges() {
+        try {
+            for (AlarmType t : AlarmType.values()) {
+                long count = alarms.countActiveByType(t);
+                metrics.setActive(t.name().toLowerCase(Locale.ROOT), count);
+            }
+        } catch (Throwable t) {
+            log.warn("refresh active alarm gauges failed: {}", t.toString());
         }
     }
 
@@ -112,6 +140,7 @@ public class AlarmDetectorImpl implements AlarmDetector {
         detail.put("snapshot_consecutive_errors", snap.consecutiveErrors());
         a.setDetail(detail);
         Alarm saved = alarms.save(a);
+        metrics.incrementCreated(type.name().toLowerCase(Locale.ROOT));
         dispatcher.dispatch(saved);
     }
 
@@ -123,6 +152,7 @@ public class AlarmDetectorImpl implements AlarmDetector {
         if (since.toSeconds() > props.suppressionWindowSeconds()) {
             sm.resolve(a, ResolvedReason.AUTO);
             alarms.save(a);
+            metrics.incrementResolved("auto");
             dispatcher.dispatchResolved(a);
         }
     }

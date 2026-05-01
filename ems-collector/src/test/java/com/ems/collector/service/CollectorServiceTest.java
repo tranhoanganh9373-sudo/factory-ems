@@ -69,6 +69,8 @@ class CollectorServiceTest {
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
                 null,
+                null,
+                null,
                 null
         );
         svc.start();
@@ -97,6 +99,8 @@ class CollectorServiceTest {
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
                 null,
+                null,
+                null,
                 null
         );
         svc.start();
@@ -119,6 +123,8 @@ class CollectorServiceTest {
                 factory,
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
+                null,
+                null,
                 null,
                 null
         );
@@ -148,6 +154,8 @@ class CollectorServiceTest {
                 r -> {}, factory, Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
                 null,
+                null,
+                null,
                 null
         );
         svc.start();
@@ -168,6 +176,8 @@ class CollectorServiceTest {
                 new CollectorProperties(true, List.of(device("dead", 50), device("alive", 50))),
                 r -> {}, factory, Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
+                null,
+                null,
                 null,
                 null
         );
@@ -191,6 +201,8 @@ class CollectorServiceTest {
                 dev -> new AlwaysSuccessMaster(new AtomicInteger()),
                 Clock.systemUTC(),
                 DevicePoller.StateTransitionListener.NOOP,
+                null,
+                null,
                 null,
                 null
         );
