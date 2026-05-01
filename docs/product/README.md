@@ -13,6 +13,30 @@
 
 ## 文档清单
 
+### 平台总览（系统级，2026-05-01 起）
+
+| 文档 | 受众 | 范围 |
+|------|------|------|
+| [product-overview.md](./product-overview.md) | 销售 / 客户决策者 / 项目方 | 产品介绍 + 价值主张 + 客户类型 + 平台架构 + 竞品对比 + 路线图 |
+| [feature-overview.md](./feature-overview.md) | 客户 / 实施 / 产品对接人 | 16 模块功能全景 + 4 个端到端业务流 + 模块矩阵速查 |
+| [user-guide.md](./user-guide.md) | 最终用户（4 个角色） | 角色 × 日常场景 + 跨角色协作流 + FAQ + 操作速查卡 |
+
+### 模块功能概览（按模块，2026-05-01 起）
+
+| 文档 | 模块 | 范围 |
+|------|------|------|
+| [orgtree-feature-overview.md](./orgtree-feature-overview.md) | 组织树 | 节点树 + 节点类型 + 路径 + 节点级权限的依据 |
+| [meter-feature-overview.md](./meter-feature-overview.md) | 仪表与计量 | 仪表档案 + 拓扑 + 阈值 + 维护模式 + InfluxDB 映射 |
+| [tariff-feature-overview.md](./tariff-feature-overview.md) | 电价 | 方案 + 时段 + 4 档位 + 生效期管理 + resolve 接口 |
+| [production-feature-overview.md](./production-feature-overview.md) | 班次与产量 | 班次定义 + 产量录入 + 单位产量能耗 |
+| [floorplan-feature-overview.md](./floorplan-feature-overview.md) | 平面图 | 底图 + 仪表挂点 + 实时态 + 编辑 |
+| [dashboard-feature-overview.md](./dashboard-feature-overview.md) | 仪表盘 | 10 个组件（KPI / 实时 / 构成 / Top N / Sankey / 平面图等）|
+| [report-feature-overview.md](./report-feature-overview.md) | 报表 | 5 张预设报表 + ad-hoc 同步 / 异步导出 + 矩阵 Excel/PDF |
+| [cost-feature-overview.md](./cost-feature-overview.md) | 成本分摊 | 三种算法（直分 / 权重 / 残差）+ 试算 + 正式 run |
+| [billing-feature-overview.md](./billing-feature-overview.md) | 账单 | 账期生命周期 OPEN/CLOSED/LOCKED + 账单明细 + 调账 |
+| [auth-audit-feature-overview.md](./auth-audit-feature-overview.md) | 认证 + 审计 | 4 角色 + 节点权限 + JWT + @Audited 切面 |
+| [platform-internals-overview.md](./platform-internals-overview.md) | 平台底座 | ems-core 公共件 + ems-timeseries InfluxDB rollup 三级聚合 |
+
 ### 子项目：采集中断告警（ems-alarm，2026-04-29 起）
 
 | 文档 | 受众 | 范围 | Phase 负责人 |
