@@ -40,6 +40,7 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Date;
 import java.util.List;
@@ -190,6 +191,40 @@ class OpcUaTransportIT {
             assertThat(sample.pointKey()).isEqualTo("currentTime");
             assertThat(sample.value()).isNotNull();
 
+        } finally {
+            transport.stop();
+        }
+    }
+
+    @Test
+    @DisplayName("SUBSCRIBE 模式端到端：订阅 CurrentTime，收到多个 sample")
+    void subscribeMode_receivesValueChange() throws Exception {
+        // Arrange
+        var collected = new ConcurrentLinkedQueue<Sample>();
+        SampleSink sink = collected::offer;
+
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:" + serverPort + "/ems-test",
+            SecurityMode.SIGN,
+            "client-cert-ref", null,
+            null, null,
+            null,  // pollInterval — SUBSCRIBE 不需要
+            List.of(new OpcUaPoint("currentTime", SERVER_STATUS_CURRENT_TIME,
+                SubscriptionMode.SUBSCRIBE, 500.0, null)));
+
+        var transport = new OpcUaTransport(secretResolver, certStore);
+        try {
+            // Act
+            transport.start(99L, cfg, sink);
+
+            // Assert — 等待最多 15 秒收到 >=2 个 sample（CurrentTime 每秒自动更新）
+            await().atMost(15, TimeUnit.SECONDS).until(() -> collected.size() >= 2);
+
+            var samples = new ArrayList<>(collected);
+            assertThat(samples).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(samples.get(0).pointKey()).isEqualTo("currentTime");
+            assertThat(samples.get(0).channelId()).isEqualTo(99L);
+            assertThat(samples.get(0).value()).isNotEqualTo(samples.get(1).value());
         } finally {
             transport.stop();
         }
