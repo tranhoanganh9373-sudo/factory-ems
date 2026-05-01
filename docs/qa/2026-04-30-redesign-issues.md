@@ -47,7 +47,7 @@
 
 | # | 严重度 | 问题 | 状态 |
 |---|---|---|---|
-| 1 | LOW | `frontend/src/assets/logo.png` 尺寸为 **12864 × 7720** 像素（3.5 MB），导致 Playwright headless 取整页 screenshot 时多次 5s 超时；亦超 Vite 500 KB 单 chunk 阈值告警的资源体量 | OPEN — 建议下采样到 ≤ 1024×616 或换 SVG，dist 体积可降 ~3.4 MB |
+| 1 | ~~LOW~~ | ~~`frontend/src/assets/logo.png` 尺寸为 **12864 × 7720** 像素（3.5 MB）~~ | **RESOLVED** (`156aea7`) — sips -Z 1024 → 1024×614 / 102 KB，dist 减 3.4 MB；BrandLockup 显示尺寸（240×144 login / 56-h header）下视觉无差 |
 | 2 | LOW | `main.tsx:27` `react-refresh/only-export-components` warning：`ThemedConfigProvider` 与 ReactDOM 渲染同文件 | OPEN — Vite HMR 优化提示，不影响生产；如需修可抽到 `src/styles/ThemedConfigProvider.tsx` |
 | 3 | INFO | K2 计划列「`/home`」实为 `<Route index>` → `/dashboard`，并非独立页 | DOCUMENTED — 行为符合预期，仅文档措辞偏差 |
 

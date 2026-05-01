@@ -10,10 +10,11 @@
  * 输出：docs/qa/screenshots/2026-04-30-redesign/{slug}-{light|dark}.png
  *
  * 实现笔记：
- * - logo.png 是 12864×7720 的巨型图，截图 pipeline 编码会超时；进每页前 remove
- *   所有 <img>，截图后页面状态丢弃，无副作用
  * - 主题通过 zustand persist 写 localStorage 后 reload 触发 React 重渲染
  * - 串行（worker=1，依赖 playwright.config.ts），共享一个 admin 会话
+ * - 历史保留：logo.png 曾为 12864×7720（3.5 MB）触发截图编码超时，已下采样
+ *   至 1024×614（commit 156aea7）；本脚本仍 remove `<img>` 作为防御层，避免
+ *   未来其它路由意外引入大图重现旧 bug
  */
 import { test, expect, type Page } from '@playwright/test';
 import path from 'node:path';
