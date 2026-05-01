@@ -20,6 +20,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -130,6 +131,9 @@ class OpcUaTransportTest {
             .start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
             .hasMessageNotContaining("certRef");
+
+        // SecretResolver 必须被调用，且使用的是 certRef
+        verify(resolver).resolve(certRef);
     }
 
     @Test

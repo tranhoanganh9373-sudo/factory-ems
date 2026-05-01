@@ -22,6 +22,7 @@ import org.eclipse.milo.opcua.stack.client.security.ClientCertificateValidator;
 import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
+import org.eclipse.milo.opcua.stack.core.types.enumerated.MessageSecurityMode;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.TimestampsToReturn;
 import org.eclipse.milo.opcua.stack.core.types.structured.EndpointDescription;
 import org.slf4j.Logger;
@@ -66,10 +67,18 @@ public final class OpcUaTransport implements Transport {
         this.certStore = certStore;
     }
 
+    /**
+     * 便利构造器，仅适用于 SecurityMode.NONE 配置或测试场景。
+     * SIGN/SIGN_AND_ENCRYPT 模式必须使用 {@link #OpcUaTransport(SecretResolver, OpcUaCertificateStore)}，
+     * 否则 start() 会抛 TransportException。
+     */
     public OpcUaTransport(SecretResolver secretResolver) {
         this(secretResolver, null);
     }
 
+    /**
+     * 仅供测试用的无参构造器。仅适用于 SecurityMode.NONE。
+     */
     public OpcUaTransport() {
         this(null, null);
     }
@@ -199,13 +208,16 @@ public final class OpcUaTransport implements Transport {
 
     /**
      * 构建基于 {@link OpcUaCertificateStore} 的服务端证书校验器。
-     * 若 certStore 未注入（向后兼容），则接受所有证书（仅 NONE 模式下不会到达此处）。
+     * certStore 必须非 null（由 start() 的前置断言保证，仅 SIGN/SIGN_AND_ENCRYPT 模式进入此处）。
      */
     private ClientCertificateValidator buildCertificateValidator() {
+        if (certStore == null) {
+            throw new TransportException(
+                "certStore required for SIGN mode (channelId=" + channelId + ")");
+        }
         return new ClientCertificateValidator() {
             @Override
             public void validateCertificateChain(List<X509Certificate> chain) throws UaException {
-                if (certStore == null) return;
                 X509Certificate serverCert = chain.get(0);
                 try {
                     if (!certStore.isTrusted(serverCert)) {
@@ -237,9 +249,9 @@ public final class OpcUaTransport implements Transport {
         return switch (mode) {
             case NONE -> policy.contains("None");
             case SIGN -> policy.contains("Basic256Sha256")
-                && ep.getSecurityMode().getValue() == 2;
+                && ep.getSecurityMode() == MessageSecurityMode.Sign;
             case SIGN_AND_ENCRYPT -> policy.contains("Basic256Sha256")
-                && ep.getSecurityMode().getValue() == 3;
+                && ep.getSecurityMode() == MessageSecurityMode.SignAndEncrypt;
         };
     }
 

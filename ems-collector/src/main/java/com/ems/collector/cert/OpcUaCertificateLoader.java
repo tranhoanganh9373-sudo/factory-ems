@@ -50,6 +50,9 @@ public final class OpcUaCertificateLoader {
             throw new TransportException("pem is empty");
         }
 
+        // 规范化行结束符，防止 Windows CRLF 导致 label group 捕获多余 \r
+        pem = pem.replace("\r\n", "\n").replace("\r", "\n");
+
         String certBlock    = extractBlock(pem, "CERTIFICATE");
         String keyBlock     = extractBlock(pem, "PRIVATE KEY");
         String encKeyBlock  = extractBlock(pem, "ENCRYPTED PRIVATE KEY");
@@ -100,11 +103,14 @@ public final class OpcUaCertificateLoader {
         if (keyPassword == null) {
             throw new TransportException("encrypted private key requires a password (certPasswordRef)");
         }
+        char[] pwd = keyPassword.toCharArray();
+        PBEKeySpec spec = null;
         try {
             var keyBytes = decodeBase64Body(encKeyBlock);
             var epki    = new EncryptedPrivateKeyInfo(keyBytes);
+            spec        = new PBEKeySpec(pwd);
             var skf     = SecretKeyFactory.getInstance(epki.getAlgName());
-            var pbeKey  = skf.generateSecret(new PBEKeySpec(keyPassword.toCharArray()));
+            var pbeKey  = skf.generateSecret(spec);
             var cipher  = Cipher.getInstance(epki.getAlgName());
             cipher.init(Cipher.DECRYPT_MODE, pbeKey, epki.getAlgParameters());
             var pkcs8Spec = epki.getKeySpec(cipher);
@@ -113,6 +119,9 @@ public final class OpcUaCertificateLoader {
             throw e;
         } catch (Exception e) {
             throw new TransportException("invalid encrypted private key: " + e.getMessage(), e);
+        } finally {
+            if (spec != null) spec.clearPassword();
+            java.util.Arrays.fill(pwd, '\0');
         }
     }
 
