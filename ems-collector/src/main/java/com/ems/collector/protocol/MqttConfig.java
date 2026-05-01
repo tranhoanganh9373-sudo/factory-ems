@@ -5,6 +5,9 @@ import jakarta.validation.constraints.*;
 import java.time.Duration;
 import java.util.List;
 
+/**
+ * MQTT 协议配置。事件驱动，{@link #pollInterval()} 永远返回 {@code null}。
+ */
 public record MqttConfig(
     @NotBlank String brokerUrl,
     @NotBlank String clientId,
