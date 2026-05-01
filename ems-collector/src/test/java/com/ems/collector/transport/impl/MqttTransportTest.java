@@ -143,6 +143,20 @@ class MqttTransportTest {
     }
 
     @Test
+    @DisplayName("resolveQosArray QoS 2 — 数组全部填充为 2")
+    void resolveQosArray_qos2_fillsAllSlots() {
+        var cfg = new MqttConfig(
+            "tcp://broker:1883", "ems-test", null, null, null,
+            2, true, Duration.ofSeconds(60),
+            List.of(
+                new MqttPoint("p1", "a/b", "$.v", null, null),
+                new MqttPoint("p2", "c/d", "$.v", null, null)
+            ));
+        int[] qos = MqttTransport.resolveQosArray(cfg, 2);
+        assertThat(qos).containsOnly(2).hasSize(2);
+    }
+
+    @Test
     @DisplayName("start 配 tlsCaCertRef 但 SecretResolver=null 抛 TransportException")
     void start_tlsCaCertRefWithoutResolver_throws() {
         var cfg = new MqttConfig(

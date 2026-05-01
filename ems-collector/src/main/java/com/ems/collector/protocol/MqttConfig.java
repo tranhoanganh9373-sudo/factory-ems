@@ -14,7 +14,7 @@ public record MqttConfig(
     String usernameRef,
     String passwordRef,
     String tlsCaCertRef,
-    @Min(0) @Max(1) int qos,
+    @Min(0) @Max(2) int qos,
     boolean cleanSession,
     @NotNull Duration keepAlive,
     @Valid @NotEmpty List<MqttPoint> points

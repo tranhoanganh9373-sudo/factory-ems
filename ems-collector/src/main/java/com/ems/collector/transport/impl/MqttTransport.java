@@ -142,9 +142,14 @@ public final class MqttTransport implements Transport {
 
     private void subscribe(MqttConfig cfg) throws MqttException {
         var topics = cfg.points().stream().map(MqttPoint::topic).distinct().toArray(String[]::new);
-        var qos = new int[topics.length];
+        client.subscribe(topics, resolveQosArray(cfg, topics.length)).waitForCompletion(SUBSCRIBE_TIMEOUT_MS);
+    }
+
+    /** Package-private for testing: builds the QoS array filled with cfg.qos(). */
+    static int[] resolveQosArray(MqttConfig cfg, int length) {
+        var qos = new int[length];
         Arrays.fill(qos, cfg.qos());
-        client.subscribe(topics, qos).waitForCompletion(SUBSCRIBE_TIMEOUT_MS);
+        return qos;
     }
 
     private void resubscribe(MqttConfig cfg) {

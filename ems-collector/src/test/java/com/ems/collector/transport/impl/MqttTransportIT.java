@@ -63,6 +63,37 @@ class MqttTransportIT {
         }
     }
 
+    @Test
+    @DisplayName("QoS 2 — 接收消息后通过 JsonPath 提取并推送 Sample")
+    void receivesAndExtractsViaJsonPath_qos2() throws Exception {
+        var resolver = noopResolver();
+        var url = "tcp://" + broker.getHost() + ":" + broker.getMappedPort(1883);
+        var cfg = new MqttConfig(url, "ems-test-qos2", null, null, null,
+            2, true, Duration.ofSeconds(60),
+            List.of(new MqttPoint("power", "sensors/+/power", "$.value", "kW", null)));
+
+        var samples = new ConcurrentLinkedQueue<Sample>();
+        var transport = new MqttTransport(resolver);
+        try {
+            transport.start(1L, cfg, samples::add);
+
+            var pub = new MqttClient(url, "publisher-qos2-" + System.nanoTime(), new MemoryPersistence());
+            pub.connect();
+            pub.publish("sensors/factory1/power",
+                new MqttMessage("{\"value\":42.0}".getBytes()));
+            pub.disconnect();
+            pub.close();
+
+            await().atMost(5, TimeUnit.SECONDS).until(() -> !samples.isEmpty());
+            var s = samples.peek();
+            assertThat(s.value()).isEqualTo(42.0);
+            assertThat(s.pointKey()).isEqualTo("power");
+            assertThat(s.tags()).containsEntry("topic", "sensors/factory1/power");
+        } finally {
+            transport.stop();
+        }
+    }
+
     private SecretResolver noopResolver() {
         return new SecretResolver() {
             @Override public String resolve(String r) { return ""; }
