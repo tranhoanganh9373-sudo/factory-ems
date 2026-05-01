@@ -145,7 +145,10 @@ public final class MqttTransport implements Transport {
         client.subscribe(topics, resolveQosArray(cfg, topics.length)).waitForCompletion(SUBSCRIBE_TIMEOUT_MS);
     }
 
-    /** Package-private for testing: builds the QoS array filled with cfg.qos(). */
+    /**
+     * 为给定 channel 配置构建 QoS 数组（每个 topic 一个槽位，全部填充 cfg.qos()）。
+     * Package-private for testing.
+     */
     static int[] resolveQosArray(MqttConfig cfg, int length) {
         var qos = new int[length];
         Arrays.fill(qos, cfg.qos());

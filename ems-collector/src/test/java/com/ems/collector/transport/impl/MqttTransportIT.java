@@ -79,8 +79,9 @@ class MqttTransportIT {
 
             var pub = new MqttClient(url, "publisher-qos2-" + System.nanoTime(), new MemoryPersistence());
             pub.connect();
-            pub.publish("sensors/factory1/power",
-                new MqttMessage("{\"value\":42.0}".getBytes()));
+            var msg = new MqttMessage("{\"value\":42.0}".getBytes());
+            msg.setQos(2);
+            pub.publish("sensors/factory1/power", msg);
             pub.disconnect();
             pub.close();
 

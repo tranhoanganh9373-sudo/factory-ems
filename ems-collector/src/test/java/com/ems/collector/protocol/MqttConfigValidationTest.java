@@ -3,6 +3,8 @@ package com.ems.collector.protocol;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,11 +18,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("MqttConfig Bean Validation")
 class MqttConfigValidationTest {
 
+    private static ValidatorFactory factory;
     private static Validator validator;
 
     @BeforeAll
     static void setUpValidator() {
-        validator = Validation.buildDefaultValidatorFactory().getValidator();
+        factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+    }
+
+    @AfterAll
+    static void tearDownValidator() {
+        factory.close();
     }
 
     private MqttConfig validBase(int qos) {
