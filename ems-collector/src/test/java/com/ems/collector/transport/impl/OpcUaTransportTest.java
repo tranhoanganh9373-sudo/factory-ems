@@ -1,5 +1,6 @@
 package com.ems.collector.transport.impl;
 
+import com.ems.collector.cert.OpcUaCertificateStore;
 import com.ems.collector.protocol.OpcUaConfig;
 import com.ems.collector.protocol.OpcUaPoint;
 import com.ems.collector.protocol.SecurityMode;
@@ -7,6 +8,7 @@ import com.ems.collector.protocol.SubscriptionMode;
 import com.ems.collector.protocol.VirtualConfig;
 import com.ems.collector.protocol.VirtualMode;
 import com.ems.collector.protocol.VirtualPoint;
+import com.ems.collector.secret.SecretResolver;
 import com.ems.collector.transport.TransportException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,9 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * OpcUaTransport 单元测试 — 不依赖 OPC UA server。
@@ -81,29 +86,54 @@ class OpcUaTransportTest {
     }
 
     @Test
-    @DisplayName("start SecurityMode.SIGN 抛 TransportException")
-    void start_securityModeSign_throws() {
+    @DisplayName("start SecurityMode.SIGN + certRef=null 抛 TransportException 含 certRef")
+    void start_securityModeSign_noCertRef_throws() {
         var cfg = new OpcUaConfig(
             "opc.tcp://localhost:99999", SecurityMode.SIGN,
             null, null, null, null, Duration.ofSeconds(1),
             List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
 
-        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+        assertThatThrownBy(() -> new OpcUaTransport(mock(SecretResolver.class), mock(OpcUaCertificateStore.class))
+            .start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
-            .hasMessageContaining("not implemented");
+            .hasMessageContaining("certRef");
     }
 
     @Test
-    @DisplayName("start SecurityMode.SIGN_AND_ENCRYPT 抛 TransportException")
-    void start_securityModeSignAndEncrypt_throws() {
+    @DisplayName("start SecurityMode.SIGN_AND_ENCRYPT + certRef=null 抛 TransportException 含 certRef")
+    void start_securityModeSignAndEncrypt_noCertRef_throws() {
         var cfg = new OpcUaConfig(
             "opc.tcp://localhost:99999", SecurityMode.SIGN_AND_ENCRYPT,
             null, null, null, null, Duration.ofSeconds(1),
             List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
 
-        assertThatThrownBy(() -> new OpcUaTransport().start(1L, cfg, s -> {}))
+        assertThatThrownBy(() -> new OpcUaTransport(mock(SecretResolver.class), mock(OpcUaCertificateStore.class))
+            .start(1L, cfg, s -> {}))
             .isInstanceOf(TransportException.class)
-            .hasMessageContaining("not implemented");
+            .hasMessageContaining("certRef");
+    }
+
+    @Test
+    @DisplayName("resolvePem: SIGN + certRef 存在 → SecretResolver 被调用并返回 PEM")
+    void resolvePem_sign_withCertRef_callsResolver() {
+        // Arrange
+        var certRef = "secret://opcua/client-cert";
+        var cfg = new OpcUaConfig(
+            "opc.tcp://localhost:99999", SecurityMode.SIGN,
+            certRef, null, null, null, Duration.ofSeconds(1),
+            List.of(new OpcUaPoint("p", "ns=2;i=1", SubscriptionMode.READ, null, null)));
+
+        var resolver = mock(SecretResolver.class);
+        when(resolver.resolve(certRef)).thenReturn("pem-content");
+
+        // Act & Assert — 在 DiscoveryClient 连接前已经 resolve，抛出的是网络错误（非 certRef 错误）
+        assertThatThrownBy(() -> new OpcUaTransport(resolver, mock(OpcUaCertificateStore.class))
+            .start(1L, cfg, s -> {}))
+            .isInstanceOf(TransportException.class)
+            .hasMessageNotContaining("certRef");
+
+        // SecretResolver 必须被调用，且使用的是 certRef
+        verify(resolver).resolve(certRef);
     }
 
     @Test

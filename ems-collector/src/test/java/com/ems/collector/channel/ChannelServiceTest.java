@@ -59,7 +59,7 @@ class ChannelServiceTest {
         int createCount = 0;
 
         RecordingFactory() {
-            super(null);
+            super(null, null);
         }
 
         void enqueue(Transport... ts) {
