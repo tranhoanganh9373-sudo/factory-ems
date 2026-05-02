@@ -1,0 +1,6 @@
+record_id,project,floor,panel,meter_tag,meter_model,unit_id,ct_ratio,install_date,installer,commissioner,voltage_check,current_check,power_check,energy_check,success_rate_24h,alarm_test,recovery_test,signoff_engineer,signoff_date,notes
+MOCK-ACC-001,MOCK-PROJ-001,1F,1F-MCC-01,1F-M-01,安科瑞 PZ72L-E4/C,1,200/5,2026-05-15,张三,李四,PASS,PASS,PASS,PASS,99.8,PASS,PASS,王五,2026-05-16,
+MOCK-ACC-002,MOCK-PROJ-001,1F,1F-MCC-01,1F-M-02,安科瑞 PZ72L-E4/C,2,200/5,2026-05-15,张三,李四,PASS,PASS,PASS,PASS,99.5,PASS,PASS,王五,2026-05-16,
+MOCK-ACC-003,MOCK-PROJ-001,2F,2F-MCC-01,2F-M-01,安科瑞 PZ72L-E4/C,1,400/5,2026-05-15,张三,李四,PASS,PASS,PASS,PASS,98.9,PASS,PASS,王五,2026-05-16,
+MOCK-ACC-004,MOCK-PROJ-001,3F,3F-MCC-01,3F-M-01,安科瑞 PZ72L-E4/C,1,400/5,2026-05-15,张三,李四,PASS,PASS,FAIL,PASS,95.2,PASS,PASS,王五,2026-05-16,功率为负-CT P1/P2 装反待返工
+MOCK-ACC-005,MOCK-PROJ-001,4F,4F-MCC-01,4F-M-01,安科瑞 APM810,1,800/5,2026-05-15,张三,李四,PASS,PASS,PASS,PASS,99.9,PASS,PASS,王五,2026-05-16,主进线表

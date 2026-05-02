@@ -1,0 +1,94 @@
+{
+  "_comment": "Factory EMS — 4 楼层 Modbus TCP 通道批量导入示例。每条对应一台串口服务器；测点表为示例（每楼层只列 1 块表），实际部署应按 meter-register-mapping-template.csv 展开。",
+  "_schema": "POST /api/v1/channel  (ADMIN role required)  see docs/api/collector-api.md §1.3",
+  "_synthetic": "All IPs and meter tags are placeholders. Replace before import.",
+  "channels": [
+    {
+      "name": "1F-MCC-485",
+      "protocol": "MODBUS_TCP",
+      "enabled": true,
+      "isVirtual": false,
+      "description": "1 楼配电室 RS-485 总线（串口服务器 USR-N510 #1）",
+      "protocolConfig": {
+        "protocol": "MODBUS_TCP",
+        "host": "10.0.1.11",
+        "port": 502,
+        "unitId": 1,
+        "pollInterval": "PT60S",
+        "timeout": "PT2S",
+        "points": [
+          {"key":"1F-M-01-voltage_a","registerKind":"HOLDING","address":40001,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"1F-M-01-voltage_b","registerKind":"HOLDING","address":40003,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"1F-M-01-voltage_c","registerKind":"HOLDING","address":40005,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"1F-M-01-current_a","registerKind":"HOLDING","address":40007,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"A"},
+          {"key":"1F-M-01-current_b","registerKind":"HOLDING","address":40009,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"A"},
+          {"key":"1F-M-01-current_c","registerKind":"HOLDING","address":40011,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"A"},
+          {"key":"1F-M-01-power_total","registerKind":"HOLDING","address":40013,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"kW"},
+          {"key":"1F-M-01-pf","registerKind":"HOLDING","address":40015,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":""},
+          {"key":"1F-M-01-freq","registerKind":"HOLDING","address":40017,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.01,"unit":"Hz"},
+          {"key":"1F-M-01-energy_total","registerKind":"HOLDING","address":40019,"quantity":2,"dataType":"U32","byteOrder":"ABCD","scale":0.01,"unit":"kWh"}
+        ]
+      }
+    },
+    {
+      "name": "2F-MCC-485",
+      "protocol": "MODBUS_TCP",
+      "enabled": true,
+      "isVirtual": false,
+      "description": "2 楼配电室 RS-485 总线（串口服务器 USR-N510 #2）",
+      "protocolConfig": {
+        "protocol": "MODBUS_TCP",
+        "host": "10.0.1.12",
+        "port": 502,
+        "unitId": 1,
+        "pollInterval": "PT60S",
+        "timeout": "PT2S",
+        "points": [
+          {"key":"2F-M-01-voltage_a","registerKind":"HOLDING","address":40001,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"2F-M-01-power_total","registerKind":"HOLDING","address":40013,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"kW"},
+          {"key":"2F-M-01-energy_total","registerKind":"HOLDING","address":40019,"quantity":2,"dataType":"U32","byteOrder":"ABCD","scale":0.01,"unit":"kWh"}
+        ]
+      }
+    },
+    {
+      "name": "3F-MCC-485",
+      "protocol": "MODBUS_TCP",
+      "enabled": true,
+      "isVirtual": false,
+      "description": "3 楼配电室 RS-485 总线（串口服务器 USR-N510 #3）",
+      "protocolConfig": {
+        "protocol": "MODBUS_TCP",
+        "host": "10.0.1.13",
+        "port": 502,
+        "unitId": 1,
+        "pollInterval": "PT60S",
+        "timeout": "PT2S",
+        "points": [
+          {"key":"3F-M-01-voltage_a","registerKind":"HOLDING","address":40001,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"3F-M-01-power_total","registerKind":"HOLDING","address":40013,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"kW"},
+          {"key":"3F-M-01-energy_total","registerKind":"HOLDING","address":40019,"quantity":2,"dataType":"U32","byteOrder":"ABCD","scale":0.01,"unit":"kWh"}
+        ]
+      }
+    },
+    {
+      "name": "4F-MCC-485",
+      "protocol": "MODBUS_TCP",
+      "enabled": true,
+      "isVirtual": false,
+      "description": "4 楼配电室 RS-485 总线（串口服务器 USR-N510 #4）",
+      "protocolConfig": {
+        "protocol": "MODBUS_TCP",
+        "host": "10.0.1.14",
+        "port": 502,
+        "unitId": 1,
+        "pollInterval": "PT60S",
+        "timeout": "PT2S",
+        "points": [
+          {"key":"4F-M-01-voltage_a","registerKind":"HOLDING","address":40001,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.1,"unit":"V"},
+          {"key":"4F-M-01-power_total","registerKind":"HOLDING","address":40013,"quantity":2,"dataType":"F32","byteOrder":"ABCD","scale":0.001,"unit":"kW"},
+          {"key":"4F-M-01-energy_total","registerKind":"HOLDING","address":40019,"quantity":2,"dataType":"U32","byteOrder":"ABCD","scale":0.01,"unit":"kWh"}
+        ]
+      }
+    }
+  ]
+}
