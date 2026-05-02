@@ -1,4 +1,5 @@
 import { Form, Input, InputNumber } from 'antd';
+import { DurationInput } from '@/components/DurationInput';
 import { ModbusPointsList } from './ModbusPointsList';
 
 export function ModbusTcpForm() {
@@ -15,11 +16,11 @@ export function ModbusTcpForm() {
       </Form.Item>
       <Form.Item
         name={['protocolConfig', 'pollInterval']}
-        label="轮询间隔（ISO-8601，例 PT5S）"
+        label="轮询间隔"
         rules={[{ required: true }]}
         initialValue="PT5S"
       >
-        <Input />
+        <DurationInput />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <ModbusPointsList fields={fields} ops={ops} />}

@@ -33,7 +33,8 @@ export const collectorDiagApi = {
   get: (id: number) =>
     apiClient.get<ChannelRuntimeState>(`/collector/${id}/state`).then((r) => r.data),
   test: (id: number) => apiClient.post<DiagTestResult>(`/collector/${id}/test`).then((r) => r.data),
-  reconnect: (id: number) => apiClient.post(`/collector/${id}/reconnect`).then((r) => r.data),
+  reconnect: (id: number) =>
+    apiClient.post<DiagTestResult>(`/collector/${id}/reconnect`).then((r) => r.data),
   recentSamples: (id: number, limit = 20) =>
     apiClient
       .get<RecentSample[]>(`/collector/${id}/recent-samples?limit=${limit}`)

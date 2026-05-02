@@ -1,4 +1,5 @@
 import { Alert, Form, Input, Select } from 'antd';
+import { DurationInput } from '@/components/DurationInput';
 import { SecretInput } from '@/components/SecretInput';
 import { OPCUA_SECURITY_MODE_LABEL } from '@/utils/i18n-dict';
 import { OpcUaPointsList } from './OpcUaPointsList';
@@ -37,11 +38,11 @@ export function OpcUaForm() {
       </Form.Item>
       <Form.Item
         name={['protocolConfig', 'pollInterval']}
-        label="轮询间隔（ISO-8601，例 PT5S）"
+        label="轮询间隔"
         rules={[{ required: true }]}
         initialValue="PT5S"
       >
-        <Input />
+        <DurationInput />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <OpcUaPointsList fields={fields} ops={ops} />}

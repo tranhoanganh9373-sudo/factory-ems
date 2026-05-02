@@ -1,4 +1,5 @@
 import { Button, Form, Input, Select, Space } from 'antd';
+import { DurationInput } from '@/components/DurationInput';
 import { VIRTUAL_MODE_LABEL } from '@/utils/i18n-dict';
 
 export function VirtualForm() {
@@ -6,11 +7,11 @@ export function VirtualForm() {
     <>
       <Form.Item
         name={['protocolConfig', 'pollInterval']}
-        label="轮询间隔（ISO-8601，例 PT1S）"
+        label="轮询间隔"
         rules={[{ required: true }]}
         initialValue="PT1S"
       >
-        <Input />
+        <DurationInput />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, { add, remove }) => (

@@ -25,7 +25,22 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
     if (open) {
       setProtocol(channel?.protocol ?? 'MODBUS_TCP');
       form.resetFields();
-      if (channel) form.setFieldsValue(channel);
+      if (channel) {
+        const value: ChannelDTO = { ...channel };
+        const cfg = channel.protocolConfig as Record<string, unknown> | undefined;
+        const points = cfg?.points;
+        if (channel.protocol === 'VIRTUAL' && Array.isArray(points)) {
+          value.protocolConfig = {
+            ...cfg,
+            points: points.map((p: Record<string, unknown>) => ({
+              ...p,
+              params:
+                p.params && typeof p.params === 'object' ? JSON.stringify(p.params) : p.params,
+            })),
+          };
+        }
+        form.setFieldsValue(value);
+      }
     }
   }, [channel, open, form]);
 
@@ -70,16 +85,14 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
             onClick={async () => {
               try {
                 const v = await form.validateFields();
-                const payload: Partial<ChannelDTO> = {
-                  ...v,
+                let protocolConfig: Record<string, unknown> = {
+                  ...(v.protocolConfig ?? {}),
                   protocol,
-                  isVirtual: protocol === 'VIRTUAL',
                 };
-                // VIRTUAL points.params 在表单里是 JSON 字符串 → 后端要 Map<String,Double>
                 if (protocol === 'VIRTUAL' && v.protocolConfig?.points) {
                   try {
-                    payload.protocolConfig = {
-                      ...v.protocolConfig,
+                    protocolConfig = {
+                      ...protocolConfig,
                       points: v.protocolConfig.points.map((p: Record<string, unknown>) => ({
                         ...p,
                         params: typeof p.params === 'string' ? JSON.parse(p.params) : p.params,
@@ -90,6 +103,12 @@ export function ChannelEditor({ channel, open, onClose }: Props) {
                     return;
                   }
                 }
+                const payload: Partial<ChannelDTO> = {
+                  ...v,
+                  protocol,
+                  isVirtual: protocol === 'VIRTUAL',
+                  protocolConfig,
+                };
                 save.mutate(payload);
               } catch {
                 // validation error: AntD 已显示

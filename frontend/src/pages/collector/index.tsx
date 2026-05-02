@@ -31,6 +31,8 @@ export default function CollectorPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelDTO | undefined>(undefined);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [reconnectingId, setReconnectingId] = useState<number | null>(null);
+  const [testingId, setTestingId] = useState<number | null>(null);
   const [batchOpen, setBatchOpen] = useState(false);
 
   const { data: states = [], isLoading } = useQuery({
@@ -45,14 +47,24 @@ export default function CollectorPage() {
       if (res.success) message.success(`测试成功 (${res.latencyMs ?? 0} ms)`);
       else message.error(`测试失败：${res.message}`);
     },
+    onSettled: () => setTestingId(null),
   });
 
   const reconnect = useMutation({
     mutationFn: (id: number) => collectorDiagApi.reconnect(id),
-    onSuccess: () => {
-      message.success('已触发重连');
-      qc.invalidateQueries({ queryKey: ['collector'] });
+    onSuccess: (res) => {
+      if (res.success) {
+        message.success(`重连成功 (${res.latencyMs ?? 0} ms)`);
+        qc.invalidateQueries({ queryKey: ['collector'] });
+      } else {
+        message.error(`重连失败：${res.message}`);
+      }
     },
+    onError: (err: unknown) => {
+      const msg = err instanceof Error ? err.message : '重连失败';
+      message.error(`重连失败：${msg}`);
+    },
+    onSettled: () => setReconnectingId(null),
   });
 
   const remove = useMutation({
@@ -125,11 +137,14 @@ export default function CollectorPage() {
             {
               title: '状态',
               dataIndex: 'connState',
-              render: (s: string) => (
-                <Tag color={STATE_COLORS[s] ?? 'default'}>
-                  {translate(CONNECTION_STATE_LABEL, s)}
-                </Tag>
-              ),
+              render: (s: string, r) => {
+                const effective = reconnectingId === r.channelId ? 'CONNECTING' : s;
+                return (
+                  <Tag color={STATE_COLORS[effective] ?? 'default'}>
+                    {translate(CONNECTION_STATE_LABEL, effective)}
+                  </Tag>
+                );
+              },
             },
             {
               title: '最近成功',
@@ -174,15 +189,23 @@ export default function CollectorPage() {
                 <Space>
                   <Button
                     size="small"
-                    onClick={() => test.mutate(r.channelId)}
-                    loading={test.isPending}
+                    onClick={() => {
+                      setTestingId(r.channelId);
+                      test.mutate(r.channelId);
+                    }}
+                    loading={testingId === r.channelId}
+                    disabled={testingId !== null && testingId !== r.channelId}
                   >
                     测试
                   </Button>
                   <Button
                     size="small"
-                    onClick={() => reconnect.mutate(r.channelId)}
-                    loading={reconnect.isPending}
+                    onClick={() => {
+                      setReconnectingId(r.channelId);
+                      reconnect.mutate(r.channelId);
+                    }}
+                    loading={reconnectingId === r.channelId}
+                    disabled={reconnectingId !== null && reconnectingId !== r.channelId}
                   >
                     重连
                   </Button>

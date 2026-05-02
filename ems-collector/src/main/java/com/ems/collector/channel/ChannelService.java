@@ -39,6 +39,25 @@ public class ChannelService {
     private final ChannelTransportFactory factory;
     private final SampleWriter sampleWriter;
     private final ConcurrentHashMap<Long, Transport> active = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, CycleAggregator> cycleAggs = new ConcurrentHashMap<>();
+
+    /**
+     * Per-channel 轮询周期聚合器：把一次轮询里多个点位的 sample 折叠成一次 success/failure，
+     * 让 24h 成功率反映"通讯周期级"健康度而不是"逐点"成功率。
+     *
+     * <p>周期边界判定：相邻 sample 间隔超过 {@link #CYCLE_GAP_NANOS} 即视为新周期开始，
+     * 此时把上一周期累计结果 commit 到 stateRegistry。
+     */
+    private static final class CycleAggregator {
+        long lastSampleNanos = 0;
+        int successCount = 0;
+        int failureCount = 0;
+        long sumLatencyMs = 0;
+        String lastError = null;
+    }
+
+    /** 200ms：modbus 多点 read 一般 &lt;100ms 完成，留 2× 余量。 */
+    private static final long CYCLE_GAP_NANOS = 200_000_000L;
 
     public ChannelService(ChannelRepository repo,
                           ChannelStateRegistry stateRegistry,
@@ -111,23 +130,24 @@ public class ChannelService {
         Transport t = factory.create(ch.getProtocol());
         stateRegistry.register(ch.getId(), ch.getProtocol());
         long startedAt = System.currentTimeMillis();
-        t.start(ch.getId(), ch.getProtocolConfig(), sample -> {
-            try {
-                sampleWriter.write(sample);
-            } catch (Exception e) {
-                log.warn("sampleWriter.write failed for channel={} point={}: {}",
-                        sample.channelId(), sample.pointKey(), e.getMessage());
-            }
-            if (sample.quality() == Quality.GOOD) {
-                stateRegistry.recordSuccess(sample.channelId(),
-                        System.currentTimeMillis() - startedAt);
-            } else {
-                // BAD / UNCERTAIN — 视为失败，避免 §9.6 5-strike 通信故障告警永远无法触发。
-                String err = sample.tags().getOrDefault("error",
-                        "quality=" + sample.quality());
-                stateRegistry.recordFailure(sample.channelId(), err);
-            }
-        });
+        CycleAggregator agg = cycleAggs.computeIfAbsent(ch.getId(), k -> new CycleAggregator());
+        try {
+            t.start(ch.getId(), ch.getProtocolConfig(), sample -> {
+                try {
+                    sampleWriter.write(sample);
+                } catch (Exception e) {
+                    log.warn("sampleWriter.write failed for channel={} point={}: {}",
+                            sample.channelId(), sample.pointKey(), e.getMessage());
+                }
+                long latencyMs = System.currentTimeMillis() - startedAt;
+                String err = sample.quality() == Quality.GOOD ? null
+                        : sample.tags().getOrDefault("error", "quality=" + sample.quality());
+                commitCycle(sample.channelId(), agg, sample.quality() == Quality.GOOD, latencyMs, err);
+            });
+        } catch (RuntimeException e) {
+            stateRegistry.recordFailure(ch.getId(), e.getMessage());
+            throw e;
+        }
         active.put(ch.getId(), t);
         log.info("channel {} ({}) started", ch.getName(), ch.getProtocol());
     }
@@ -140,6 +160,40 @@ public class ChannelService {
             } catch (Exception e) {
                 log.warn("stop channel {} error: {}", id, e.getMessage());
             }
+        }
+        cycleAggs.remove(id);
+    }
+
+    /**
+     * 把一次 sample 累入 per-channel 周期聚合器；当检测到新周期开始时，把上一周期累计结果
+     * commit 到 stateRegistry —— 整周期任一点失败 → 整周期算 failure，否则算 success。
+     */
+    private void commitCycle(Long channelId, CycleAggregator agg, boolean ok, long latencyMs, String err) {
+        synchronized (agg) {
+            long now = System.nanoTime();
+            long gap = now - agg.lastSampleNanos;
+            boolean hasPrior = agg.successCount > 0 || agg.failureCount > 0;
+            if (hasPrior && gap > CYCLE_GAP_NANOS) {
+                if (agg.failureCount == 0) {
+                    long avgLatency = agg.sumLatencyMs / Math.max(agg.successCount, 1);
+                    stateRegistry.recordSuccess(channelId, avgLatency);
+                } else {
+                    stateRegistry.recordFailure(channelId,
+                            agg.lastError != null ? agg.lastError : "cycle had failures");
+                }
+                agg.successCount = 0;
+                agg.failureCount = 0;
+                agg.sumLatencyMs = 0;
+                agg.lastError = null;
+            }
+            if (ok) {
+                agg.successCount++;
+                agg.sumLatencyMs += latencyMs;
+            } else {
+                agg.failureCount++;
+                if (err != null) agg.lastError = err;
+            }
+            agg.lastSampleNanos = now;
         }
     }
 

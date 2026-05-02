@@ -34,6 +34,14 @@ public class ChannelStateRegistry {
     /** 连续失败达到该阈值时发布 {@link ChannelFailureEvent}。 */
     static final int FAILURE_THRESHOLD = 5;
 
+    /**
+     * connState 转换的 hysteresis 阈值，避免 modbus 间歇通讯时 UI 在 CONNECTED/DISCONNECTED
+     * 之间高频抖动。DISCONNECTED → CONNECTED 需连续达标次数的成功；CONNECTED → DISCONNECTED
+     * 需连续达标次数的失败。CONNECTING（初始/重连）允许首次失败即切 DISCONNECTED，体现
+     * "正在判断连接是否成功"的语义。
+     */
+    static final int STATE_FLIP_THRESHOLD = 3;
+
     private final Map<Long, MutableState> states = new ConcurrentHashMap<>();
     private final Clock clock;
     private final ApplicationEventPublisher publisher;
@@ -55,16 +63,30 @@ public class ChannelStateRegistry {
     public void recordSuccess(Long id, long latencyMs) {
         MutableState s = states.get(id);
         if (s == null) return;
-        s.connState = ConnectionState.CONNECTED;
         s.lastSuccessAt = clock.instant();
-        s.counter.recordSuccess();
         s.recordLatency(latencyMs);
 
         boolean wasFault;
+        boolean shouldConnect;
+        boolean countAsSuccess;
         synchronized (s) {
             wasFault = s.faultRaised;
             s.consecutiveFailures = 0;
             s.faultRaised = false;
+            s.consecutiveSuccesses++;
+            shouldConnect = s.connState != ConnectionState.CONNECTED
+                    && s.consecutiveSuccesses >= STATE_FLIP_THRESHOLD;
+            if (shouldConnect) {
+                s.connState = ConnectionState.CONNECTED;
+            }
+            // 24h 成功率口径：以稳定 connState 为准。仍处于 DISCONNECTED/CONNECTING 时
+            // 即使本次 sample GOOD 也不视为"通道可用"，避免间歇通讯期间成功率虚高。
+            countAsSuccess = s.connState == ConnectionState.CONNECTED;
+        }
+        if (countAsSuccess) {
+            s.counter.recordSuccess();
+        } else {
+            s.counter.recordFailure();
         }
         if (wasFault) {
             safePublish(new ChannelRecoveredEvent(id, clock.instant()));
@@ -74,7 +96,6 @@ public class ChannelStateRegistry {
     public void recordFailure(Long id, String error) {
         MutableState s = states.get(id);
         if (s == null) return;
-        s.connState = ConnectionState.DISCONNECTED;
         s.lastFailureAt = clock.instant();
         s.lastErrorMessage = truncate(error);
         s.counter.recordFailure();
@@ -83,13 +104,21 @@ public class ChannelStateRegistry {
         int consecutiveSnapshot;
         String protocolSnapshot;
         String errorSnapshot;
+        boolean shouldDisconnect;
         synchronized (s) {
             s.consecutiveFailures++;
+            s.consecutiveSuccesses = 0;
             transitioned = s.consecutiveFailures == FAILURE_THRESHOLD && !s.faultRaised;
             if (transitioned) s.faultRaised = true;
             consecutiveSnapshot = s.consecutiveFailures;
             protocolSnapshot = s.protocol;
             errorSnapshot = s.lastErrorMessage;
+            shouldDisconnect = s.connState != ConnectionState.DISCONNECTED
+                    && (s.connState == ConnectionState.CONNECTING
+                        || s.consecutiveFailures >= STATE_FLIP_THRESHOLD);
+        }
+        if (shouldDisconnect) {
+            s.connState = ConnectionState.DISCONNECTED;
         }
         if (transitioned) {
             safePublish(new ChannelFailureEvent(
@@ -143,6 +172,8 @@ public class ChannelStateRegistry {
         int latencyCount = 0;
         /** 连续失败计数 — 由 synchronized(this) 保护。 */
         int consecutiveFailures = 0;
+        /** 连续成功计数 — 用于 connState hysteresis，由 synchronized(this) 保护。 */
+        int consecutiveSuccesses = 0;
         /** 当前是否已发布 fault 事件 — 由 synchronized(this) 保护，确保只发一次。 */
         boolean faultRaised = false;
         final Map<String, Object> protocolMeta = new ConcurrentHashMap<>();
