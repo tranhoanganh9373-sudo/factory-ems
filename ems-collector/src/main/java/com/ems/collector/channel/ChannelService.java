@@ -47,12 +47,16 @@ public class ChannelService {
      *
      * <p>周期边界判定：相邻 sample 间隔超过 {@link #CYCLE_GAP_NANOS} 即视为新周期开始，
      * 此时把上一周期累计结果 commit 到 stateRegistry。
+     *
+     * <p>{@code cycleStartNanos} 记录当前周期第一条 sample 的到达时刻；commit 时
+     * 用 {@code lastSampleNanos - cycleStartNanos} 表示该周期的实际采集耗时，
+     * 即"上报给 UI 的平均延迟"口径。
      */
     private static final class CycleAggregator {
+        long cycleStartNanos = 0;
         long lastSampleNanos = 0;
         int successCount = 0;
         int failureCount = 0;
-        long sumLatencyMs = 0;
         String lastError = null;
     }
 
@@ -129,7 +133,6 @@ public class ChannelService {
     private void startChannel(Channel ch) {
         Transport t = factory.create(ch.getProtocol());
         stateRegistry.register(ch.getId(), ch.getProtocol());
-        long startedAt = System.currentTimeMillis();
         CycleAggregator agg = cycleAggs.computeIfAbsent(ch.getId(), k -> new CycleAggregator());
         try {
             t.start(ch.getId(), ch.getProtocolConfig(), sample -> {
@@ -139,10 +142,9 @@ public class ChannelService {
                     log.warn("sampleWriter.write failed for channel={} point={}: {}",
                             sample.channelId(), sample.pointKey(), e.getMessage());
                 }
-                long latencyMs = System.currentTimeMillis() - startedAt;
                 String err = sample.quality() == Quality.GOOD ? null
                         : sample.tags().getOrDefault("error", "quality=" + sample.quality());
-                commitCycle(sample.channelId(), agg, sample.quality() == Quality.GOOD, latencyMs, err);
+                commitCycle(sample.channelId(), agg, sample.quality() == Quality.GOOD, err);
             });
         } catch (RuntimeException e) {
             stateRegistry.recordFailure(ch.getId(), e.getMessage());
@@ -167,28 +169,32 @@ public class ChannelService {
     /**
      * 把一次 sample 累入 per-channel 周期聚合器；当检测到新周期开始时，把上一周期累计结果
      * commit 到 stateRegistry —— 整周期任一点失败 → 整周期算 failure，否则算 success。
+     *
+     * <p>延迟口径：周期最后一条 sample 与第一条 sample 的时间差，即"通讯一轮的实际耗时"。
+     * 单点周期（虚拟通道、单寄存器 modbus）天然为 0；多点 modbus 反映总轮询时长。
      */
-    private void commitCycle(Long channelId, CycleAggregator agg, boolean ok, long latencyMs, String err) {
+    private void commitCycle(Long channelId, CycleAggregator agg, boolean ok, String err) {
         synchronized (agg) {
             long now = System.nanoTime();
             long gap = now - agg.lastSampleNanos;
             boolean hasPrior = agg.successCount > 0 || agg.failureCount > 0;
             if (hasPrior && gap > CYCLE_GAP_NANOS) {
                 if (agg.failureCount == 0) {
-                    long avgLatency = agg.sumLatencyMs / Math.max(agg.successCount, 1);
-                    stateRegistry.recordSuccess(channelId, avgLatency);
+                    long cycleDurationMs = (agg.lastSampleNanos - agg.cycleStartNanos) / 1_000_000L;
+                    stateRegistry.recordSuccess(channelId, cycleDurationMs);
                 } else {
                     stateRegistry.recordFailure(channelId,
                             agg.lastError != null ? agg.lastError : "cycle had failures");
                 }
                 agg.successCount = 0;
                 agg.failureCount = 0;
-                agg.sumLatencyMs = 0;
                 agg.lastError = null;
+                agg.cycleStartNanos = now;
+            } else if (!hasPrior) {
+                agg.cycleStartNanos = now;
             }
             if (ok) {
                 agg.successCount++;
-                agg.sumLatencyMs += latencyMs;
             } else {
                 agg.failureCount++;
                 if (err != null) agg.lastError = err;
