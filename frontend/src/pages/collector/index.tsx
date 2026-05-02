@@ -68,7 +68,9 @@ export default function CollectorPage() {
     mutationFn: (id: number) => collectorDiagApi.reconnect(id),
     onSuccess: (res) => {
       if (res.success) {
-        message.success(`重连成功 (${res.latencyMs ?? 0} ms)`);
+        // 后端 restart() 对 Modbus / OPC UA / MQTT 都是非阻塞的：start() 把 transport 起到
+        // 后台线程就返回。9ms 是指令下发耗时，不是连接建立耗时——别冒充"已连接"。
+        message.success('重连请求已下发，连接结果以状态列为准');
         qc.invalidateQueries({ queryKey: ['collector'] });
       } else {
         message.error(`重连失败：${res.message}`);
