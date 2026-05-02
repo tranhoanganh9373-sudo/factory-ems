@@ -13,7 +13,13 @@ import {
   Spin,
   message,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, ApartmentOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  ApartmentOutlined,
+  ImportOutlined,
+} from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import { meterApi, MeterDTO, MeterTopologyEdgeDTO } from '@/api/meter';
@@ -27,6 +33,7 @@ import { METER_STATE_LABEL, translate } from '@/utils/i18n-dict';
 import { CreateMeterModal } from './CreateMeterModal';
 import { EditMeterModal } from './EditMeterModal';
 import { BindParentModal } from './BindParentModal';
+import { MeterBatchImportModal } from './MeterBatchImportModal';
 
 // Flatten org tree to a map of id -> name
 function buildOrgMap(nodes: OrgNodeDTO[]): Map<number, string> {
@@ -82,6 +89,7 @@ export default function MetersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [bindOpen, setBindOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const [selectedMeter, setSelectedMeter] = useState<MeterDTO | null>(null);
 
   const {
@@ -303,9 +311,14 @@ export default function MetersPage() {
         title="表计管理"
         extra={
           isAdmin && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-              新建测点
-            </Button>
+            <Space>
+              <Button icon={<ImportOutlined />} onClick={() => setBatchOpen(true)}>
+                批量导入
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+                新建测点
+              </Button>
+            </Space>
           )
         }
       />
@@ -324,6 +337,7 @@ export default function MetersPage() {
         topology={topology}
         onClose={() => setBindOpen(false)}
       />
+      <MeterBatchImportModal open={batchOpen} onClose={() => setBatchOpen(false)} />
     </Card>
   );
 }

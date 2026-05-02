@@ -134,6 +134,22 @@ curl http://localhost:8888/actuator/health/liveness
 - [告警 Runbook](./docs/ops/alarm-runbook.md) ｜ [可观测性 Runbook](./docs/ops/observability-runbook.md) ｜ [账单 Runbook](./docs/ops/billing-runbook.md)
 - [Onboarding Checklist](./docs/ops/onboarding-checklist.md)
 
+### 现场上线 SOP（"装-通-看-警-钱-报-效" 全闭环）
+按顺序走完即可把一个新工厂从空白到月报自动化全部跑通：
+
+1. **选型**：[meter-selection-guide.md](./docs/install/meter-selection-guide.md) — ≤50 块表场景的 BOM + 采购清单
+2. **现场施工**：[field-installation-sop.md](./docs/install/field-installation-sop.md) — 10 步从勘测到 24h 验收
+3. **通道导入**：`scripts/csv-to-channels.py` + `scripts/import-channels.sh` — 把 meter mapping CSV 转通道 JSON 一键导入
+4. **仪表导入**：`scripts/csv-to-meters.py` + `scripts/import-meters.sh` — 自动解析 channelName→channelId 后批量注册 Meter（或前端 `/meters` 页"批量导入"按钮，v2 新增）
+5. **看板上线**：[dashboard-commissioning-sop.md](./docs/install/dashboard-commissioning-sop.md) — org-tree、平面图、KPI 配齐
+6. **5 分钟演示**：[dashboard-demo-quickstart.md](./docs/install/dashboard-demo-quickstart.md) + `scripts/demo-up.sh` — 客户参观 / 销售 demo 用
+7. **告警上线**：[alarm-commissioning-sop.md](./docs/install/alarm-commissioning-sop.md) — 断线告警 + Webhook 推钉钉/企微
+8. **账单上线**：[billing-commissioning-sop.md](./docs/install/billing-commissioning-sop.md) — 工业分时电价 + 内部分摊 + 账单 LOCK
+9. **月报自动化**：[report-automation-sop.md](./docs/install/report-automation-sop.md) + `scripts/monthly-report-mail.sh` — cron 每月 1 号自动 PDF + 邮件
+10. **生产能效**：[production-energy-sop.md](./docs/install/production-energy-sop.md) — 录产量 → 单位产品能耗 → 改造前后对比
+
+辅助：`scripts/backup.sh` + `scripts/restore.sh`（生产备份/恢复）。
+
 ### API 文档（面向集成开发）
 - [API 索引](./docs/api/README.md)
 - [告警 API](./docs/api/alarm-api.md) ｜ [采集 API](./docs/api/collector-api.md) ｜ [可观测性 API](./docs/api/observability-metrics-api.md)

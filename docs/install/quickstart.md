@@ -86,3 +86,21 @@ docker compose down -v   # 同时删掉数据卷
 | 拉代码慢 | 网络问题 | 设代理或换镜像源 |
 
 排查长一些的问题进生产部署文档：[installation-guide.md §10](./installation-guide.md)。
+
+---
+
+**相关文档**
+
+- 生产部署向导：[installation-guide.md](./installation-guide.md)
+- 完整安装手册（含可选项）：[installation-manual.md](./installation-manual.md)
+
+**装好之后按顺序上线（"装-通-看-警-钱-报-效"）**
+
+1. 选型：[meter-selection-guide.md](./meter-selection-guide.md)
+2. 现场施工：[field-installation-sop.md](./field-installation-sop.md)
+3. 看板上线：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
+4. 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
+5. 告警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+6. 账单上线：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
+7. 月报自动化：[report-automation-sop.md](./report-automation-sop.md)
+8. 生产能效：[production-energy-sop.md](./production-energy-sop.md)

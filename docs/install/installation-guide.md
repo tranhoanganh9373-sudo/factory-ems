@@ -479,6 +479,21 @@ tar czf debug-$(date +%Y%m%d).tgz debug.txt debug.log env.sanitized
 - 部署运维：[../ops/deployment.md](../ops/deployment.md)
 - nginx 配置：[../ops/nginx-setup.md](../ops/nginx-setup.md)
 - 观测栈部署：[../ops/observability-deployment.md](../ops/observability-deployment.md)
+- 备份脚本：`scripts/backup.sh`
+- 恢复脚本：`scripts/restore.sh`
+
+**装好之后按顺序上线（"装-通-看-警-钱-报-效"）**
+
+1. 选型：[meter-selection-guide.md](./meter-selection-guide.md)
+2. 现场施工：[field-installation-sop.md](./field-installation-sop.md)
+3. 通道导入：`scripts/csv-to-channels.py` + `scripts/import-channels.sh`
+4. 仪表导入：`scripts/csv-to-meters.py` + `scripts/import-meters.sh`（或前端 `/meters` 页"批量导入"按钮，v2 新增）
+5. 看板上线：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
+6. 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
+7. 告警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+8. 账单上线：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
+9. 月报自动化：[report-automation-sop.md](./report-automation-sop.md)
+10. 生产能效：[production-energy-sop.md](./production-energy-sop.md)
 
 **装好之后做什么**
 

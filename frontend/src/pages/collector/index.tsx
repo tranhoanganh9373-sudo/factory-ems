@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { collectorDiagApi, type ChannelRuntimeState } from '@/api/collectorDiag';
 import { channelApi, type ChannelDTO } from '@/api/channel';
 import { translate, COLLECTOR_PROTOCOL_LABEL, CONNECTION_STATE_LABEL } from '@/utils/i18n-dict';
+import { BatchImportModal } from './BatchImportModal';
 import { ChannelDetailDrawer } from './ChannelDetailDrawer';
 import { ChannelEditor } from './ChannelEditor';
 import { PageHeader } from '@/components/PageHeader';
@@ -30,6 +31,7 @@ export default function CollectorPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelDTO | undefined>(undefined);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [batchOpen, setBatchOpen] = useState(false);
 
   const { data: states = [], isLoading } = useQuery({
     queryKey: ['collector', 'state'],
@@ -100,9 +102,12 @@ export default function CollectorPage() {
       <PageHeader
         title="数据采集"
         extra={
-          <Button type="primary" onClick={() => openEditor()}>
-            新增通道
-          </Button>
+          <Space>
+            <Button onClick={() => setBatchOpen(true)}>批量导入</Button>
+            <Button type="primary" onClick={() => openEditor()}>
+              新增通道
+            </Button>
+          </Space>
         }
       />
       <Card>
@@ -213,6 +218,7 @@ export default function CollectorPage() {
           setEditing(undefined);
         }}
       />
+      <BatchImportModal open={batchOpen} onClose={() => setBatchOpen(false)} />
     </>
   );
 }
