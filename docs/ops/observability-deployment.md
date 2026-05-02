@@ -8,9 +8,9 @@
 
 ## 1. 概述
 
-本文档描述如何在客户服务器上部署 factory-ems 可观测性栈（Prometheus + Loki + Tempo + Promtail + Alertmanager + webhook-bridge + Grafana），该栈以独立 Docker Compose 文件运行，与产品栈（`docker-compose.yml`）生命周期互不干扰，共享同一个 `ems-net` 网络。
+本文档讲怎么在客户服务器上部署 factory-ems 可观测性栈（Prometheus + Loki + Tempo + Promtail + Alertmanager + webhook-bridge + Grafana）。它以独立 Docker Compose 文件运行，与产品栈（`docker-compose.yml`）生命周期互不干扰，共享同一个 `ems-net` 网络。
 
-**与产品栈的关系**：观测栈抓取产品栈暴露的指标（`:8080/actuator/prometheus`）并收集其容器日志；产品栈无需感知观测栈是否在线，两侧可独立启停。
+**与产品栈的关系**：观测栈抓产品栈暴露的指标（`:8080/actuator/prometheus`）并收集容器日志；产品栈不感知观测栈是否在线，两侧可独立启停。
 
 ---
 
@@ -29,7 +29,7 @@
 | Grafana | 256 MB | ~200 MB | 0.15 vCPU |
 | **合计** | **~1.44 GB** | **~15.3 GB** | **~0.64 vCPU** |
 
-> **保守预留**：建议为突发峰值预留 20% 余量，实际总占用约 1.8 GB 内存 / 15 GB 磁盘 / 0.85 vCPU。
+> **保守预留**：为突发峰值留 20% 余量，实际总占用约 1.8 GB 内存 / 15 GB 磁盘 / 0.85 vCPU。
 
 ### 客户最低服务器配置
 
@@ -127,7 +127,7 @@ cp .env.obs.example .env.obs
 | `OBS_GENERIC_WEBHOOK` | 否 | 通用 Webhook URL（客户内部 IT 系统） |
 | `OBS_NETWORK_NAME` | 否 | 默认 `ems-net` |
 
-> **告警通道说明**：所有告警通道变量均为可选。留空时对应接收方被 Alertmanager 静默跳过，不影响启动。**至少配置一个告警通道**，否则告警无处发送。
+> **告警通道说明**：所有告警通道变量都是可选。留空时对应接收方被 Alertmanager 静默跳过，不影响启动。**至少配一个告警通道**，否则告警无处发送。
 
 **失败回退**：若 `.env.obs.example` 不存在，确认当前目录是否为 `ops/observability/`，或确认 git 分支已包含 Phase C 代码。
 

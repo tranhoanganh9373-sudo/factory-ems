@@ -21,8 +21,8 @@
 
 ## Verification Reports
 
-历史文件命名不一致（`-plan-X.Y` 前缀位置、是否带 plan 后缀），下面给出权威映射。
-**新增报告请用规范：** `verification-{YYYY-MM-DD}-{scope}.md`，其中 `scope` 为
+历史文件命名不一致（`-plan-X.Y` 前缀位置、是否带 plan 后缀），下面给出对照表。
+**新增报告统一用：** `verification-{YYYY-MM-DD}-{scope}.md`，其中 `scope` 为
 `planX.Y` 或简短主题（如 `deploy-pack`、`mockdata-phaseH`）。
 
 | 文件 | 覆盖 Plan / 主题 | 日期 |

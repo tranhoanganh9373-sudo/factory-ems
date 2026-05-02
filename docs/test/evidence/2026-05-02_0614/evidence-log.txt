@@ -1,0 +1,32 @@
+=== EVIDENCE-01: Liveness ===
+Sat May  2 06:15:06 PDT 2026
+01_liveness.txt saved
+=== EVIDENCE-02: Login ===
+02_login.txt saved
+=== EVIDENCE-03: NoToken 401 ===
+03_notoken.txt saved
+=== EVIDENCE-04: CRUD ===
+CREATED ID=
+04_crud done
+=== EVIDENCE-05: RateLimit ===
+05_ratelimit.txt saved
+=== EVIDENCE-06: Negative Page ===
+HTTP HTTP/1.1 401 
+=== EVIDENCE-07: Huge Size ===
+HTTP HTTP/1.1 401 
+=== EVIDENCE-08: Long String ===
+HTTP HTTP/1.1 401 
+=== EVIDENCE-09: Dashboard Anomalies ===
+09_dashboard done
+=== EVIDENCE-10: CRUD Redo ===
+10_crud done
+=== EVIDENCE-11: Refresh ===
+HTTP HTTP/1.1 401 
+=== EVIDENCE-12: Wrong Pwd ===
+HTTP HTTP/1.1 401 
+E06: HTTP 200
+E07: HTTP 200
+E08: HTTP 200
+E09: done
+E11: HTTP 400
+E12: HTTP 400

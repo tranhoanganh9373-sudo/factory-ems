@@ -8,7 +8,7 @@
 
 ## 1. 文件结构（spec §11.1）
 
-观测栈所有配置集中在 `ops/observability/` 目录，独立于产品栈 `docker-compose.yml`，生命周期互不影响。
+观测栈所有配置集中在 `ops/observability/` 目录，和产品栈 `docker-compose.yml` 独立，生命周期互不影响。
 
 ```
 ops/observability/
@@ -64,9 +64,9 @@ ops/observability/
 
 ## 2. 环境变量（`.env.obs`）（spec §11.2）
 
-将 `.env.obs.example` 复制为 `.env.obs`，按下表填写。**`.env.obs` 不应提交到 git**（已在 `.gitignore` 中）。
+把 `.env.obs.example` 复制成 `.env.obs`，按下表填写。`.env.obs` 不要提交到 git（已在 `.gitignore` 中）。
 
-> **空值行为总则**：告警通道相关变量（SMTP / 钉钉 / 企微 / 通用 webhook）留空时，Alertmanager 静默跳过该接收方，**不会导致启动失败**。至少配置一个告警通道才能收到告警通知。
+> **空值行为总则**：告警通道相关变量（SMTP / 钉钉 / 企微 / 通用 webhook）留空时，Alertmanager 会静默跳过该接收方，不会导致启动失败。至少配一个告警通道才能收到通知。
 
 | 变量 | 必填 | 默认值 | 空值行为 |
 |------|------|--------|---------|
@@ -115,7 +115,7 @@ OBS_WECHAT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx
 
 ## 3. 应用层配置（application-prod.yml 增量）（spec §11.3）
 
-以下是 Task A4 实际提交到 `ems-app/src/main/resources/application-prod.yml` 的完整内容。可观测性相关配置以 `management:` 节点为主，无需改动其他部分。
+下面是 Task A4 实际提交到 `ems-app/src/main/resources/application-prod.yml` 的完整内容。可观测性相关配置集中在 `management:` 节点，其他部分不用改。
 
 ```yaml
 spring:
@@ -164,7 +164,7 @@ management:
 | `tracing.sampling.probability` | `0.1` | 10% 采样率，生产环境平衡成本；调试时可临时改为 `1.0` |
 | `otlp.tracing.endpoint` | `${OTLP_TRACING_ENDPOINT:http://tempo:4318/v1/traces}` | traces 推送到 Tempo；默认走 docker 内网，可通过环境变量覆盖 |
 
-> **修改后需重启 ems-app 才生效**。采样率修改后约 1-2 分钟 Grafana Tempo 数据源可见变化。
+> 改完要重启 ems-app 才生效。采样率改完 1-2 分钟后 Grafana Tempo 数据源能看到变化。
 
 ---
 
@@ -234,7 +234,7 @@ amtool --alertmanager.url=http://localhost:9093 \
 
 ## 5. 升级路径（spec §16.3）
 
-观测栈与产品栈各自独立升级，互不影响。升级时 Grafana dashboard 数据不丢失（volume 持久化）。
+观测栈和产品栈各自独立升级，互不影响。升级时 Grafana dashboard 数据不会丢（volume 持久化）。
 
 ### 5.1 仅升级观测栈
 
@@ -272,7 +272,7 @@ docker compose -f docker-compose.yml up -d
 
 ## 6. 资源预算（spec §16.1）
 
-以下为各服务在**稳态运行**时的资源用量（不含启动峰值）。实际以客户数据量和设备规模为准。
+下面是各服务稳态运行时的资源用量（不含启动峰值）。实际以客户数据量和设备规模为准。
 
 | 服务 | 内存 | 磁盘 | CPU |
 |------|------|------|-----|
@@ -285,7 +285,7 @@ docker compose -f docker-compose.yml up -d
 | promtail | 128 MB | — | 0.1 vCPU |
 | **合计** | **~1.8 GB** | **~15 GB** | **~0.85 vCPU** |
 
-> 加上产品栈（ems-app + nginx + postgres + influx，约 4-6 GB），**客户最低服务器配置为 8 GB RAM / 50 GB SSD / 4 vCPU**。若客户有历史数据需要较长 retention 或设备规模 > 500 台，建议 16 GB RAM / 100 GB SSD。
+> 加上产品栈（ems-app + nginx + postgres + influx，约 4-6 GB），客户最低服务器配置为 8 GB RAM / 50 GB SSD / 4 vCPU。客户有历史数据需要较长 retention 或设备规模 > 500 台时，建议 16 GB RAM / 100 GB SSD。
 
 ---
 
@@ -293,7 +293,7 @@ docker compose -f docker-compose.yml up -d
 
 ### Q1：钉钉 / 企微 webhook 不通，告警收不到
 
-**症状**：告警在 Alertmanager UI（`http://localhost:9093`）中可以看到，但钉钉 / 企微 没有消息。
+**症状**：告警在 Alertmanager UI（`http://localhost:9093`）中能看到，但钉钉 / 企微 没收到消息。
 
 **排查步骤**：
 
@@ -310,19 +310,19 @@ docker compose -f docker-compose.yml up -d
      "https://oapi.dingtalk.com/robot/send?access_token=xxx"
    ```
 
-3. 如果内网无法访问公网（常见于工厂封闭网络）：
-   - 改用 `OBS_GENERIC_WEBHOOK` 对接客户**内网**的 IT 工单或消息系统
-   - 或仅保留邮件（SMTP）通道，邮件服务器通常走内网中继
+3. 内网无法访问公网时（工厂封闭网络常见）：
+   - 改用 `OBS_GENERIC_WEBHOOK` 对接客户内网的 IT 工单或消息系统
+   - 或者只留邮件（SMTP）通道，邮件服务器一般走内网中继
 
-4. 钉钉加签验证失败（`sign check failed`）：确认 `.env.obs` 中的 `OBS_DINGTALK_SECRET` 与机器人配置一致，Secret 是以 `SEC` 开头的字符串。
+4. 钉钉加签验证失败（`sign check failed`）：确认 `.env.obs` 中的 `OBS_DINGTALK_SECRET` 和机器人配置一致，Secret 是以 `SEC` 开头的字符串。
 
 ---
 
 ### Q2：Grafana 忘记管理员密码
 
-**方法 A（推荐）**：查看 `.env.obs` 文件中的 `OBS_GRAFANA_ADMIN_PASSWORD` 字段。
+**方法 A（推荐）**：查 `.env.obs` 文件里的 `OBS_GRAFANA_ADMIN_PASSWORD` 字段。
 
-**方法 B**：通过 Grafana CLI 重置：
+**方法 B**：用 Grafana CLI 重置：
 
 ```bash
 # 进入 Grafana 容器
@@ -335,7 +335,7 @@ grafana cli admin reset-admin-password 新密码
 exit
 ```
 
-> 重置后无需重启容器，密码立即生效。请同步更新 `.env.obs`，避免下次 `up -d` 时密码被 compose 覆盖。
+> 重置后不用重启容器，密码立即生效。同步更新 `.env.obs`，避免下次 `up -d` 时密码被 compose 覆盖。
 
 ---
 
@@ -347,7 +347,7 @@ exit
 Error response from daemon: network ems-net not found
 ```
 
-**原因**：`ems-net` 是 external docker network，必须在启动任一 compose 栈前手动创建（或通过脚本幂等创建）。
+**原因**：`ems-net` 是 external docker network，必须在启动任一 compose 栈前手动创建（或者用脚本幂等创建）。
 
 **修复**：
 
@@ -362,31 +362,31 @@ docker network inspect ems-net
 docker compose -f ops/observability/docker-compose.obs.yml up -d
 ```
 
-> 推荐通过 `obs-up.sh` 脚本启动，脚本内已包含幂等的 network 创建逻辑。
+> 推荐用 `obs-up.sh` 脚本启动，脚本里已包含幂等的 network 创建逻辑。
 
 ---
 
 ### Q4：ems-app 没有注册到 Prometheus，metrics 采集不到
 
-**症状**：Prometheus 中 `up{job="factory-ems"}` 为 0，或 `/actuator/prometheus` 返回 404。
+**症状**：Prometheus 中 `up{job="factory-ems"}` 为 0，或者 `/actuator/prometheus` 返回 404。
 
 **排查步骤**：
 
 1. 确认 `application-prod.yml` 的 `management.endpoints.web.exposure.include` 包含 `prometheus`（见 §3）。
 
-2. 确认 ems-app 使用了 `prod` profile 启动：
+2. 确认 ems-app 用 `prod` profile 启动：
    ```bash
    docker exec ems-app env | grep SPRING_PROFILES_ACTIVE
    # 应输出: SPRING_PROFILES_ACTIVE=prod
    ```
 
-3. 确认 ems-app 与 Prometheus 在同一 docker network `ems-net` 内：
+3. 确认 ems-app 和 Prometheus 在同一 docker network `ems-net` 内：
    ```bash
    docker network inspect ems-net | grep -A5 '"Name"'
    ```
-   输出中应同时包含 `ems-app`（或产品栈容器名）和 `obs_prometheus`。
+   输出里应同时包含 `ems-app`（或产品栈容器名）和 `obs_prometheus`。
 
-4. 在 Prometheus UI（`http://localhost:9090/targets`）确认 `factory-ems` target 状态为 `UP`。如果是 `DOWN`，点击 target 名称查看具体错误信息。
+4. 在 Prometheus UI（`http://localhost:9090/targets`）确认 `factory-ems` target 状态为 `UP`。如果是 `DOWN`，点 target 名称看具体错误信息。
 
 ---
 

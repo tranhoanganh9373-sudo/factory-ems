@@ -42,10 +42,10 @@
 1. 进入 **系统健康 → Webhook 配置**（仅 ADMIN 角色可见）
 2. 启用开关 ON（`enabled=false` 时所有派发完全跳过，仅保留站内通知）
 3. 填写配置字段：
-   - **URL**：必须 `http://` 或 `https://`（强烈建议 HTTPS）
-   - **Secret**：任意字符串，建议 32 位以上随机串（`openssl rand -hex 32`），用于 HMAC-SHA256 签名
+   - **URL**：必须是 `http://` 或 `https://`（优先用 HTTPS）
+   - **Secret**：任意字符串，32 位以上随机串（`openssl rand -hex 32`），用于 HMAC-SHA256 签名
    - **Adapter**：默认 `GENERIC_JSON`（标准 JSON 格式）；可扩展 DINGTALK、WECHAT_WORK 等
-   - **Timeout**：1000–30000 毫秒，建议内网 2000ms、外网 5000ms
+   - **Timeout**：1000–30000 毫秒，内网 2000ms、外网 5000ms 够用
 4. 点击 **测试发送**：构造一条假告警立即同步发送，2xx 视为通过；否则页面显示返回 statusCode / error 提示（测试发送不写 delivery_log，不计重试次数）
 5. 点击 **保存**
 
@@ -235,7 +235,7 @@ curl http://localhost:8080/api/v1/collector/status | jq '.devices[].meterCode'
 - **维护中**：`alarm_rule_overrides.maintenance_mode = true` 的设备数
 - **Top10**：ACTIVE + ACKED 数倒序，前 10 条（未解决告警最多的设备）
 
-**预警信号**（建议人工介入）：
+**预警信号**（人工介入门槛）：
 
 - 在线率 < 95%
 - 告警中设备数 > 总设备数的 5%
@@ -278,7 +278,7 @@ TRUNCATE TABLE alarm_inbox;
 - 单设备处理 < 5ms（DB 查询均走索引）
 - 设备处理异常被 catch 隔离，不影响其他设备扫描
 
-**delivery_log 长期写入**：建议每月归档；50K 行以下查询无压力。
+**delivery_log 长期写入**：每月归档；50K 行以下查询无压力。
 
 **alarm_inbox**：每用户每告警 1 行（ADMIN + OPERATOR），近 1 月单用户预期 < 1000 行。
 
@@ -296,9 +296,9 @@ TRUNCATE TABLE alarm_inbox;
 
 当前版本**单实例运行**；多实例部署时每个实例独立执行检测，会重复创建告警（无分布式锁）。
 
-**多实例方案**：引入 ShedLock，在 shedlock 表加行锁，确保每轮仅一个实例执行 detector。
+**多实例方案**：引入 ShedLock，在 shedlock 表加行锁，每轮仅一个实例执行 detector。
 
-当前生产建议：**单实例运行** alarm 检测模块。详见 spec §16 部署要求。
+当前生产部署：**单实例运行** alarm 检测模块。详见 spec §16 部署要求。
 
 ---
 

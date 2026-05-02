@@ -1,0 +1,21 @@
+HTTP/1.1 200 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:17:03 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: 97270fc2b66e4bdb
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":0,"data":[],"message":"ok","traceId":"2291edbf18e86c62aad580fb164db88b"}

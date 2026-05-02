@@ -19,7 +19,7 @@
 > ```
 >
 > 含义：channel 抓到的所有 point 都会触发一次 sink，但只有 `meter.code = point.key` 的才真正落库。
-> **所以不必给每个测点都建 Meter——挑你要看的（功率 + 电量）即可，其余白白浪费 5 千条/天的写入量。**
+> 所以不必给每个测点都建 Meter，挑你要看的（功率 + 电量）即可。其余的白白多写 5 千条/天没意义。
 
 ---
 
@@ -223,7 +223,7 @@ done
 
 > 数据存储：`floorplan.points` JSONB 字段，每个挂点 `{meterId, xRatio, yRatio, label}`，xy 是 0-1 之间的相对坐标，浏览器按底图原始尺寸缩放。
 >
-> 要批量化（不在前端拖）：调 `PUT /api/v1/floorplans/{id}/points`，传 `SetPointsReq` JSON。但实践上拖一遍比写脚本快——50 块表的位置只有现场工程师知道。
+> 要批量化（不在前端拖）：调 `PUT /api/v1/floorplans/{id}/points`，传 `SetPointsReq` JSON。但实践上拖一遍比写脚本快，50 块表的位置只有现场工程师知道。
 
 ---
 
@@ -256,7 +256,7 @@ done
 | Top N 显示一半 | 有些 meter 的 `energy_total` 没注册或 `enabled=false` |
 | 平面图挂点全灰 | meter 的 `channelId` 或 `point_key` 写错；后端 join 不到实时数据 |
 | 平面图挂点位置乱 | 之前编辑后没点保存；或者底图换过尺寸（重新拖） |
-| Sankey 桑基图空 | Sankey 需要"上下游能源关系"；50 块表如果没建电气拓扑就显示空。这是正常的，不影响其他面板 |
+| Sankey 桑基图空 | Sankey 需要"上下游能源关系"；50 块表如果没建电气拓扑就显示空。这属于正常情况，不影响其他面板 |
 
 ---
 

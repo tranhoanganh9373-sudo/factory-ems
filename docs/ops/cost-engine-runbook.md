@@ -107,7 +107,7 @@ PENDING ──(worker 接管)──► RUNNING ──(成功)──► SUCCESS
 | RESIDUAL | — | `{}`（剩余落到 `targetOrgIds[0]`） |
 | COMPOSITE | `steps[]` | `{"steps":[{"weights":{...}},{"weights":{...}}]}` |
 
-> 配置完成后强烈建议先发 `/dry-run` 看一行 sample，确认 4 段拆分加总等于 amount。
+> 配置完成后先发 `/dry-run` 看一行 sample，确认 4 段拆分加总等于 amount。
 
 ---
 
@@ -132,8 +132,8 @@ PENDING ──(worker 接管)──► RUNNING ──(成功)──► SUCCESS
 
 ### 6.1 提交后一直停在 PENDING
 
-- 看应用日志，搜索 `cost-alloc run id=<X>`。如果完全无日志，多半 `costAllocationExecutor` 还没启动 / 被关闭。
-- 若同时出现 `Run not PENDING` 异常，说明前一次的 worker 已经把状态推到 RUNNING 但仍占线程；应等待 / 检查死循环。
+- 看应用日志，搜索 `cost-alloc run id=<X>`。完全无日志时多半 `costAllocationExecutor` 还没启动或已被关闭。
+- 同时出现 `Run not PENDING` 异常时，说明前一次的 worker 已把状态推到 RUNNING 但仍占线程；等待或排查死循环。
 
 ### 6.2 Run SUCCESS 但 lines 为空
 
@@ -154,8 +154,8 @@ PENDING ──(worker 接管)──► RUNNING ──(成功)──► SUCCESS
 
 ### 6.5 `effectiveTo` 当天的 run 应该跑还是不跑？
 
-`isEffectiveAt(rule, periodStart.toLocalDate())` 用 `periodStart` 的日期对比；若 `effectiveTo == periodStart.toLocalDate()` 视为生效。
-若客户期望「end 当天即失效」，跑前手动改 `effectiveTo` 为前一天即可。
+`isEffectiveAt(rule, periodStart.toLocalDate())` 用 `periodStart` 的日期对比；`effectiveTo == periodStart.toLocalDate()` 视为生效。
+客户希望「end 当天即失效」时，跑前手动把 `effectiveTo` 改成前一天。
 
 ---
 
@@ -163,7 +163,7 @@ PENDING ──(worker 接管)──► RUNNING ──(成功)──► SUCCESS
 
 - `cost_allocation_run` 表 `status`+`finished_at-started_at` 可直接画分位线。
 - `cost_allocation_line` 总条数随时间增长应近线性；突然斜率变化 → 跑了大期间或重复期间。
-- worker 异常落库为 `error_message`；在 ELK / Grafana 上 alert `cost-alloc run id=.* FAILED` 关键字即可。
+- worker 异常落库为 `error_message`；在 ELK / Grafana 上对 `cost-alloc run id=.* FAILED` 关键字告警即可。
 
 ---
 

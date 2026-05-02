@@ -33,7 +33,7 @@ ems-meter ─阈值/维护模式─────────┘     │
 | 只有 1 个全局 Webhook | 全场告警共用 1 个 URL | 桥接服务里按 `org_node_id` 分流给多个 IM |
 | 只有 `GENERIC_JSON` adapter | 不内置钉钉/企微的 markdown 模板 | 走桥接做格式转换 |
 | 没有严重级别（severity） | 全部告警一律 NORMAL | v1.7+ 规划；目前可按 `device_code` 前缀人工区分 |
-| 阈值热更新只对**设备级 override** 生效 | 全局参数改完要重启 ems-app | 大批量调阈值用 override 批量推 |
+| 阈值热更新只对设备级 override 生效 | 全局参数改完要重启 ems-app | 大批量调阈值用 override 批量推 |
 
 ---
 
@@ -72,7 +72,7 @@ curl -s -H "Authorization: Bearer $TOKEN" "$BASE/api/v1/alarm-rules/defaults" | 
 
 ## 2. 步骤 ②（可选）：给关键表加严
 
-50 块表里通常有 **2 块主进线表**（`1F-MAIN` 和 `4F-MAIN`，APM810），它们断线 = 整楼层数据全废。给它们设更严的阈值（不重启）：
+50 块表里通常有 **2 块主进线表**（`1F-MAIN` 和 `4F-MAIN`，APM810），它们一断线，整楼层数据就全废。给它们设更严的阈值（不重启）：
 
 ```bash
 # 假设 1F-MAIN 的 meter id = 5
@@ -86,7 +86,7 @@ curl -s -X PUT "$BASE/api/v1/alarm-rules/overrides/5" \
   }'
 ```
 
-效果：1F-MAIN 静默 2 分钟即告警（vs. 普通表 5 分钟），失败 2 次即告警。**60 秒内热生效**，不用重启。
+效果：1F-MAIN 静默 2 分钟即告警（普通表是 5 分钟），失败 2 次即告警。60 秒内热生效，不用重启。
 
 **查所有 override**：
 
@@ -251,7 +251,7 @@ done
 | 钉钉收到了但是乱码 | 桥接服务的格式转换逻辑写错；对照 `alarm-bridge-recipes.md` 的模板 |
 | 告警一直触发不恢复 | ① 来电后 collector 是不是真接通了（`/collector` 看 connState）② `suppression-window-seconds` 是不是设太大（恢复需 ≥ 这个时长无失败） |
 | 维护期间还是被告警轰炸 | ① override 是否真写成功（`GET /alarm-rules/overrides/{id}` 看 `maintenanceMode: true`）② 60 s 内才生效；刚改的话再等等 |
-| 同一断线触发了多条告警 | 正常 — 每块掉线表一条告警。如果嫌多，可以让运维人 ack 完一条再等下一条；产品没做"按 channel 聚合" |
+| 同一断线触发了多条告警 | 正常情况——每块掉线表一条告警。嫌多的话，可以让运维 ack 完一条再等下一条；产品没做"按 channel 聚合" |
 | 告警从未自动 RESOLVED | ① 检查 `alarm-detection-rules.md` 的恢复条件 ② 大概率是采集恢复后 `consecutiveErrors` 没归零 → 重启 ems-collector 可清状态 |
 
 ---
@@ -260,9 +260,9 @@ done
 
 告警上线后，路线图上下一站可选：
 
-- **电价 + 内部分摊**：装入 `ems-tariff` 工业分时电价 → `ems-cost` 按面积/产量分摊 → `ems-billing` 出内部账单。**把电量变成钱**，是 EMS 的商业核心。
+- **电价 + 内部分摊**：装入 `ems-tariff` 工业分时电价 → `ems-cost` 按面积/产量分摊 → `ems-billing` 出内部账单。把电量变成钱，是 EMS 的商业核心。
 - **报表自动化**：`ems-report` 配日/周/月报模板 → 每月 1 号自动 PDF 邮件给厂长。
-- **生产能效**：`ems-production` 录入产量 → 计算"单位产品能耗"趋势，节能改造前后对比有数据。
+- **生产能效**：`ems-production` 录入产量 → 计算"单位产品能耗"趋势，节能改造前后有数据可对比。
 
 ---
 

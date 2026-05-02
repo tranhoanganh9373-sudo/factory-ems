@@ -31,13 +31,13 @@ webhook_config (系统级单行表，无关联约束)
 | `alarm_inbox.alarm_id` → `alarms.id` | 软关联，无 FK | 站内通知关联到触发它的告警 |
 | `alarm_inbox.user_id` → `users.id` | 软关联，无 FK | 站内通知归属到具体用户 |
 
-**为什么不用外键约束？** 告警模块（`ems-alarm`）与设备模块（`ems-meter`）、用户模块（`ems-user`）属于不同有界上下文。使用数据库层 FK 会在模块之间引入强耦合，导致跨模块事务、迁移顺序依赖、测试隔离困难等问题。软关联由应用层保证引用完整性，是微服务/模块化单体架构的常见取舍。
+**为什么不用外键约束？** 告警模块（`ems-alarm`）与设备模块（`ems-meter`）、用户模块（`ems-user`）属于不同有界上下文。数据库层 FK 会让模块之间强耦合，带来跨模块事务、迁移顺序依赖、测试隔离困难等问题。软关联由应用层保证引用完整性，是微服务和模块化单体架构里的常见取舍。
 
 ---
 
 ## 2. `alarms` — 告警事件主表
 
-每一行代表一次完整的告警生命周期事件，从设备触发告警开始，到最终被确认或自动恢复结束。告警不可更新历史记录，状态流转通过更新本表字段实现。
+每一行是一次完整的告警事件，从设备触发开始，到被确认或自动恢复结束。历史记录不重写，状态流转通过更新本表字段实现。
 
 ### 字段说明
 
@@ -104,7 +104,7 @@ triggered_at ──► acked_at ──► resolved_at
 
 ## 3. `alarm_rules_override` — 设备级阈值覆盖
 
-允许对单台设备设置独立的检测阈值或开启维护模式，覆盖系统全局默认值，修改后立即生效（无需重启）。未设置覆盖的字段自动沿用 `application.yml` 中的全局默认值。
+对单台设备设置独立的检测阈值或开启维护模式，覆盖全局默认值，修改后立即生效（不用重启）。未设置覆盖的字段沿用 `application.yml` 中的全局默认值。
 
 ### 字段说明
 
@@ -120,16 +120,16 @@ triggered_at ──► acked_at ──► resolved_at
 
 ### 业务规则
 
-- **一对一关系**：`device_id` 直接作为 PK，从数据库层保证每台设备最多一条覆盖规则，无需额外唯一约束。
-- **NULL 即继承**：`silent_timeout_seconds` 和 `consecutive_fail_count` 为 NULL 时，检测引擎使用全局默认值，无需在应用层做特殊处理。
-- **维护模式优先于阈值**：当 `maintenance_mode = TRUE` 时，即使阈值字段有值，检测引擎也直接跳过该设备，不触发任何告警。
-- **无覆盖记录等同全默认**：若某设备没有对应的覆盖行，效果与所有字段均为 NULL 完全一致。
+- 一对一关系：`device_id` 直接作为 PK，从数据库层保证每台设备最多一条覆盖规则，不用额外加唯一约束。
+- NULL 即继承：`silent_timeout_seconds` 和 `consecutive_fail_count` 为 NULL 时，检测引擎用全局默认值，应用层不用做特殊处理。
+- 维护模式优先于阈值：当 `maintenance_mode = TRUE` 时，即使阈值字段有值，检测引擎也跳过该设备，不触发告警。
+- 无覆盖记录等同全默认：若某设备没有覆盖行，效果与所有字段均为 NULL 完全一致。
 
 ---
 
 ## 4. `webhook_config` — Webhook 配置
 
-系统级 Webhook 配置，首版设计为**单行表**（始终只有一条记录，通过 `SELECT … LIMIT 1` 读取）。用于将告警事件推送到外部系统（钉钉、企业微信、自定义 HTTP 接收端等）。
+系统级 Webhook 配置，首版是单行表（只有一条记录，通过 `SELECT … LIMIT 1` 读取）。用于把告警事件推送到外部系统（钉钉、企业微信、自定义 HTTP 接收端等）。
 
 ### 字段说明
 
@@ -146,12 +146,12 @@ triggered_at ──► acked_at ──► resolved_at
 
 ### secret 字段安全说明
 
-`secret` 字段存储 Webhook HMAC-SHA256 签名密钥，属于敏感凭据，遵循以下安全规则：
+`secret` 字段存储 Webhook HMAC-SHA256 签名密钥，属于敏感凭据，安全规则：
 
-1. **写入**：通过 `PUT /api/v1/webhook-config` 设置，明文传输仅在 TLS 保护下进行。
-2. **读取**：`GET /api/v1/webhook-config` 响应中 `secret` 字段始终替换为 `"hasSecret": true/false`，不返回密钥原文。
-3. **存储**：数据库中以明文存储（供应用层签名使用），依赖数据库访问控制保护。
-4. **清除**：发送空字符串或 `null` 可清除密钥，此后 Webhook 请求不携带签名头。
+1. 写入：通过 `PUT /api/v1/webhook-config` 设置，明文传输仅在 TLS 保护下进行。
+2. 读取：`GET /api/v1/webhook-config` 响应中 `secret` 字段始终替换为 `"hasSecret": true/false`，不返回密钥原文。
+3. 存储：数据库中以明文存储（供应用层签名使用），依赖数据库访问控制保护。
+4. 清除：发送空字符串或 `null` 可清除密钥，此后 Webhook 请求不携带签名头。
 
 ### timeout_ms 与全局配置的关系
 
@@ -164,7 +164,7 @@ triggered_at ──► acked_at ──► resolved_at
 
 ## 5. `webhook_delivery_log` — 派发流水
 
-记录每一次 Webhook 完整推送过程（含所有重试）的结果，用于运维监控和故障排查。**一次告警对应一行派发日志**，`attempts` 字段反映了包括所有重试在内的总尝试次数。
+记录每一次 Webhook 完整推送过程（含所有重试）的结果，用于运维监控和排障。一次告警对应一行派发日志，`attempts` 字段是含所有重试在内的总尝试次数。
 
 ### 字段说明
 
@@ -181,10 +181,10 @@ triggered_at ──► acked_at ──► resolved_at
 
 ### 业务规则
 
-- **每次完整推送写一行**：无论是否重试，一条告警对应一行派发日志；重试过程由应用层管理，不在此表中体现中间状态。
-- **`attempts` 含首次**：若首次即成功，`attempts = 1`；若重试 2 次后成功，`attempts = 3`。
-- **`status = FAILED` 含义**：所有重试已耗尽，没有任何一次请求成功。此时 `last_error` 和 `response_status` 反映最后一次尝试的情况。
-- **派发失败不影响告警状态**：`webhook_delivery_log` 与 `alarms` 完全解耦，Webhook 推送失败不会将告警回滚或标记为异常，告警状态机独立运行。
+- 每次完整推送写一行：无论是否重试，一条告警对应一行派发日志；重试过程由应用层管理，本表不体现中间状态。
+- `attempts` 含首次：若首次即成功，`attempts = 1`；若重试 2 次后成功，`attempts = 3`。
+- `status = FAILED` 含义：所有重试已耗尽，没有一次请求成功。此时 `last_error` 和 `response_status` 反映最后一次尝试的情况。
+- 派发失败不影响告警状态：`webhook_delivery_log` 与 `alarms` 解耦，Webhook 推送失败不会回滚告警或标记为异常，告警状态机独立运行。
 
 ### 索引说明
 
@@ -197,7 +197,7 @@ triggered_at ──► acked_at ──► resolved_at
 
 ## 6. `alarm_inbox` — 站内通知收件箱
 
-为平台内每位 ADMIN / OPERATOR 用户生成站内消息，支持"红点徽标"未读提示功能。每当一条告警发生关键状态变化（触发或解决），系统为所有订阅用户各写入一条收件箱消息。
+为平台内每位 ADMIN / OPERATOR 用户生成站内消息，支持"红点徽标"未读提示。每当告警发生关键状态变化（触发或解决），系统会给所有订阅用户各写入一条收件箱消息。
 
 ### 字段说明
 
@@ -212,21 +212,21 @@ triggered_at ──► acked_at ──► resolved_at
 
 ### 业务规则
 
-- **写入时机**：每条告警在 `ACTIVE`（TRIGGERED）和 `RESOLVED` 时各写一轮，每个 ADMIN/OPERATOR 用户收到一条对应类型的消息；同一告警最多产生 `用户数 × 2` 条收件箱记录。
-- **未读判断**：`read_at IS NULL` 即为未读，已读后不可撤回。
-- **红点徽标查询**（前端实时轮询）：
+- 写入时机：每条告警在 `ACTIVE`（TRIGGERED）和 `RESOLVED` 时各写一轮，每个 ADMIN/OPERATOR 用户收到一条对应类型的消息；同一告警最多产生 `用户数 × 2` 条收件箱记录。
+- 未读判断：`read_at IS NULL` 即为未读，已读后不可撤回。
+- 红点徽标查询（前端实时轮询）：
 
 ```sql
 SELECT COUNT(*) FROM alarm_inbox WHERE user_id = :userId AND read_at IS NULL;
 ```
 
-- **索引**：`idx_inbox_user_unread` 覆盖 `(user_id, read_at)`，保证上述未读计数查询极速（毫秒级），不随收件箱总量增长而变慢。
+- 索引：`idx_inbox_user_unread` 覆盖 `(user_id, read_at)`，保证上述未读计数查询毫秒级返回，不随收件箱总量增长而变慢。
 
 ---
 
 ## 7. 数据生命周期
 
-首版所有表均采用**永久保留**策略，不执行自动清理或归档。考虑到审计合规需求和告警数据的历史回溯价值，这是合理的初始选择。商业化部署时建议参考下表中的"商用归档建议"列制定归档方案。
+首版所有表都采用永久保留策略，不做自动清理或归档。出于审计合规和告警历史回溯的需要，这是合理的初始选择。商业化部署时建议参考下表"商用归档建议"列制定归档方案。
 
 | 表名 | 首版保留策略 | 商用归档建议 | 清理脚本 |
 |------|------------|------------|---------|
@@ -236,7 +236,7 @@ SELECT COUNT(*) FROM alarm_inbox WHERE user_id = :userId AND read_at IS NULL;
 | `webhook_config` | 永久（单行） | 永久保留，仅有一条记录 | 暂无 |
 | `alarm_rules_override` | 永久保留 | 永久保留，记录每台设备的阈值调优历史 | 暂无 |
 
-首版未内置归档机制，相关需求已加入运维 backlog，计划在 v1.7+ 版本中引入定时任务或 pg_partman 分区归档方案。
+首版没有内置归档机制，相关需求已进运维 backlog，计划在 v1.7+ 引入定时任务或 pg_partman 分区归档方案。
 
 ---
 
@@ -246,7 +246,7 @@ SELECT COUNT(*) FROM alarm_inbox WHERE user_id = :userId AND read_at IS NULL;
 
 ### 场景 1：当前所有 ACTIVE 告警按设备分组
 
-适用于监控大屏展示各设备的未处理告警数量，可快速识别问题集中的设备。
+监控大屏展示各设备的未处理告警数量，快速找出问题集中的设备。
 
 ```sql
 SELECT
@@ -262,7 +262,7 @@ ORDER BY active_count DESC, earliest_triggered ASC;
 
 ### 场景 2：最近 7 天告警次数 Top 10 设备
 
-用于识别高频故障设备，辅助运维团队排查系统性问题（网络不稳定、设备老化等）。
+找出高频故障设备，帮助运维团队排查系统性问题（网络不稳定、设备老化等）。
 
 ```sql
 SELECT
@@ -302,7 +302,7 @@ LIMIT 1;
 
 ### 场景 4：24 小时内 Webhook 失败统计
 
-运维监控看板用，快速了解 Webhook 推送健康状况；`attempts` 可用于评估重试压力。
+运维监控看板用，看 Webhook 推送的健康状况；`attempts` 用来评估重试压力。
 
 ```sql
 SELECT
@@ -330,7 +330,7 @@ WHERE user_id = :userId
 
 ### 场景 6：当前处于维护模式的设备列表
 
-值班交接时快速确认哪些设备正在维护中，避免误判"设备正常、无告警"的原因。
+值班交接时确认哪些设备正在维护中，避免把"设备正常、无告警"误判成故障。
 
 ```sql
 SELECT
@@ -345,7 +345,7 @@ ORDER BY updated_at DESC;
 
 ### 场景 7：某月每日告警量趋势
 
-生成月度报告时统计每天新增告警数量，用于评估系统稳定性走势。
+生成月度报告时统计每天新增告警数量，看系统稳定性走势。
 
 ```sql
 SELECT

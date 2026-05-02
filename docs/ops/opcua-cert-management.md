@@ -16,7 +16,7 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | `SIGN` | 否 | 是 | 是 | 是 |
 | `SIGN_AND_ENCRYPT` | 是 | 是 | 是 | 是 |
 
-`NONE` 模式下整条链路是**明文 + 无身份认证**；只能用于物理隔离的 OT 网络。生产环境应优先选 `SIGN_AND_ENCRYPT`。
+`NONE` 模式下整条链路是**明文 + 无身份认证**，只能用于物理隔离的 OT 网络。生产环境优先选 `SIGN_AND_ENCRYPT`。
 
 ---
 
@@ -34,7 +34,7 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | `OPC_UA_CERT_PENDING` 告警自动联动 | ✅ pending 时创建 ACTIVE 告警，approve 时自动 RESOLVE |
 | `.pfx` 客户端证书 multipart 上传 | ✅ `POST /api/v1/secrets/opcua/cert`（ADMIN）— 后端解析 PKCS#12 → 落盘成 PEM (encrypted PKCS#8) — 见 §5.2 |
 
-> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维通过 §3 信任目录约定 + §4 审批 SOP 工作；客户端 `.pfx` 直接走 §5.2 的 multipart 上传端点即可。
+> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维走 §3 信任目录约定 + §4 审批 SOP；客户端 `.pfx` 走 §5.2 的 multipart 上传端点。
 
 ---
 
@@ -59,7 +59,7 @@ ${ems.secrets.dir}                       # 默认 ${user.home}/.ems/secrets
 - **文件格式**：DER 编码 X.509（**非 PEM**，无 base64 包裹）
 - **`trusted/` 文件名**：`<displayName>-<thumbprint>.der`，其中 `<thumbprint>` 是证书 DER 字节的 **SHA-256 十六进制**（小写 64 字符）
 - **`pending/` / `rejected/` 文件名**：`<thumbprint>.der`（不带 displayName 前缀）
-- **权限**：代码会用 POSIX 把 `pending/` `.der` 与 `.json` 设为 `rw-------`（600）；`trusted/` 目录建议手工设 `700`（运维责任，下文 §6 给出命令）
+- **权限**：代码用 POSIX 把 `pending/` `.der` 与 `.json` 设为 `rw-------`（600）；`trusted/` 目录手工设 `700`（运维责任，下文 §6 给出命令）
 
 > `OpcUaCertificateStore` 暴露的能力（v1.1 transport 实际调用）：
 > - `isTrusted(X509Certificate)` —— 按 thumbprint 查 `trusted/`
@@ -173,7 +173,7 @@ ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRe
 
 ## 6. 手工补救（绕开审批端点 / 直接管理目录）
 
-通常用 §5 的 REST 流就够了。下列手工流程仅在审批 UI 不可用、或需要批量预置证书时使用。
+通常 §5 的 REST 流就够了。下列手工流程仅在审批 UI 不可用、或需要批量预置证书时使用。
 
 ### 6.1 把服务端证书加入信任列表
 
@@ -211,7 +211,7 @@ chmod 700 ~/.ems/secrets/opcua/certs/trusted/
 chmod 600 ~/.ems/secrets/opcua/certs/trusted/*.der
 ```
 
-容器部署：把 `~/.ems` 挂卷的 owner 设置为运行 collector 的 uid（如 `app:app`），并禁止 world 读。
+容器部署：把 `~/.ems` 挂卷的 owner 改成运行 collector 的 uid（如 `app:app`），禁止 world 读。
 
 ---
 

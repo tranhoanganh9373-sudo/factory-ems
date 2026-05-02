@@ -12,7 +12,7 @@
 
 ## 1. 概述
 
-本文档定义 factory-ems 可观测性栈的 **4 个服务级别目标（SLO）**、**16 条告警规则**（5 critical + 9 warning + 2 burn-rate）、**Alertmanager 路由策略**与**客户合同对应关系**，面向负责保障系统运行质量的运维工程师与客户管理人员。
+本文档定义 factory-ems 可观测性栈的 4 个服务级别目标（SLO）、16 条告警规则（5 critical + 9 warning + 2 burn-rate）、Alertmanager 路由策略，以及与客户合同的对应关系，面向运维工程师和客户管理人员。
 
 架构一览：
 
@@ -54,10 +54,10 @@ ems:slo:availability:error_budget_remaining
 ```
 
 **错误预算解释**：
-- 30 天允许不可用时间 = 30 × 24 × 60 × (1 - 0.995) ≈ **216 分钟（约 3.6 小时）**
-- `error_budget_remaining = 1.0` 表示预算完整未用
-- `error_budget_remaining = 0.5` 表示已用一半（约 1.8 小时不可用）
-- `error_budget_remaining = 0.0` 表示本月 SLO 已违约
+- 30 天允许的不可用时间 = 30 × 24 × 60 × (1 - 0.995) ≈ 216 分钟（约 3.6 小时）
+- `error_budget_remaining = 1.0`：预算完整没用过
+- `error_budget_remaining = 0.5`：已用掉一半（约 1.8 小时不可用）
+- `error_budget_remaining = 0.0`：本月 SLO 已违约
 
 ---
 
@@ -95,7 +95,7 @@ ems:slo:latency:error_budget_remaining
 ```
 
 **错误预算解释**：
-- 预算衡量的是"当前 p99 距离上限还有多远"
+- 这里的预算衡量的是"当前 p99 距离上限还有多远"
 - p99 = 0.5s → 剩余 50% 预算；p99 = 1s → 预算归零；p99 > 1s → 已违约
 - v1 延迟 SLO 的 burn-rate 告警列入路线图（§10）
 
@@ -146,10 +146,10 @@ ems:slo:freshness:error_budget_remaining
 | **SLI 含义** | 所有调度任务中最大的触发偏差（秒） |
 | **v1 状态** | **占位（Placeholder）** — 见下方说明 |
 
-> **v1 重要说明**：应用尚未发出 `ems_app_scheduled_drift_seconds` 指标（Phase B4 已标记为延期）。
-> 当前 SLI 记录规则返回常量 `0`，SLO 面板可正常渲染但不反映真实值。
+> **v1 重要说明**：应用还没发出 `ems_app_scheduled_drift_seconds` 指标（Phase B4 已标记为延期）。
+> 当前 SLI 记录规则返回常量 `0`，SLO 面板能正常渲染但不反映真实值。
 > 对应的 warning 告警 `EmsSchedulerDrift` 在 v1 不会触发。
-> Phase F 将在真实 drift 信号接入后重新评估此 SLO。
+> Phase F 真实 drift 信号接入后会重新评估此 SLO。
 
 **关键 PromQL**（来自 D1 录制规则）：
 
@@ -193,11 +193,11 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 **处置思路**：
 1. 检查容器/进程是否在线（`docker ps`、`systemctl status factory-ems`）
-2. 查看最近应用日志（OOM、启动失败、端口冲突等）
+2. 查最近的应用日志（OOM、启动失败、端口冲突等）
 3. 确认 Prometheus 到实例的网络连通性
 4. 参考 runbook → [`#emsappdown`](https://internal/docs/ops/observability-runbook.md#emsappdown)
 
-**影响范围**：**业务全停**。所有数据采集、告警检测、计费计算均依赖应用在线。抑制规则激活（详见 §6）。
+**影响范围**：业务全停。所有数据采集、告警检测、计费计算都依赖应用在线。抑制规则激活（详见 §6）。
 
 ---
 
@@ -210,15 +210,15 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | critical |
 | **team** | backend |
 
-**含义**：应用抛出未捕获异常的速率持续 5 分钟超过 1 次/秒，表明系统存在大量错误。
+**含义**：应用抛出未捕获异常的速率持续 5 分钟超过 1 次/秒，说明系统存在大量错误。
 
 **处置思路**：
-1. 查看应用日志中的异常堆栈（`type` 标签区分异常类型）
-2. 检查最近部署或配置变更
+1. 查应用日志里的异常堆栈（`type` 标签区分异常类型）
+2. 检查最近的部署或配置变更
 3. 确认数据库、外部依赖的连接状态
 4. 参考 runbook → [`#emsapphigherrorrate`](https://internal/docs/ops/observability-runbook.md#emsapphigherrorrate)
 
-**影响范围**：高频异常通常伴随 API 响应失败，影响前端用户体验与数据采集可靠性。
+**影响范围**：高频异常通常伴随 API 响应失败，影响前端用户体验和数据采集可靠性。
 
 ---
 
@@ -231,15 +231,15 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | critical |
 | **team** | data |
 
-**含义**：至少一台电表的最新读数时间戳超过 10 分钟前，数据严重过期（SLO freshness 目标为 5 分钟，此处为 2× 阈值触发 critical）。
+**含义**：至少一台电表的最新读数时间戳是 10 分钟前的，数据严重过期（SLO freshness 目标为 5 分钟，此处为 2× 阈值触发 critical）。
 
 **处置思路**：
 1. 在 Grafana 的 Collector Dashboard 定位滞后的电表（按 `tenant`/`device` 筛选）
-2. 检查对应采集器的连接状态与 poll 日志
-3. 确认设备是否离线或网络中断
+2. 检查对应采集器的连接状态和 poll 日志
+3. 确认设备是不是离线或网络中断
 4. 参考 runbook → [`#emsdatafreshnesscritical`](https://internal/docs/ops/observability-runbook.md#emsdatafreshnesscritical)
 
-**影响范围**：客户报表与计费数据依赖实时读数，延迟超过 10 分钟将直接影响当期账单准确性。
+**影响范围**：客户报表和计费数据依赖实时读数，延迟超过 10 分钟会直接影响当期账单准确性。
 
 ---
 
@@ -252,15 +252,15 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | critical |
 | **team** | backend |
 
-**含义**：HikariCP 连接池的活跃连接数超过总量的 95%，持续 3 分钟，新请求即将开始等待或超时。
+**含义**：HikariCP 连接池的活跃连接数超过总量的 95%，持续 3 分钟，新请求要开始等待或超时了。
 
 **处置思路**：
-1. 检查是否存在慢查询或长事务持有连接（`SHOW PROCESSLIST`）
+1. 检查有没有慢查询或长事务占着连接（`SHOW PROCESSLIST`）
 2. 确认连接池大小配置（`spring.datasource.hikari.maximum-pool-size`）是否合理
 3. 必要时临时扩大连接池上限
 4. 参考 runbook → [`#emsdbconnectionpoolexhausted`](https://internal/docs/ops/observability-runbook.md#emsdbconnectionpoolexhausted)
 
-**影响范围**：连接池耗尽后所有数据库操作将超时，导致 API 全面失败。
+**影响范围**：连接池耗尽后所有数据库操作都会超时，导致 API 全面失败。
 
 ---
 
@@ -273,15 +273,15 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | critical |
 | **team** | ops |
 
-**含义**：节点上任意持久化文件系统的可用空间低于 10%，存在数据写入失败风险（排除 tmpfs/overlay/squashfs 等内存/容器层）。
+**含义**：节点上任一持久化文件系统的可用空间低于 10%，有数据写入失败风险（排除 tmpfs/overlay/squashfs 等内存/容器层）。
 
 **处置思路**：
 1. 定位磁盘占用最大的目录（`du -sh /var/lib/*`）
 2. 清理过期日志、旧备份文件
-3. 确认 Prometheus/Loki 的数据保留策略是否需要调整
+3. 确认 Prometheus/Loki 的数据保留策略要不要调整
 4. 参考 runbook → [`#emsdiskspacecritical`](https://internal/docs/ops/observability-runbook.md#emsdiskspacecritical)
 
-**影响范围**：磁盘写满将导致 Prometheus 无法写入时序数据、应用日志丢失、数据库事务回滚。
+**影响范围**：磁盘写满会导致 Prometheus 无法写入时序数据、应用日志丢失、数据库事务回滚。
 
 ---
 
@@ -301,9 +301,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | backend |
 
-**含义**：HTTP API 成功请求的 p99 延迟超过 1 秒（SLO latency 目标）持续 10 分钟。
+**含义**：HTTP API 成功请求的 p99 延迟超过 1 秒（SLO latency 目标），持续 10 分钟。
 
-**处置思路**：查找慢接口（按路径分组）、排查数据库慢查询、检查 GC 压力。
+**处置思路**：找慢接口（按路径分组）、排查数据库慢查询、检查 GC 压力。
 参考 runbook → [`#emsapplatencyhigh`](https://internal/docs/ops/observability-runbook.md#emsapplatencyhigh)
 
 ---
@@ -335,7 +335,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 **含义**：告警检测扫描的 p95 执行时间超过 10 秒，持续 15 分钟，可能导致告警检测延迟。
 
-**处置思路**：检查检测规则数量、数据库查询性能、是否存在积压的待处理读数。
+**处置思路**：检查检测规则数量、数据库查询性能、是不是有积压的待处理读数。
 参考 runbook → [`#emsalarmdetectorslow`](https://internal/docs/ops/observability-runbook.md#emsalarmdetectorslow)
 
 ---
@@ -351,7 +351,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 **含义**：告警 webhook 投递失败率超过 20%，持续 15 分钟，客户的钉钉/企微/自定义通知可能大量丢失。
 
-**处置思路**：检查目标 webhook 端点的响应码、网络连通性、签名配置是否有变更。
+**处置思路**：检查目标 webhook 端点的响应码、网络连通性、签名配置有没有变更。
 参考 runbook → [`#emswebhookfailurerate`](https://internal/docs/ops/observability-runbook.md#emswebhookfailurerate)
 
 ---
@@ -365,9 +365,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | backend |
 
-> **v1 说明**：此告警在 v1 **不会触发**。`ems:slo:scheduler_drift:max_seconds` 当前返回常量 `0`（Phase B4 drift 埋点延期）。规则已声明保持规格对齐；待 Phase F 接入真实信号后自动激活。
+> **v1 说明**：此告警在 v1 不会触发。`ems:slo:scheduler_drift:max_seconds` 当前返回常量 `0`（Phase B4 drift 埋点延期）。规则已声明以保持和规格对齐；Phase F 接入真实信号后会自动激活。
 
-**含义**：调度任务的触发时间偏差超过 60 秒（SLO scheduler-drift 目标），可能表明定时器或 JVM GC 存在问题。
+**含义**：调度任务的触发时间偏差超过 60 秒（SLO scheduler-drift 目标），可能是定时器或 JVM GC 有问题。
 
 参考 runbook → [`#emsschedulerdrift`](https://internal/docs/ops/observability-runbook.md#emsschedulerdrift)
 
@@ -382,9 +382,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | backend |
 
-**含义**：JVM 堆内存使用率超过 85%，持续 15 分钟，接近 OOM 风险区。
+**含义**：JVM 堆内存使用率超过 85%，持续 15 分钟，已接近 OOM 风险区。
 
-**处置思路**：检查内存泄漏（heap dump 分析）、调整 JVM `-Xmx` 参数、确认是否有大批量数据操作触发。
+**处置思路**：检查内存泄漏（heap dump 分析）、调整 JVM `-Xmx` 参数、确认有没有大批量数据操作触发。
 参考 runbook → [`#emsjvmmemoryhigh`](https://internal/docs/ops/observability-runbook.md#emsjvmmemoryhigh)
 
 ---
@@ -398,9 +398,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | backend |
 
-**含义**：GC 暂停时间速率超过 0.5 s/s（5 分钟内 GC 暂停累计超过总时间的 50%），持续 10 分钟，应用明显受 GC 拖累。
+**含义**：GC 暂停时间速率超过 0.5 s/s（5 分钟内 GC 暂停累计超过总时间的 50%），持续 10 分钟，应用明显被 GC 拖累。
 
-**处置思路**：确认 GC 类型（G1/ZGC）、分析 GC 日志、检查是否存在大对象分配或内存碎片。
+**处置思路**：确认 GC 类型（G1/ZGC）、分析 GC 日志、检查有没有大对象分配或内存碎片。
 参考 runbook → [`#emsjvmgcpressure`](https://internal/docs/ops/observability-runbook.md#emsjvmgcpressure)
 
 ---
@@ -414,9 +414,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | collector |
 
-**含义**：离线设备占总设备数超过 10%，持续 10 分钟，表明存在批量设备断连问题。
+**含义**：离线设备占总设备数超过 10%，持续 10 分钟，说明有批量设备断连问题。
 
-**处置思路**：确认是否为网络故障、设备维护还是采集器配置问题；检查最近批量变更。
+**处置思路**：确认是网络故障、设备维护还是采集器配置问题；检查最近的批量变更。
 参考 runbook → [`#emscollectorofflinedevices`](https://internal/docs/ops/observability-runbook.md#emscollectorofflinedevices)
 
 ---
@@ -430,9 +430,9 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | alarm |
 
-**含义**：`silent_timeout` 类型的活跃告警积压超过 50 条，持续 30 分钟，表明设备静默超时规则可能触发条件异常或客户运营侧存在大量未处理告警。
+**含义**：`silent_timeout` 类型的活跃告警积压超过 50 条，持续 30 分钟，可能是设备静默超时规则触发条件异常，或者客户运营侧有大量未处理告警。
 
-**处置思路**：检查静默超时阈值配置是否合理、确认是否存在批量设备网络问题、联系客户运营人员处理积压告警。
+**处置思路**：检查静默超时阈值配置是否合理、确认有没有批量设备网络问题、联系客户运营人员处理积压告警。
 参考 runbook → [`#emsalarmbacklog`](https://internal/docs/ops/observability-runbook.md#emsalarmbacklog)
 
 ---
@@ -444,15 +444,15 @@ ems:slo:scheduler_drift:error_budget_remaining
 燃烧率（Burn Rate）是 Google SRE Workbook 推荐的告警策略，解决传统阈值告警"过去好不代表未来没问题"的问题。
 
 **核心思路**：
-- SLO 允许在 30 天内有 0.5% 的不可用时间（即"错误预算"= 0.005）
-- 如果过去 1 小时的不可用率是正常预算消耗速度的 **14.4 倍**，那么按此速率继续下去，**约 2 天就会耗尽整月预算** → 必须立刻响应（critical）
-- 如果过去 6 小时的不可用率是正常速度的 **6 倍**，那么约 **5 天耗尽** → 需要关注但不紧急（warning）
+- SLO 允许 30 天内有 0.5% 的不可用时间（即"错误预算"= 0.005）
+- 如果过去 1 小时的不可用率是正常预算消耗速度的 14.4 倍，按此速率持续，约 2 天就会耗尽整月预算 → 必须立刻响应（critical）
+- 如果过去 6 小时的不可用率是正常速度的 6 倍，约 5 天耗尽 → 要关注但不紧急（warning）
 
 **两个窗口的作用**：
-- **短窗口（1h）**：灵敏，捕捉突发故障
-- **长窗口（6h）**：稳定，过滤噪声、捕捉持续性慢速恶化
+- 短窗口（1h）：灵敏，捕捉突发故障
+- 长窗口（6h）：稳定，过滤噪声，捕捉持续慢速恶化
 
-**v1 覆盖范围**：仅可用性 SLO 接入燃烧率告警；延迟/新鲜度/调度漂移的 burn-rate 告警列入 Plan #4 路线图。
+**v1 覆盖范围**：只有可用性 SLO 接入了燃烧率告警；延迟/新鲜度/调度漂移的 burn-rate 告警列入 Plan #4 路线图。
 
 ---
 
@@ -468,7 +468,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 **阈值推导**：`14.4 × 0.005 = 0.072`，即过去 1 小时内不可用时间超过 4.3 分钟（72% 的小时预算）。
 
-**含义**：可用性 SLO 错误预算正在以 14.4 倍速度消耗，约 2 天内将耗尽整月预算。需立即响应。
+**含义**：可用性 SLO 错误预算正以 14.4 倍速度消耗，约 2 天内会耗尽整月预算。需要立即响应。
 
 参考 runbook → [`#emsbudgetburnfast`](https://internal/docs/ops/observability-runbook.md#emsbudgetburnfast)
 
@@ -486,7 +486,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 **阈值推导**：`6 × 0.005 = 0.03`，即过去 6 小时内不可用时间超过 10.8 分钟（30% 的 6h 预算）。
 
-**含义**：可用性 SLO 错误预算正在以 6 倍速度慢速消耗，约 5 天内将耗尽整月预算。应在当天内排查。
+**含义**：可用性 SLO 错误预算正以 6 倍速度慢速消耗，约 5 天内会耗尽整月预算。当天内要排查。
 
 参考 runbook → [`#emsbudgetburnslow`](https://internal/docs/ops/observability-runbook.md#emsbudgetburnslow)
 
@@ -517,8 +517,8 @@ ems:slo:scheduler_drift:error_budget_remaining
 ```
 
 **分组策略**（`group_by: [alertname, severity]`）：
-- 同一告警名 + 相同 severity 的告警合并为一条通知
-- `group_wait: 30s` — 等待 30 秒聚合同批到来的告警
+- 同一告警名加相同 severity 的告警合并成一条通知
+- `group_wait: 30s` — 等 30 秒聚合同批到来的告警
 - `group_interval: 5m` — 同组新告警到来后，至少等 5 分钟再发送更新
 - `repeat_interval: 4h` — 已激活的告警每 4 小时重复提醒一次
 
@@ -532,7 +532,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 | `multi-channel` | 企微 | 内部 webhook-bridge 服务（`http://obs-webhook-bridge:9094/wechat`） |
 | `multi-channel` | 通用 webhook | `OBS_GENERIC_WEBHOOK`（客户 IT 工单系统等） |
 
-> **重要**：若某个环境变量未设置，对应渠道的 URL 为空，Alertmanager 将静默跳过该 receiver，不影响其他渠道。例如，不配置 `OBS_GENERIC_WEBHOOK` 时，邮件/钉钉/企微仍可正常收到通知。
+> **重要**：某个环境变量没设置时，对应渠道的 URL 为空，Alertmanager 会静默跳过该 receiver，不影响其他渠道。比如不配 `OBS_GENERIC_WEBHOOK` 时，邮件/钉钉/企微仍能正常收到通知。
 
 ### 6.3 抑制规则（Inhibition）
 
@@ -545,9 +545,9 @@ inhibit_rules:
     equal: [instance]
 ```
 
-**效果**：当 `EmsAppDown` 对某个实例触发时，**同一实例**上的所有其他 `Ems.*` 告警将被自动抑制，不发送通知。
+**效果**：`EmsAppDown` 对某个实例触发时，同一实例上的所有其他 `Ems.*` 告警会被自动抑制，不发送通知。
 
-**原因**：应用实例宕机后，延迟升高、连接池耗尽、数据新鲜度劣化等所有下游告警都是宕机的直接后果。同时发出这些告警只会造成通知洪泛（alert spam），干扰故障响应。
+**原因**：应用实例宕机后，延迟升高、连接池耗尽、数据新鲜度劣化等下游告警都是宕机的直接后果。同时发出这些告警只会造成通知洪泛（alert spam），干扰故障响应。
 
 ---
 
@@ -555,7 +555,7 @@ inhibit_rules:
 
 ### 7.1 维护期静默
 
-在计划维护期间（重启、升级），建议提前创建静默，避免误报。
+计划维护期间（重启、升级），建议提前创建静默，避免误报。
 
 **命令行方式（amtool）**：
 
@@ -588,11 +588,11 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 4. 填写维护说明（Comment 字段）
 5. 点击 Submit 保存
 
-> **建议**：静默时长不超过计划维护窗口 + 30 分钟缓冲，维护结束后及时手动结束静默，避免真实故障被掩盖。
+> **建议**：静默时长不要超过计划维护窗口加 30 分钟缓冲，维护结束后及时手动结束静默，避免真实故障被掩盖。
 
 ### 7.2 抑制规则的工作方式
 
-抑制规则（Inhibition）与静默的区别：
+抑制规则（Inhibition）和静默的区别：
 
 | 特性 | 静默（Silence） | 抑制（Inhibition） |
 |------|-----------------|-------------------|
@@ -601,11 +601,11 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 | 用途 | 维护期 | 根因/派生告警去重 |
 | 配置位置 | Alertmanager UI / amtool | `alertmanager.yml` |
 
-当前 factory-ems 的抑制规则（§6.3）仅有一条：`EmsAppDown` 触发时抑制同实例所有 `Ems.*` 告警。一旦 `EmsAppDown` 恢复，抑制自动解除，被抑制的告警若仍满足触发条件则会重新发出通知。
+当前 factory-ems 的抑制规则（§6.3）只有一条：`EmsAppDown` 触发时抑制同实例所有 `Ems.*` 告警。`EmsAppDown` 一恢复，抑制就自动解除，被抑制的告警仍满足触发条件就会重新发出通知。
 
 ### 7.3 默认 Receiver 行为
 
-未被特定路由匹配的告警（理论上在当前规则集中不存在）会落到 `default-email` receiver。这是 Alertmanager 的安全兜底——所有告警最少会有一个邮件通知渠道。
+没被特定路由匹配的告警（当前规则集里理论上不存在）会落到 `default-email` receiver。这是 Alertmanager 的安全兜底，保证所有告警至少有一个邮件通知渠道。
 
 ---
 
@@ -613,39 +613,39 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ### 8.1 99.5% 可用性
 
-**数学含义**：允许每月不可用 **约 3.6 小时**（= 30 × 24 × 60 × 0.005 分钟）。
+**数学含义**：允许每月不可用约 3.6 小时（= 30 × 24 × 60 × 0.005 分钟）。
 
 对客户的实际意义：
-- 计划维护可在凌晨 2-4 点执行（2 小时），仍有 1.6 小时余量应对突发故障
+- 计划维护放在凌晨 2-4 点执行（2 小时），还剩 1.6 小时余量应对突发故障
 - 非计划故障响应目标：30 分钟内恢复（单次故障消耗约 14% 的月度预算）
-- 监控证明：`ems:slo:availability:sli_30d` 指标实时可查，无需依赖供应商声明
+- 监控证明：`ems:slo:availability:sli_30d` 指标实时可查，不用依赖供应商声明
 
 ### 8.2 p99 ≤ 1 秒
 
-**数学含义**：最慢的 1% 请求在 1 秒内完成。平均响应时间通常远低于此（典型值 p50 < 100ms）。
+**数学含义**：最慢的 1% 请求在 1 秒内完成。平均响应时间通常远低于此（典型 p50 < 100ms）。
 
 对客户的实际意义：
-- 操作员查询实时数据时不会因页面加载缓慢而影响工作效率
+- 操作员查询实时数据时不会因页面加载慢而影响工作效率
 - 1 秒上限是行业认可的"可接受延迟"边界（p99 = 1s 是保守上限，日常 p50 通常远低于此）
-- 高峰期（批量报表导出、采集并发高峰）下仍能保障 p99
+- 高峰期（批量报表导出、采集并发高峰）下仍能保住 p99
 
 ### 8.3 5 分钟数据新鲜度
 
-**数学含义**：任意电表的最新读数不超过 5 分钟前，客户看到的数据最多延迟 300 秒。
+**数学含义**：任一电表的最新读数不超过 5 分钟前，客户看到的数据最多延迟 300 秒。
 
 对客户的实际意义：
-- 支持近实时决策（如发现用电异常后 5 分钟内可看到数据变化）
+- 支持近实时决策（如发现用电异常后 5 分钟内能看到数据变化）
 - 计费周期内每小时最多影响 1 个采样点的准确性
 - 超过 10 分钟（2× SLO）触发 critical 告警，运维介入
 
 ### 8.4 错误预算的策略价值
 
-错误预算不仅是"允许出错多少"，更是运维团队的**行动指引**：
+错误预算不只是"允许出错多少"，也是运维团队的行动指引：
 
-- **预算充裕（>70%）**：可以安排升级、变更，甚至接受一定风险的功能发布
-- **预算中等（30-70%）**：需谨慎评估每次变更的影响，限制高风险操作窗口
-- **预算告急（<30%）**：冻结非紧急变更，专注稳定性改进；触发回顾会
-- **预算耗尽（0%）**：当月 SLO 已违约，需完整故障复盘 + 客户沟通
+- 预算充裕（>70%）：可以安排升级、变更，甚至接受一定风险的功能发布
+- 预算中等（30-70%）：每次变更的影响要谨慎评估，限制高风险操作窗口
+- 预算告急（<30%）：冻结非紧急变更，专注稳定性改进，触发回顾会
+- 预算耗尽（0%）：当月 SLO 已违约，需要完整故障复盘加客户沟通
 
 ---
 
@@ -653,7 +653,7 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ### 9.1 promtool 测试用例
 
-所有告警规则均配有 `promtool test rules` 单元测试，位于：
+所有告警规则都配有 `promtool test rules` 单元测试，位于：
 
 ```
 ops/observability/prometheus/rules/_tests/
@@ -664,9 +664,9 @@ ops/observability/prometheus/rules/_tests/
 
 **总计：32 个测试用例**
 
-每条告警均有：
-- **正例（Positive）**：注入超过阈值的时间序列，验证告警在预期 `eval_time` 内触发，并检查 `severity`、`team` 等关键标签
-- **负例（Negative）**：注入正常数据，验证告警不触发（`exp_alerts: []`）
+每条告警都有：
+- 正例（Positive）：注入超过阈值的时间序列，验证告警在预期 `eval_time` 内触发，并检查 `severity`、`team` 等关键标签
+- 负例（Negative）：注入正常数据，验证告警不触发（`exp_alerts: []`）
 
 **本地运行**：
 
@@ -683,13 +683,13 @@ promtool test rules ops/observability/prometheus/rules/_tests/critical-alerts_te
 
 ### 9.2 测试策略说明
 
-- 测试验证的是**告警是否触发**（标签断言）和**是否静默**（空 exp_alerts）
+- 测试验证的是告警是否触发（标签断言）和是否静默（空 exp_alerts）
 - annotation 模板渲染（`humanizePercentage`、`humanizeDuration` 等）不在单元测试中断言，由 F2 smoke 测试（端到端告警注入）覆盖
-- `EmsSchedulerDrift` 的正例测试暂缓，待 Phase F 接入真实 drift 信号后补充
+- `EmsSchedulerDrift` 的正例测试暂缓，等 Phase F 接入真实 drift 信号后补充
 
 ### 9.3 CI 集成（v1 待办）
 
-CI 集成计划在 **Phase F1** 实现。v1 阶段需手动执行上述命令验证规则变更。
+CI 集成计划在 Phase F1 实现。v1 阶段需要手动执行上述命令验证规则变更。
 
 Phase F1 目标：
 - 每次 PR 自动运行 `promtool test rules`（32 个用例）
@@ -698,12 +698,12 @@ Phase F1 目标：
 
 ### 9.4 客户验收标准
 
-每条告警在交付验收时需满足：
-- 至少通过一次 **synthetic 告警注入**（人工制造满足触发条件的场景）
+每条告警在交付验收时要满足：
+- 至少通过一次 synthetic 告警注入（人工制造满足触发条件的场景）
 - 在 Alertmanager UI 确认告警路由到正确的 receiver
 - 在对应通知渠道（邮件/钉钉/企微）收到通知样例
 
-具体注入方法参见 Phase F2 `obs-smoke` 端到端脚本（F2 完成后补充链接）。
+具体注入方法看 Phase F2 `obs-smoke` 端到端脚本（F2 完成后补充链接）。
 
 ---
 
@@ -719,17 +719,17 @@ Phase F1 目标：
 
 ### Plan #4 容错强化阶段（中期）
 
-- 为延迟 SLO（latency）、新鲜度 SLO（freshness）补充燃烧率告警
-- 调度漂移 SLO：待 Phase B4 `ems_app_scheduled_drift_seconds` 埋点完成后，替换 v1 占位规则，并补充 burn-rate 告警
+- 给延迟 SLO（latency）、新鲜度 SLO（freshness）补充燃烧率告警
+- 调度漂移 SLO：等 Phase B4 `ems_app_scheduled_drift_seconds` 埋点完成后，替换 v1 占位规则，并补充 burn-rate 告警
 
 ### Plan #6 SSO 接入 Grafana（中期）
 
-- 企业 SSO（LDAP/OIDC）集成，为客户提供基于角色的 Grafana 访问控制
-- 客户管理员可直接查看 SLO Dashboard，无需运维开放账号
+- 企业 SSO（LDAP/OIDC）集成，给客户提供基于角色的 Grafana 访问控制
+- 客户管理员可以直接查看 SLO Dashboard，不用运维开放账号
 
 ### 客户合同写法建议
 
-在 SLA 附件中引用 SLO 时，建议：
+在 SLA 附件中引用 SLO 时，可以这样写：
 
 ```
 可用性：factory-ems 核心服务月度可用率 ≥ 99.5%，
@@ -741,7 +741,7 @@ Phase F1 目标：
 数据新鲜度：电表读数延迟 ≤ 5 分钟（基于 ems_meter_reading_lag_seconds 最大值）。
 ```
 
-这种写法将 SLO 与可观测性指标直接绑定，避免了"SLA 违约认定困难"的常见合同纠纷。
+这种写法把 SLO 和可观测性指标直接绑定，能避免"SLA 违约认定困难"这类常见合同纠纷。
 
 ---
 

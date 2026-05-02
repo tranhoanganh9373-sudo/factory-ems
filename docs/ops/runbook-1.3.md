@@ -25,9 +25,9 @@ ${EMS_UPLOAD_ROOT}/                        # docker-compose 内为 ./data/ems_up
 
 约定：
 
-- **目录分桶**：`yyyy-MM`，按上传月份切分，避免单目录 inode 爆炸。
+- **目录分桶**：`yyyy-MM`，按上传月份切分，防止单目录 inode 爆。
 - **文件名**：UUIDv4 + 扩展名。Spring 在 `FloorplanService.upload()` 生成；
-  原始文件名仅在 DB `floorplans.original_name` 留档，磁盘上不再使用。
+  原始文件名只在 DB `floorplans.original_name` 留档，磁盘上不再使用。
 - **支持扩展**：`png` / `jpg` / `jpeg` / `webp` / `svg`。MIME 校验在
   `ems-floorplan` 的 `FileTypeValidator` 完成；上限 10 MiB。
 - **DB 字段** `floorplans.image_path`：相对路径，例如
@@ -62,7 +62,7 @@ ${EMS_UPLOAD_ROOT}/                        # docker-compose 内为 ./data/ems_up
   并标记 `image_path` 待清理。**磁盘文件不立即删**（避免误删，等周期 GC）。
 - **GC 任务**：`scripts/floorplan-gc.sh` 扫 `data/ems_uploads/floorplans/`，
   跨表 join `floorplans.image_path`，孤儿文件移到 `data/ems_uploads/.trash/`。
-  建议每月 1 号 cron 跑一次。
+  每月 1 号 cron 跑一次即可。
 
 ---
 
@@ -140,7 +140,7 @@ LINE-B,MORNING,2026-04-25,SKU-B007,12.500,KG
 
 ### 3.4 错误处理
 
-- 任意一行解析失败 → 整个导入回滚（事务），返回 4xx + JSON 错误清单。
+- 任一行解析失败 → 整个导入回滚（事务），返回 4xx + JSON 错误清单。
 - 错误清单示例：
   ```json
   {
