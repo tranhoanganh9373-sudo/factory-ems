@@ -83,3 +83,6 @@
 - [x] Backup tag `backup/pre-redesign-2026-04-30` 仍可访问
 
 未打勾项均为「需后端栈或人工」，可作为后续 PR 的 review checklist。
+
+- 2026-05-01 10:37 probe BE=000000 FE=000000 — skip
+- 2026-05-01 17:37 probe BE=000000 FE=000000 — skip
