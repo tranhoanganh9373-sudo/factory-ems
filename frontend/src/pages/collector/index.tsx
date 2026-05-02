@@ -30,9 +30,17 @@ export default function CollectorPage() {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<ChannelDTO | undefined>(undefined);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-  const [reconnectingId, setReconnectingId] = useState<number | null>(null);
-  const [testingId, setTestingId] = useState<number | null>(null);
+  // 用 Set 跟踪每个 channelId 是否在飞行中——同列多通道操作互不阻塞。
+  const [deletingIds, setDeletingIds] = useState<Set<number>>(new Set());
+  const [reconnectingIds, setReconnectingIds] = useState<Set<number>>(new Set());
+  const [testingIds, setTestingIds] = useState<Set<number>>(new Set());
+
+  const addId = (set: Set<number>, id: number) => new Set(set).add(id);
+  const removeId = (set: Set<number>, id: number) => {
+    const next = new Set(set);
+    next.delete(id);
+    return next;
+  };
   const [batchOpen, setBatchOpen] = useState(false);
 
   const { data: states = [], isLoading } = useQuery({
@@ -53,7 +61,7 @@ export default function CollectorPage() {
       if (res.success) message.success(`测试成功 (${res.latencyMs ?? 0} ms)`);
       else message.error(`测试失败：${res.message}`);
     },
-    onSettled: () => setTestingId(null),
+    onSettled: (_, __, id) => setTestingIds((s) => removeId(s, id)),
   });
 
   const reconnect = useMutation({
@@ -70,7 +78,7 @@ export default function CollectorPage() {
       const msg = err instanceof Error ? err.message : '重连失败';
       message.error(`重连失败：${msg}`);
     },
-    onSettled: () => setReconnectingId(null),
+    onSettled: (_, __, id) => setReconnectingIds((s) => removeId(s, id)),
   });
 
   const remove = useMutation({
@@ -83,7 +91,7 @@ export default function CollectorPage() {
       const msg = err instanceof Error ? err.message : '删除失败';
       message.error(msg);
     },
-    onSettled: () => setDeletingId(null),
+    onSettled: (_, __, id) => setDeletingIds((s) => removeId(s, id)),
   });
 
   const confirmDelete = (channelId: number) => {
@@ -94,7 +102,7 @@ export default function CollectorPage() {
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: () => {
-        setDeletingId(channelId);
+        setDeletingIds((s) => addId(s, channelId));
         return new Promise<void>((resolve, reject) => {
           remove.mutate(channelId, {
             onSuccess: () => resolve(),
@@ -149,7 +157,7 @@ export default function CollectorPage() {
               title: '状态',
               dataIndex: 'connState',
               render: (s: string, r) => {
-                const effective = reconnectingId === r.channelId ? 'CONNECTING' : s;
+                const effective = reconnectingIds.has(r.channelId) ? 'CONNECTING' : s;
                 return (
                   <Tag color={STATE_COLORS[effective] ?? 'default'}>
                     {translate(CONNECTION_STATE_LABEL, effective)}
@@ -204,22 +212,20 @@ export default function CollectorPage() {
                   <Button
                     size="small"
                     onClick={() => {
-                      setTestingId(r.channelId);
+                      setTestingIds((s) => addId(s, r.channelId));
                       test.mutate(r.channelId);
                     }}
-                    loading={testingId === r.channelId}
-                    disabled={testingId !== null && testingId !== r.channelId}
+                    loading={testingIds.has(r.channelId)}
                   >
                     测试
                   </Button>
                   <Button
                     size="small"
                     onClick={() => {
-                      setReconnectingId(r.channelId);
+                      setReconnectingIds((s) => addId(s, r.channelId));
                       reconnect.mutate(r.channelId);
                     }}
-                    loading={reconnectingId === r.channelId}
-                    disabled={reconnectingId !== null && reconnectingId !== r.channelId}
+                    loading={reconnectingIds.has(r.channelId)}
                   >
                     重连
                   </Button>
@@ -234,8 +240,7 @@ export default function CollectorPage() {
                     type="link"
                     danger
                     data-testid={`channel-delete-${r.channelId}`}
-                    loading={deletingId === r.channelId}
-                    disabled={deletingId !== null && deletingId !== r.channelId}
+                    loading={deletingIds.has(r.channelId)}
                     onClick={() => confirmDelete(r.channelId)}
                   >
                     删除
