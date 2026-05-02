@@ -10,9 +10,12 @@ import com.ems.audit.annotation.Audited;
 import com.ems.auth.security.AuthUser;
 import com.ems.core.dto.PageDTO;
 import com.ems.core.dto.Result;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -20,6 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/alarms")
+@Validated
 public class AlarmController {
 
     private final AlarmService service;
@@ -36,8 +40,8 @@ public class AlarmController {
             @RequestParam(required = false) AlarmType alarmType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
         return Result.ok(service.list(status, deviceId, alarmType, from, to, page, size));
     }
 
