@@ -504,6 +504,46 @@ docker compose up -d
 
 跑通一遍 = 备份可用。**部署后 30 天内必做一次**。
 
+### 8.5 前端代码热更新
+
+`docker-compose.yml` 的 `frontend-builder` 服务只在 `docker compose up` 时跑一次，把 Vite bundle 写进命名卷 `factory-ems_frontend_dist`，nginx 只读挂载之。**`git push` 后这两个容器都不会自动重启**，卷内 bundle 仍是旧版本——前端改动看不到。本节给出固化方案（QA 报告 L-001 永久修复）。
+
+#### 手动热更新（推荐先掌握）
+
+```bash
+cd /opt/factory-ems
+git pull
+sudo ./scripts/redeploy-frontend.sh                # 全量：npm ci + build + 注入卷 + nginx reload
+sudo ./scripts/redeploy-frontend.sh --no-install   # 复用 node_modules，~4 秒
+```
+
+脚本退出码：0 成功 / 1 入参或前置失败 / 2 npm ci 失败 / 3 build 失败 / 4 卷注入失败 / 5 nginx reload 失败。最后会打印 bundle 体积 + `dist/index.html` 的 sha256 + 当前 git HEAD，方便回写部署日志。
+
+环境变量（默认值适配 `docker-compose.yml`）：
+
+| 变量 | 默认 |
+|---|---|
+| `EMS_HOME` | `/opt/factory-ems` |
+| `NGINX_CONTAINER` | `factory-ems-nginx-1` |
+| `FRONTEND_VOLUME` | `factory-ems_frontend_dist` |
+
+#### 自动化（opt-in git hook）
+
+仓库提供 `scripts/git-hooks/post-merge`：每次 `git pull` / `git merge` 后若本次合并触到 `frontend/` 则自动调 `redeploy-frontend.sh`。**不会自动启用**，部署机手工开：
+
+```bash
+cd /opt/factory-ems
+git config core.hooksPath scripts/git-hooks
+# 想关：git config --unset core.hooksPath
+```
+
+Hook 自身 always exit 0，redeploy 失败只打 stderr，不让 `git pull` 整体失败。
+
+#### 不要做什么
+
+- **不要** `docker compose restart nginx`——它不会刷卷里的 bundle，仍是旧版。
+- **不要** 直接 `docker compose up -d --force-recreate frontend-builder`——会用镜像里 bake 进去的 bundle（compose-up 那时的 HEAD），不是当前 git 工作树最新代码；除非要回滚。
+
 ---
 
 ## §9 高可用（多实例）

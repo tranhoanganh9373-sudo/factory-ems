@@ -181,6 +181,37 @@ sudo TARGET=/opt/factory-ems-restore REPO_URL=git@example.com:org/factory-ems.gi
 
 **配套 SOP**：[installation-manual.md](../docs/install/installation-manual.md) §8.4。
 
+### redeploy-frontend.sh — 前端 bundle 热更新
+
+**做什么**：在 frontend 仓库改动 push 之后，本机上重建 Vite bundle → 注入命名卷 `factory-ems_frontend_dist` → `nginx -s reload`。`docker-compose.yml` 的 `frontend-builder` 仍是首装 bootstrap，本脚本只补"已起栈后怎么热更新"那段缺口（QA 报告 L-001）。
+**何时用**：`git pull` / `git push` 触到 `frontend/` 之后；或上一次 demo 看不到新按钮时手工兜底。
+**示例**：
+
+```bash
+sudo ./scripts/redeploy-frontend.sh                    # 全量：npm ci + build + 注入 + reload
+sudo ./scripts/redeploy-frontend.sh --no-install       # 复用 node_modules，约 4 秒
+EMS_HOME=/opt/factory-ems NGINX_CONTAINER=factory-ems-nginx-1 \
+  ./scripts/redeploy-frontend.sh
+```
+
+**配套 SOP**：[installation-manual.md](../docs/install/installation-manual.md) §8.5 "前端代码热更新"，以及下方 "Git hooks" 段的 opt-in 自动化。
+
+---
+
+## Git hooks
+
+仓库自带的 git hook 全部放在 `scripts/git-hooks/`，**默认不启用**——避免污染开发机。生产部署机 opt-in 一次即可：
+
+```bash
+cd /opt/factory-ems
+git config core.hooksPath scripts/git-hooks
+# 关掉：git config --unset core.hooksPath
+```
+
+| Hook | 作用 |
+|---|---|
+| `post-merge` | `git merge` / `git pull` 完成后，若本次合并触到 `frontend/` 则自动调 `redeploy-frontend.sh`；不动则静默退出。Hook 自身始终 exit 0，redeploy 失败仅打 stderr，不让 `git pull` 整体失败。 |
+
 ---
 
 ## Seed script notes

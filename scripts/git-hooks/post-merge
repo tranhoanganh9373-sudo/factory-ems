@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Factory EMS — post-merge git hook（前端热更新触发器）
+#
+# 作用：每次 git merge / git pull 完成后，若本次合并触到 frontend/ 目录，
+#       自动调用 scripts/redeploy-frontend.sh 重建前端 bundle 并 reload nginx。
+#       不动 frontend/ 时静默退出，不打扰其他模块的 commit / merge。
+#
+# ⚠️ 这是 opt-in 机制——本仓库不会自动启用。在生产部署机上手工开：
+#
+#   cd /opt/factory-ems
+#   git config core.hooksPath scripts/git-hooks
+#
+# 关掉：
+#
+#   git config --unset core.hooksPath
+#
+# 退出码：始终 0（hook 失败不应让 git pull/merge 整体失败）；
+#         redeploy-frontend.sh 自身的错误码会打到 stderr，不传播。
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+# git 把合并前后的两个 commit 暴露成 ORIG_HEAD / HEAD
+# 第一次 clone 后没有 ORIG_HEAD，跳过即可
+[[ -n "${ORIG_HEAD:-}" ]] || ORIG_HEAD="$(git rev-parse ORIG_HEAD 2>/dev/null || true)"
+[[ -n "$ORIG_HEAD" ]] || exit 0
+
+CHANGED=$(git diff-tree -r --name-only --no-commit-id "$ORIG_HEAD" HEAD 2>/dev/null || true)
+if ! grep -q '^frontend/' <<<"$CHANGED"; then
+  exit 0
+fi
+
+SCRIPT="$REPO_ROOT/scripts/redeploy-frontend.sh"
+if [[ ! -x "$SCRIPT" ]]; then
+  echo "post-merge: $SCRIPT 不存在或不可执行，跳过前端热更新" >&2
+  exit 0
+fi
+
+echo "post-merge: 检测到 frontend/ 改动，调用 redeploy-frontend.sh ..."
+"$SCRIPT" || {
+  echo "post-merge: redeploy-frontend.sh 失败，请手工排查（git pull 仍视为成功）" >&2
+  exit 0
+}
