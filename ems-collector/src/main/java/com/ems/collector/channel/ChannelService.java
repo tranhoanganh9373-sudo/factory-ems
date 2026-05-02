@@ -79,23 +79,28 @@ public class ChannelService {
             try {
                 startChannel(ch);
             } catch (Exception e) {
+                // 不阻塞其他 channel；register/recordFailure/setState 已在 startChannel 内处理。
                 log.error("failed to start channel {} ({}): {}",
                         ch.getName(), ch.getProtocol(), e.getMessage());
-                // 标 ERROR 但不重抛 — 不影响其他 channel
-                // 注意：setState 必须在 recordFailure 之后，
-                // 否则 recordFailure 会把 ERROR 覆盖回 DISCONNECTED
-                stateRegistry.register(ch.getId(), ch.getProtocol());
-                stateRegistry.recordFailure(ch.getId(), e.getMessage());
-                stateRegistry.setState(ch.getId(), ConnectionState.ERROR);
             }
         }
         log.info("ChannelService started: active={}", active.size());
     }
 
+    /**
+     * 创建通道：先落库，再尝试启动；启动失败不回滚也不抛 500，通道仍以 ERROR 状态存在，
+     * 让用户能在 UI 上看到并修配置。语义与 {@link #startAllEnabled} 一致——
+     * "通道已创建"和"通道当前不可达"是两件事。
+     */
     public Channel create(Channel ch) {
         Channel saved = repo.save(ch);
         if (saved.isEnabled()) {
-            startChannel(saved);
+            try {
+                startChannel(saved);
+            } catch (Exception e) {
+                log.error("channel {} ({}) created but initial start failed: {}",
+                        saved.getName(), saved.getProtocol(), e.getMessage());
+            }
         }
         return saved;
     }
@@ -105,7 +110,12 @@ public class ChannelService {
         updated.setId(id);
         Channel saved = repo.save(updated);
         if (saved.isEnabled()) {
-            startChannel(saved);
+            try {
+                startChannel(saved);
+            } catch (Exception e) {
+                log.error("channel {} ({}) updated but restart failed: {}",
+                        saved.getName(), saved.getProtocol(), e.getMessage());
+            }
         }
         return saved;
     }
@@ -131,10 +141,12 @@ public class ChannelService {
     }
 
     private void startChannel(Channel ch) {
-        Transport t = factory.create(ch.getProtocol());
+        // 先 register：保证即使 factory.create 失败，也有一个可被 setState(ERROR) 命中的状态条目。
         stateRegistry.register(ch.getId(), ch.getProtocol());
         CycleAggregator agg = cycleAggs.computeIfAbsent(ch.getId(), k -> new CycleAggregator());
+        Transport t;
         try {
+            t = factory.create(ch.getProtocol());
             t.start(ch.getId(), ch.getProtocolConfig(), sample -> {
                 try {
                     sampleWriter.write(sample);
@@ -148,6 +160,8 @@ public class ChannelService {
             });
         } catch (RuntimeException e) {
             stateRegistry.recordFailure(ch.getId(), e.getMessage());
+            // setState 必须在 recordFailure 之后——recordFailure 会把 connState 改写成 DISCONNECTED。
+            stateRegistry.setState(ch.getId(), ConnectionState.ERROR);
             throw e;
         }
         active.put(ch.getId(), t);
