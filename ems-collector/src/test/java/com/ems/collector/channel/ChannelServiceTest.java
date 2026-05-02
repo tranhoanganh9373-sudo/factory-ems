@@ -222,7 +222,7 @@ class ChannelServiceTest {
     }
 
     @Test
-    void sampleCallbackTriggersWriterAndStateRegistry() {
+    void sampleCallbackWiresWriterAndCycleAggregator() throws InterruptedException {
         Transport transport = mock(Transport.class);
         factoryMock.enqueue(transport);
         Channel ch = newChannel(60L, "VIRTUAL", true);
@@ -233,21 +233,30 @@ class ChannelServiceTest {
 
         ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
         verify(transport).start(eq(60L), any(VirtualConfig.class), sinkCaptor.capture());
+        SampleSink sink = sinkCaptor.getValue();
 
-        Sample sample = new Sample(60L, "p1",
+        Sample sample1 = new Sample(60L, "p1",
                 Instant.parse("2026-04-30T10:00:00Z"),
                 1.5, Quality.GOOD, Map.of());
-        sinkCaptor.getValue().accept(sample);
+        sink.accept(sample1);
+        // ChannelService 的 200ms cycle-gap 聚合：cycle 仅在下一 sample 跨过 gap 时 commit。
+        Thread.sleep(250);
+        Sample sample2 = new Sample(60L, "p1",
+                Instant.parse("2026-04-30T10:00:01Z"),
+                1.6, Quality.GOOD, Map.of());
+        sink.accept(sample2);
 
-        verify(sinkSvc).write(sample);
-        // 真实 registry 验证：CONNECTED + lastSuccessAt 不为 null
+        verify(sinkSvc).write(sample1);
+        verify(sinkSvc).write(sample2);
+        // cycle 1 已 commit → recordSuccess 触发 lastSuccessAt。Hysteresis(threshold=3)
+        // 阻止 CONNECTING→CONNECTED；CONNECTED 状态与 successCount24h 在 ChannelStateRegistryTest 单独验证。
         var snap = registry.snapshot(60L);
-        assertThat(snap.connState()).isEqualTo(ConnectionState.CONNECTED);
-        assertThat(snap.successCount24h()).isEqualTo(1L);
+        assertThat(snap.lastSuccessAt()).isNotNull();
+        assertThat(snap.connState()).isEqualTo(ConnectionState.CONNECTING);
     }
 
     @Test
-    void badSampleRecordsFailureNotSuccess() {
+    void badSampleRecordsFailureNotSuccess() throws InterruptedException {
         Transport transport = mock(Transport.class);
         factoryMock.enqueue(transport);
         Channel ch = newChannel(61L, "VIRTUAL", true);
@@ -258,13 +267,21 @@ class ChannelServiceTest {
 
         ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
         verify(transport).start(eq(61L), any(VirtualConfig.class), sinkCaptor.capture());
+        SampleSink sink = sinkCaptor.getValue();
 
         Sample bad = new Sample(61L, "p1",
                 Instant.parse("2026-04-30T10:00:00Z"),
                 null, Quality.BAD, Map.of("error", "modbus timeout"));
-        sinkCaptor.getValue().accept(bad);
+        sink.accept(bad);
+        // 跨过 200ms cycle-gap 后再发 trigger sample，把 cycle 1 (1×BAD) commit 到 registry。
+        Thread.sleep(250);
+        Sample trigger = new Sample(61L, "p1",
+                Instant.parse("2026-04-30T10:00:01Z"),
+                null, Quality.BAD, Map.of("error", "trigger"));
+        sink.accept(trigger);
 
         var snap = registry.snapshot(61L);
+        // CONNECTING + 1 次 cycle failure → 单次失败即 DISCONNECTED（hysteresis 对 CONNECTING 不延迟）。
         assertThat(snap.connState()).isEqualTo(ConnectionState.DISCONNECTED);
         assertThat(snap.successCount24h()).isZero();
         assertThat(snap.failureCount24h()).isEqualTo(1L);
@@ -272,7 +289,7 @@ class ChannelServiceTest {
     }
 
     @Test
-    void uncertainSampleRecordsFailureWithFallbackError() {
+    void uncertainSampleRecordsFailureWithFallbackError() throws InterruptedException {
         Transport transport = mock(Transport.class);
         factoryMock.enqueue(transport);
         Channel ch = newChannel(62L, "VIRTUAL", true);
@@ -283,12 +300,18 @@ class ChannelServiceTest {
 
         ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
         verify(transport).start(eq(62L), any(VirtualConfig.class), sinkCaptor.capture());
+        SampleSink sink = sinkCaptor.getValue();
 
         // 没有 error tag — fallback 用 "quality=UNCERTAIN"
         Sample uncertain = new Sample(62L, "p1",
                 Instant.parse("2026-04-30T10:00:00Z"),
                 null, Quality.UNCERTAIN, Map.of());
-        sinkCaptor.getValue().accept(uncertain);
+        sink.accept(uncertain);
+        Thread.sleep(250);
+        Sample trigger = new Sample(62L, "p1",
+                Instant.parse("2026-04-30T10:00:01Z"),
+                null, Quality.UNCERTAIN, Map.of());
+        sink.accept(trigger);
 
         var snap = registry.snapshot(62L);
         assertThat(snap.successCount24h()).isZero();
