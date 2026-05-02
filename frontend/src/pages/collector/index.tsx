@@ -41,6 +41,12 @@ export default function CollectorPage() {
     refetchInterval: 5000,
   });
 
+  const { data: channels = [] } = useQuery({
+    queryKey: ['collector', 'channels'],
+    queryFn: channelApi.list,
+  });
+  const channelNameById = new Map<number, string>(channels.map((c) => [c.id, c.name]));
+
   const test = useMutation({
     mutationFn: (id: number) => collectorDiagApi.test(id),
     onSuccess: (res) => {
@@ -129,6 +135,11 @@ export default function CollectorPage() {
           dataSource={states}
           columns={[
             {
+              title: '通道名称',
+              dataIndex: 'channelId',
+              render: (id: number) => channelNameById.get(id) ?? '-',
+            },
+            {
               title: '协议',
               dataIndex: 'protocol',
               render: (p: string) => <Tag>{translate(COLLECTOR_PROTOCOL_LABEL, p)}</Tag>,
@@ -162,7 +173,8 @@ export default function CollectorPage() {
               title: '24h 成功率',
               render: (_, r) => {
                 const tot = r.successCount24h + r.failureCount24h;
-                const rate = tot ? (r.successCount24h / tot) * 100 : 100;
+                if (tot === 0) return '-';
+                const rate = (r.successCount24h / tot) * 100;
                 return (
                   <Progress
                     percent={Math.round(rate)}
@@ -174,8 +186,10 @@ export default function CollectorPage() {
             },
             {
               title: '平均延迟',
-              dataIndex: 'avgLatencyMs',
-              render: (v: number) => `${v} ms`,
+              render: (_, r) => {
+                const tot = r.successCount24h + r.failureCount24h;
+                return tot === 0 ? '-' : `${r.avgLatencyMs} ms`;
+              },
             },
             {
               title: '最后错误',
