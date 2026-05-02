@@ -8,6 +8,7 @@ import com.ems.report.service.ReportService;
 import com.ems.report.support.CsvReportWriter;
 import com.ems.timeseries.model.Granularity;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -74,10 +75,8 @@ public class ReportController {
 
     /** 异步提交：返回 token；后台跑 CSV，写入临时文件。 */
     @PostMapping("/ad-hoc/async")
-    public ResponseEntity<FileTokenDTO> submitAsync(@RequestBody ReportRequest req) {
-        if (req == null || req.from() == null || req.to() == null || req.granularity() == null) {
-            return ResponseEntity.badRequest().build();
-        }
+    public ResponseEntity<FileTokenDTO> submitAsync(@Valid @RequestBody ReportRequest req) {
+        // null/空字段由 ReportRequest 上的 @NotNull + GlobalExceptionHandler 统一返回 Result 信封。
         String filename = "ad-hoc-" + filenameTs(req.from()) + "_" + filenameTs(req.to()) + ".csv";
         FileTokenStore.Entry entry = store.create(filename);
         runner.submit(entry, req);
