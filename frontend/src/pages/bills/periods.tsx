@@ -8,6 +8,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
+import { showTotal } from '@/utils/format';
 
 const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
   OPEN: { tone: 'info', label: '开放' },
@@ -138,7 +139,7 @@ export default function BillPeriodsPage() {
           rowKey="id"
           loading={isLoading}
           dataSource={periods}
-          pagination={{ pageSize: 50 }}
+          pagination={{ pageSize: 50, showTotal }}
           columns={[
             { title: 'ID', dataIndex: 'id', width: 80 },
             { title: '账期', dataIndex: 'yearMonth', width: 100 },

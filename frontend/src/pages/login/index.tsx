@@ -57,12 +57,22 @@ export default function LoginPage() {
         <div style={{ width: 400, maxWidth: '100%' }}>
           <h2 style={{ marginBottom: 24, fontSize: 20, fontWeight: 600 }}>登录系统</h2>
           {errorMsg && <Alert type="error" message={errorMsg} style={{ marginBottom: 16 }} />}
-          <Form layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
+          <Form layout="vertical" onFinish={onFinish} size="large">
             <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input prefix={<UserOutlined />} placeholder="用户名" />
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="用户名"
+                autoComplete="username"
+                aria-label="用户名"
+              />
             </Form.Item>
             <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="密码"
+                autoComplete="current-password"
+                aria-label="密码"
+              />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
               登录

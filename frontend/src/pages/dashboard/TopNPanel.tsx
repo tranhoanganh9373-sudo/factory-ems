@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Empty, Select, Skeleton, Table, Typography } from 'antd';
+import { Alert, Select, Skeleton, Table, Typography } from 'antd';
+import { EmptyState } from '@/components/EmptyState';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import { dashboardApi, type TopNItemDTO } from '@/api/dashboard';
@@ -79,7 +80,7 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
       ) : isError ? (
         <Alert type="error" message="综合排名数据加载失败" showIcon />
       ) : !data?.length ? (
-        <Empty description="暂无综合排名数据" />
+        <EmptyState kind="no-data" description="暂无综合排名数据" compact />
       ) : (
         <Table
           rowKey="meterId"

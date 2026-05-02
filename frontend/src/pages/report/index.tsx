@@ -223,16 +223,18 @@ export default function ReportPage() {
           </Row>
 
           <Form.Item>
-            <Space>
+            <Space size="middle">
               <Button
                 type="primary"
                 onClick={handleExport}
                 loading={submitting}
                 icon={<FileTextOutlined />}
               >
-                导出
+                {submitting ? '导出中…' : '导出'}
               </Button>
-              <Button onClick={handleReset}>重置</Button>
+              <Button onClick={handleReset} disabled={submitting}>
+                重置
+              </Button>
             </Space>
           </Form.Item>
         </Form>

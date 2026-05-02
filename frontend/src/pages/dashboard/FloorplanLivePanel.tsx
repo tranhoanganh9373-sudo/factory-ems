@@ -97,7 +97,15 @@ export default function FloorplanLivePanel() {
           options={list.map((f) => ({ label: f.name, value: f.id }))}
         />
       </Space>
-      <div ref={containerRef} style={{ width: '100%', minHeight: 200, background: '#fafafa' }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          minHeight: 200,
+          background: 'var(--ems-color-muted, #fafafa)',
+          borderRadius: 4,
+        }}
+      >
         {img && data && (
           <Stage width={stageSize.width} height={stageSize.height}>
             <Layer>

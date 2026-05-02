@@ -6,8 +6,8 @@ import {
   Input,
   Popconfirm,
   Select,
+  Skeleton,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
@@ -155,7 +155,7 @@ export default function FloorplanEditorPage() {
     );
   }
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 8 }} />;
   if (!data) return null;
 
   return (

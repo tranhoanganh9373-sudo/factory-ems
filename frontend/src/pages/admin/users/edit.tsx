@@ -1,4 +1,4 @@
-import { Card, Form, Input, Switch, Select, Button, message, Spin } from 'antd';
+import { Card, Form, Input, Switch, Select, Button, message, Skeleton } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
@@ -41,7 +41,7 @@ export default function UserEditPage() {
     },
   });
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
   if (!user) return null;
 
   return (

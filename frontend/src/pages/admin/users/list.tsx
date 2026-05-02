@@ -6,11 +6,13 @@ import {
   Space,
   Input,
   Tag,
+  Tooltip,
   Popconfirm,
   message,
   Modal,
   Form,
   Select,
+  Typography,
 } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
@@ -19,6 +21,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi, UserDTO } from '@/api/user';
 import { roleApi } from '@/api/role';
 import { Link } from 'react-router-dom';
+import dayjs from 'dayjs';
+import { showTotal } from '@/utils/format';
+
+const E2E_USERNAME_RE = /^e2e[_-]/i;
+
+function formatLastLogin(iso?: string | null): string {
+  if (!iso) return '—';
+  const d = dayjs(iso);
+  return d.isValid() ? d.format('YYYY-MM-DD HH:mm') : iso;
+}
 
 export default function UserListPage() {
   useDocumentTitle('系统管理 - 用户');
@@ -84,10 +96,40 @@ export default function UserListPage() {
           rowKey="id"
           loading={isLoading}
           dataSource={data?.items ?? []}
-          pagination={{ current: page, pageSize: 20, total: data?.total ?? 0, onChange: setPage }}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: data?.total ?? 0,
+            onChange: setPage,
+            showTotal,
+          }}
           columns={[
-            { title: '用户名', dataIndex: 'username' },
-            { title: '姓名', dataIndex: 'displayName' },
+            {
+              title: '用户名',
+              dataIndex: 'username',
+              ellipsis: { showTitle: false },
+              render: (username: string) => {
+                const isE2E = E2E_USERNAME_RE.test(username);
+                return (
+                  <Tooltip title={username} placement="topLeft">
+                    <Space size={6} style={{ maxWidth: '100%' }}>
+                      {isE2E && (
+                        <Tag color="default" style={{ margin: 0, fontSize: 11 }}>
+                          E2E
+                        </Tag>
+                      )}
+                      <Typography.Text
+                        ellipsis
+                        style={{ fontVariantNumeric: 'tabular-nums', maxWidth: 220 }}
+                      >
+                        {username}
+                      </Typography.Text>
+                    </Space>
+                  </Tooltip>
+                );
+              },
+            },
+            { title: '姓名', dataIndex: 'displayName', ellipsis: { showTitle: true } },
             {
               title: '角色',
               dataIndex: 'roles',
@@ -101,9 +143,17 @@ export default function UserListPage() {
             {
               title: '状态',
               dataIndex: 'enabled',
+              width: 80,
               render: (e) => (e ? <Tag color="green">启用</Tag> : <Tag>禁用</Tag>),
             },
-            { title: '最近登录', dataIndex: 'lastLoginAt' },
+            {
+              title: '最近登录',
+              dataIndex: 'lastLoginAt',
+              width: 160,
+              render: (v: string | null | undefined) => (
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatLastLogin(v)}</span>
+              ),
+            },
             {
               title: '操作',
               key: 'ops',

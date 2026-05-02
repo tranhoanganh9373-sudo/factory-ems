@@ -1,8 +1,9 @@
-import { Skeleton, Alert, Empty } from 'antd';
+import { Skeleton, Alert } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi, type KpiDTO } from '@/api/dashboard';
 import { useDashboardFilterStore } from '@/stores/dashboardFilter';
 import { KpiCard } from '@/components/KpiCard';
+import { EmptyState } from '@/components/EmptyState';
 import { translate, ENERGY_TYPE_LABEL } from '@/utils/i18n-dict';
 
 export default function KpiPanel() {
@@ -23,7 +24,7 @@ export default function KpiPanel() {
   }
   if (isLoading) return <Skeleton active paragraph={{ rows: 2 }} />;
   if (isError) return <Alert type="error" message="KPI 数据加载失败" showIcon />;
-  if (!data?.length) return <Empty description="暂无 KPI 数据" />;
+  if (!data?.length) return <EmptyState kind="no-data" description="暂无 KPI 数据" compact />;
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 16 }}>

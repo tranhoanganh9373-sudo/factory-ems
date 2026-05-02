@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusOutlined } from '@ant-design/icons';
 import { permissionApi, NodePermissionDTO } from '@/api/permission';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
+import { formatDateTime } from '@/utils/format';
 
 export default function UserPermissionPage() {
   useDocumentTitle('系统管理 - 用户权限');
@@ -101,7 +102,14 @@ export default function UserPermissionPage() {
               dataIndex: 'scope',
               render: (s) => (s === 'SUBTREE' ? '子树（含后代）' : '仅此节点'),
             },
-            { title: '授予时间', dataIndex: 'createdAt' },
+            {
+              title: '授予时间',
+              dataIndex: 'createdAt',
+              width: 180,
+              render: (v: string) => (
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(v)}</span>
+              ),
+            },
             {
               title: '操作',
               key: 'ops',

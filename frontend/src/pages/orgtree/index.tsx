@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { Card, Tree, Button, Space, Typography, Popconfirm, message } from 'antd';
+import { Card, Tree, Button, Space, Typography, Tooltip, Tag, Popconfirm, message } from 'antd';
+
+const NODE_TYPE_COLOR: Record<string, string> = {
+  PLANT: 'blue',
+  WORKSHOP: 'cyan',
+  LINE: 'green',
+  EQUIPMENT: 'default',
+};
+
+function shortenCode(code: string, max = 16): string {
+  if (code.length <= max) return code;
+  return `${code.slice(0, max - 3)}…`;
+}
 import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
@@ -41,12 +53,28 @@ export default function OrgTreePage() {
   });
 
   const toTreeData = (nodes: OrgNodeDTO[]): DisplayNode[] =>
-    nodes.map((n) => ({
-      key: String(n.id),
-      title: `${n.name} (${n.code}) [${n.nodeType}]`,
-      children: toTreeData(n.children),
-      raw: n,
-    }));
+    nodes.map((n) => {
+      const codeShort = shortenCode(n.code);
+      const tagColor = NODE_TYPE_COLOR[n.nodeType] ?? 'default';
+      return {
+        key: String(n.id),
+        title: (
+          <Space size={6}>
+            <span>{n.name}</span>
+            <Tooltip title={n.code}>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {codeShort}
+              </Typography.Text>
+            </Tooltip>
+            <Tag color={tagColor} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
+              {n.nodeType}
+            </Tag>
+          </Space>
+        ),
+        children: toTreeData(n.children),
+        raw: n,
+      };
+    });
 
   return (
     <>

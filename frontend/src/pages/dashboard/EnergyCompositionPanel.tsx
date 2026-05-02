@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
-import { Alert, Empty, Skeleton, Typography } from 'antd';
+import { Alert, Skeleton, Typography } from 'antd';
+import { EmptyState } from '@/components/EmptyState';
 import { useQuery } from '@tanstack/react-query';
 import * as echarts from 'echarts/core';
 import { PieChart } from 'echarts/charts';
@@ -77,7 +78,7 @@ export default function EnergyCompositionPanel() {
     return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
   if (isLoading) return <Skeleton active paragraph={{ rows: 5 }} />;
   if (isError) return <Alert type="error" message="能耗构成加载失败" showIcon />;
-  if (!data?.length) return <Empty description="暂无能耗构成数据" />;
+  if (!data?.length) return <EmptyState kind="no-pie" description="暂无能耗构成数据" compact />;
 
   return (
     <div>

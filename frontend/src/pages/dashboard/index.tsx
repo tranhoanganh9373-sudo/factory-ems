@@ -16,6 +16,7 @@ import EnergyIntensityPanel from './EnergyIntensityPanel';
 import SankeyPanel from './SankeyPanel';
 import FloorplanLivePanel from './FloorplanLivePanel';
 import CostDistributionPanel from './CostDistributionPanel';
+import { DashboardSection } from '@/components/DashboardSection';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
@@ -95,69 +96,69 @@ export default function DashboardPage() {
       {/* Row 1: KPI */}
       <Row gutter={[0, 16]} style={{ marginBottom: 16 }}>
         <Col span={24}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection tone="primary">
             <KpiPanel />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 
       {/* Row 2: Realtime curves + Composition */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={16}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection tone="primary">
             <RealtimeSeriesPanel />
-          </Card>
+          </DashboardSection>
         </Col>
         <Col xs={24} lg={8}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <EnergyCompositionPanel />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 
       {/* Row 3: Top N */}
       <Row style={{ marginBottom: 16 }}>
         <Col span={24}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <TopNPanel onMeterClick={handleMeterClick} />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 
       {/* Row 4: ⑥ Tariff distribution + ⑦ Energy intensity */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={8}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <TariffDistributionPanel />
-          </Card>
+          </DashboardSection>
         </Col>
         <Col xs={24} lg={16}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <EnergyIntensityPanel />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 
       {/* Row 5: ⑧ Sankey + ⑨ Floorplan live */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} lg={12}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <SankeyPanel />
-          </Card>
+          </DashboardSection>
         </Col>
         <Col xs={24} lg={12}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <FloorplanLivePanel />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 
-      {/* Row 6: ⑩ Cost distribution (Plan 2.2 Phase K backend, Plan 2.3 Phase I frontend) */}
+      {/* Row 6: ⑩ Cost distribution */}
       <Row gutter={[16, 16]}>
         <Col span={24}>
-          <Card size="small" bodyStyle={{ padding: 16 }}>
+          <DashboardSection>
             <CostDistributionPanel />
-          </Card>
+          </DashboardSection>
         </Col>
       </Row>
 

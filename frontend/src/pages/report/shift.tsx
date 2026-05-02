@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Card, DatePicker, Empty, Select, Space, Spin, TreeSelect } from 'antd';
+import { Alert, Card, DatePicker, Empty, Select, Skeleton, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
@@ -113,7 +113,7 @@ export default function ShiftReportPage() {
         {!shiftId ? (
           <Alert type="info" message="请选择班次" showIcon />
         ) : isLoading ? (
-          <Spin />
+          <Skeleton active paragraph={{ rows: 8 }} />
         ) : error ? (
           <Alert type="error" message="加载失败" showIcon />
         ) : !data ? (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Card, DatePicker, Empty, Select, Space, Spin, TreeSelect } from 'antd';
+import { Alert, Card, DatePicker, Empty, Select, Skeleton, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import { useQuery } from '@tanstack/react-query';
@@ -85,7 +85,7 @@ export default function DailyReportPage() {
         </Space>
 
         {isLoading ? (
-          <Spin />
+          <Skeleton active paragraph={{ rows: 8 }} />
         ) : error ? (
           <Alert type="error" message="加载失败" showIcon />
         ) : !data ? (

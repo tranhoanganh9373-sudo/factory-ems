@@ -10,7 +10,7 @@ import {
   Tabs,
   Tree,
   Empty,
-  Spin,
+  Tooltip,
   message,
 } from 'antd';
 import {
@@ -34,6 +34,7 @@ import { CreateMeterModal } from './CreateMeterModal';
 import { EditMeterModal } from './EditMeterModal';
 import { BindParentModal } from './BindParentModal';
 import { MeterBatchImportModal } from './MeterBatchImportModal';
+import { showTotal } from '@/utils/format';
 
 // Flatten org tree to a map of id -> name
 function buildOrgMap(nodes: OrgNodeDTO[]): Map<number, string> {
@@ -203,35 +204,45 @@ export default function MetersPage() {
     {
       title: '操作',
       key: 'action',
-      width: 180,
+      width: 120,
       render: (_, r) => (
-        <Space>
+        <Space size={4}>
           {isAdmin && (
             <>
-              <Button
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => {
-                  setSelectedMeter(r);
-                  setEditOpen(true);
-                }}
-              >
-                编辑
-              </Button>
-              <Button
-                size="small"
-                icon={<ApartmentOutlined />}
-                onClick={() => {
-                  setSelectedMeter(r);
-                  setBindOpen(true);
-                }}
-              >
-                绑父
-              </Button>
+              <Tooltip title="编辑">
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label="编辑测点"
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    setSelectedMeter(r);
+                    setEditOpen(true);
+                  }}
+                />
+              </Tooltip>
+              <Tooltip title="绑定父测点">
+                <Button
+                  type="text"
+                  size="small"
+                  aria-label="绑定父测点"
+                  icon={<ApartmentOutlined />}
+                  onClick={() => {
+                    setSelectedMeter(r);
+                    setBindOpen(true);
+                  }}
+                />
+              </Tooltip>
               <Popconfirm title="确认删除？" onConfirm={() => delMut.mutate(r.id)}>
-                <Button size="small" danger icon={<DeleteOutlined />}>
-                  删除
-                </Button>
+                <Tooltip title="删除">
+                  <Button
+                    type="text"
+                    size="small"
+                    danger
+                    aria-label="删除测点"
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
               </Popconfirm>
             </>
           )}
@@ -282,15 +293,15 @@ export default function MetersPage() {
       {metersError ? (
         <Empty description="加载失败" />
       ) : (
-        <Spin spinning={metersLoading}>
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={meters}
-            pagination={{ pageSize: 20, showSizeChanger: false }}
-            size="middle"
-          />
-        </Spin>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={meters}
+          loading={metersLoading}
+          pagination={{ pageSize: 20, showSizeChanger: false, showTotal }}
+          size="small"
+          scroll={{ x: 'max-content' }}
+        />
       )}
     </>
   );

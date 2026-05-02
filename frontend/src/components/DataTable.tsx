@@ -1,9 +1,26 @@
 import type { ReactNode } from 'react';
 import { Table, type TableProps } from 'antd';
+import type { ColumnsType, ColumnType } from 'antd/es/table';
 
 interface Props<T> extends TableProps<T> {
   toolbarLeft?: ReactNode;
   toolbarExtra?: ReactNode;
+}
+
+function withAriaSort<T>(columns?: ColumnsType<T>): ColumnsType<T> | undefined {
+  if (!columns) return columns;
+  return columns.map((col) => {
+    const leaf = col as ColumnType<T>;
+    if (!leaf.sorter) return col;
+    const original = leaf.onHeaderCell;
+    return {
+      ...leaf,
+      onHeaderCell: (column, idx) => {
+        const base = original?.(column, idx) ?? {};
+        return { 'aria-sort': 'none', ...base } as ReturnType<NonNullable<typeof original>>;
+      },
+    };
+  });
 }
 
 export function DataTable<T extends object>({ toolbarLeft, toolbarExtra, ...rest }: Props<T>) {
@@ -29,7 +46,11 @@ export function DataTable<T extends object>({ toolbarLeft, toolbarExtra, ...rest
           <div>{toolbarExtra}</div>
         </div>
       )}
-      <Table {...rest} pagination={rest.pagination ?? { pageSize: 20, showSizeChanger: true }} />
+      <Table
+        {...rest}
+        columns={withAriaSort(rest.columns)}
+        pagination={rest.pagination ?? { pageSize: 20, showSizeChanger: true }}
+      />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { alarmRuleApi, type AlarmRuleOverrideDTO, type OverrideRequest } from '@
 import { useAuthStore } from '@/stores/authStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { formatDateTime } from '@/utils/format';
 
 interface FormValues {
   deviceId: number;
@@ -179,7 +180,10 @@ export default function AlarmRulesPage() {
             {
               title: '更新时间',
               dataIndex: 'updatedAt',
-              width: 200,
+              width: 180,
+              render: (v: string) => (
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(v)}</span>
+              ),
             },
             {
               title: '操作',

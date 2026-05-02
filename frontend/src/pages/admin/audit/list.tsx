@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { auditApi, AuditLogDTO, AuditQuery } from '@/api/audit';
 import { DetailModal } from './DetailModal';
+import { showTotal } from '@/utils/format';
 import { translate, AUDIT_ACTION_LABEL, RESOURCE_TYPE_LABEL } from '@/utils/i18n-dict';
 
 const { RangePicker } = DatePicker;
@@ -84,6 +85,7 @@ export default function AuditListPage() {
             pageSize: q.size,
             total: data?.total ?? 0,
             onChange: (p, s) => setQ({ ...q, page: p, size: s }),
+            showTotal,
           }}
           columns={[
             {

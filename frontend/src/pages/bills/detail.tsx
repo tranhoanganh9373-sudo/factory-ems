@@ -1,4 +1,4 @@
-import { Card, Descriptions, Table, Tag, Empty, Spin } from 'antd';
+import { Card, Descriptions, Table, Tag, Empty, Skeleton } from 'antd';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -30,7 +30,7 @@ export default function BillDetailPage() {
     enabled: !Number.isNaN(billId),
   });
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
   if (!bill) return <Empty description="账单不存在" />;
 
   return (

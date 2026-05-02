@@ -4,14 +4,14 @@ import {
   Button,
   Card,
   Col,
-  Empty,
   Form,
   Input,
   Modal,
   Popconfirm,
   Row,
+  Skeleton,
   Space,
-  Spin,
+  Tooltip,
   TreeSelect,
   Upload,
 } from 'antd';
@@ -27,6 +27,7 @@ import {
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
   return nodes.map((n) => ({
@@ -107,9 +108,15 @@ export default function FloorplanListPage() {
         }
       >
         {isLoading ? (
-          <Spin />
+          <Row gutter={[16, 16]}>
+            {[0, 1, 2, 3].map((i) => (
+              <Col key={i} xs={24} sm={12} md={8} lg={6}>
+                <Skeleton active paragraph={{ rows: 3 }} />
+              </Col>
+            ))}
+          </Row>
         ) : list.length === 0 ? (
-          <Empty description="暂无平面图" />
+          <EmptyState kind="no-data" description="暂无平面图" />
         ) : (
           <Row gutter={[16, 16]}>
             {list.map((f: FloorplanDTO) => (
@@ -120,12 +127,16 @@ export default function FloorplanListPage() {
                     <div
                       style={{
                         height: 160,
-                        background: `#f0f0f0 url(${floorplanImageUrl(f.id)}) center/contain no-repeat`,
+                        background: `var(--ems-color-muted, #f0f0f0) url(${floorplanImageUrl(f.id)}) center/contain no-repeat`,
                       }}
                     />
                   }
                   actions={[
-                    <Link key="edit" to={`/floorplan/editor/${f.id}`}>
+                    <Link
+                      key="edit"
+                      to={`/floorplan/editor/${f.id}`}
+                      style={{ color: 'var(--ems-color-text-secondary)' }}
+                    >
                       <EditOutlined /> 编辑测点
                     </Link>,
                     <Popconfirm
@@ -133,9 +144,15 @@ export default function FloorplanListPage() {
                       title={`删除 ${f.name}？`}
                       onConfirm={() => deleteMut.mutate(f.id)}
                     >
-                      <a style={{ color: '#cf1322' }}>
-                        <DeleteOutlined /> 删除
-                      </a>
+                      <Tooltip title="删除">
+                        <Button
+                          type="text"
+                          size="small"
+                          danger
+                          aria-label={`删除 ${f.name}`}
+                          icon={<DeleteOutlined />}
+                        />
+                      </Tooltip>
                     </Popconfirm>,
                   ]}
                 >
