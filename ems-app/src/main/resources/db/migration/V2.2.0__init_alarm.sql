@@ -1,4 +1,4 @@
--- ems-alarm: 采集中断报警
+-- ems-alarm: 采集中断告警
 -- spec: docs/superpowers/specs/2026-04-29-acquisition-alarm-design.md
 
 CREATE TABLE alarms (

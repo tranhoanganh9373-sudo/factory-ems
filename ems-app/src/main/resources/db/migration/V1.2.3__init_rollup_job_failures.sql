@@ -1,4 +1,4 @@
--- Rollup 失败重试表：5min → 30min → 2h 三轮指数退避，3 次后停止自动重试并报警。
+-- Rollup 失败重试表：5min → 30min → 2h 三轮指数退避，3 次后停止自动重试并告警。
 -- (granularity, bucket_ts, meter_id) 唯一标识一个失败桶；同一桶反复失败递增 attempt。
 
 CREATE TABLE rollup_job_failures (
