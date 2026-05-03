@@ -19,11 +19,25 @@ export function humanizeChannelError(raw: string | null | undefined): string {
     return 'Modbus 读寄存器失败';
   }
 
-  // ── Modbus 重连 ─────────────────────────────────────────────
-  if (/modbus.*reopen|reopen.*modbus/.test(s)) {
+  // ── Modbus 连接 / 重连 / RTU 串口 ─────────────────────────
+  if (/modbus.*(connect|reopen|open|rtu)|rtu\s*connect/.test(s)) {
+    // RTU 串口设备问题：先于网络类匹配，避免被通用 timeout/refused 误判。
+    if (/invalid\s*port\s*descriptor|no\s*such\s*(file|device).*tty|cannot\s*find.*port|port.*not\s*found/.test(s)) {
+      return 'Modbus RTU 串口不存在（请检查设备名 /dev/ttyUSB?）';
+    }
+    if (/unable\s*to\s*create.*serial|serial\s*port.*(busy|in\s*use|not\s*available|locked)/.test(s)) {
+      return 'Modbus RTU 串口不可用（设备未插入或被占用）';
+    }
+    if (/permission\s*denied|access.*denied/.test(s)) {
+      return 'Modbus RTU 串口权限不足（请加入 dialout 组或 chmod）';
+    }
+    if (/baud|parity|stop\s*bit|data\s*bit/.test(s) && /(invalid|illegal|mismatch)/.test(s)) {
+      return 'Modbus RTU 串口参数无效（请核对波特率/校验位）';
+    }
     if (/connection\s*refused/.test(s)) return 'Modbus 连接被拒绝（请检查 IP/端口）';
     if (/timeout|timed\s*out/.test(s)) return 'Modbus 连接超时（设备或网络不可达）';
-    return 'Modbus 重连失败';
+    if (/unknown\s*host|host\s*unreachable|no\s*route/.test(s)) return 'Modbus 主机不可达';
+    return 'Modbus 连接失败';
   }
 
   // ── OPC UA ─────────────────────────────────────────────────
