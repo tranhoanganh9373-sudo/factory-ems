@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { collectorDiagApi, type ChannelRuntimeState } from '@/api/collectorDiag';
 import { channelApi, type ChannelDTO } from '@/api/channel';
 import { translate, COLLECTOR_PROTOCOL_LABEL, CONNECTION_STATE_LABEL } from '@/utils/i18n-dict';
+import { humanizeChannelError } from '@/utils/channelErrorHumanize';
 import { BatchImportModal } from './BatchImportModal';
 import { ChannelDetailDrawer } from './ChannelDetailDrawer';
 import { ChannelEditor } from './ChannelEditor';
@@ -204,8 +205,11 @@ export default function CollectorPage() {
             {
               title: '最后错误',
               dataIndex: 'lastErrorMessage',
-              render: (m?: string) =>
-                m ? <Tooltip title={m}>{m.length > 30 ? `${m.slice(0, 30)}…` : m}</Tooltip> : '-',
+              render: (m?: string) => {
+                if (!m) return '-';
+                // 主显示翻译成中文人话；hover 仍可看原始错误供 debug。
+                return <Tooltip title={m}>{humanizeChannelError(m)}</Tooltip>;
+              },
             },
             {
               title: '操作',
