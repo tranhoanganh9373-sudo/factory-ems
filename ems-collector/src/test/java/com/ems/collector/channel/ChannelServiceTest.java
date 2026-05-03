@@ -319,6 +319,65 @@ class ChannelServiceTest {
         assertThat(snap.lastErrorMessage()).isEqualTo("quality=UNCERTAIN");
     }
 
+    @Test
+    void create_rejectsNameEqualToProtocolEnumValue() {
+        Channel ch = newChannel(70L, "VIRTUAL", true);
+        ch.setName("MQTT");
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.create(ch))
+                .isInstanceOf(com.ems.core.exception.BusinessException.class)
+                .hasMessageContaining("协议名");
+        org.mockito.Mockito.verify(repo, org.mockito.Mockito.never()).save(any(Channel.class));
+    }
+
+    @Test
+    void create_rejectsNameEqualToProtocolDisplayLabel() {
+        Channel ch = newChannel(71L, "VIRTUAL", true);
+        ch.setName("Modbus TCP");
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.create(ch))
+                .isInstanceOf(com.ems.core.exception.BusinessException.class)
+                .hasMessageContaining("协议名");
+    }
+
+    @Test
+    void create_rejectsDuplicateName() {
+        Channel ch = newChannel(72L, "VIRTUAL", true);
+        ch.setName("dup-name");
+        Channel existing = newChannel(99L, "VIRTUAL", true);
+        existing.setName("dup-name");
+        when(repo.findByName("dup-name")).thenReturn(java.util.Optional.of(existing));
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> svc.create(ch))
+                .isInstanceOf(com.ems.core.exception.BusinessException.class)
+                .hasMessageContaining("已存在");
+        org.mockito.Mockito.verify(repo, org.mockito.Mockito.never()).save(any(Channel.class));
+    }
+
+    @Test
+    void update_allowsRenameToOwnExistingName() {
+        Transport transport = mock(Transport.class);
+        factoryMock.enqueue(transport);
+        Channel ch = newChannel(73L, "VIRTUAL", true);
+        ch.setName("same-name");
+        // Self-collision in findByName is OK on update.
+        when(repo.findByName("same-name")).thenReturn(java.util.Optional.of(ch));
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+
+        Channel updated = newChannel(73L, "VIRTUAL", true);
+        updated.setName("same-name");
+        org.assertj.core.api.Assertions.assertThatNoException()
+                .isThrownBy(() -> svc.update(73L, updated));
+    }
+
     private static Channel newChannel(Long id, String protocol, boolean enabled) {
         Channel ch = new Channel();
         ch.setId(id);

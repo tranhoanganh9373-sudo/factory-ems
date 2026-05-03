@@ -6,15 +6,19 @@ import com.ems.collector.sink.SampleWriter;
 import com.ems.collector.transport.ChannelTransportFactory;
 import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.Transport;
+import com.ems.core.constant.ErrorCode;
+import com.ems.core.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -63,6 +67,17 @@ public class ChannelService {
     /** 200ms：modbus 多点 read 一般 &lt;100ms 完成，留 2× 余量。 */
     private static final long CYCLE_GAP_NANOS = 200_000_000L;
 
+    /**
+     * 不允许作为通道名的保留字——5 个 enum 值（DB chk_channel_protocol 约束的取值）+ 常用展示标签。
+     * 全部以 UPPER 形式存储；比对时把入参 trim().toUpperCase(Locale.ROOT) 后查表。
+     * 中文标签无大小写之分，与自身 upper-case 后等价。
+     */
+    private static final Set<String> RESERVED_NAMES = Set.of(
+            "MODBUS_TCP", "MODBUS_RTU", "OPC_UA", "MQTT", "VIRTUAL",
+            "MODBUS TCP", "MODBUS RTU", "OPC UA",
+            "虚拟", "虚拟（模拟）", "虚拟(模拟)"
+    );
+
     public ChannelService(ChannelRepository repo,
                           ChannelStateRegistry stateRegistry,
                           ChannelTransportFactory factory,
@@ -91,8 +106,12 @@ public class ChannelService {
      * 创建通道：先落库，再尝试启动；启动失败不回滚也不抛 500，通道仍以 ERROR 状态存在，
      * 让用户能在 UI 上看到并修配置。语义与 {@link #startAllEnabled} 一致——
      * "通道已创建"和"通道当前不可达"是两件事。
+     *
+     * <p>名字校验在 save 之前——重名 / 留白 / 撞协议名直接抛 BusinessException 不入库。
      */
     public Channel create(Channel ch) {
+        validateName(ch, null);
+        ch.setName(ch.getName().trim());
         Channel saved = repo.save(ch);
         if (saved.isEnabled()) {
             try {
@@ -106,6 +125,9 @@ public class ChannelService {
     }
 
     public Channel update(Long id, Channel updated) {
+        // 名字校验先行：失败时不应该把旧 transport 停掉。
+        validateName(updated, id);
+        updated.setName(updated.getName().trim());
         stopChannel(id);
         updated.setId(id);
         Channel saved = repo.save(updated);
@@ -118,6 +140,29 @@ public class ChannelService {
             }
         }
         return saved;
+    }
+
+    /**
+     * 通道名硬约束：非空、不撞协议名、不与现有通道重名。
+     *
+     * @param excludeId update 场景下传入当前通道 id，自身重名不算冲突；create 传 null。
+     */
+    private void validateName(Channel ch, Long excludeId) {
+        String raw = ch.getName();
+        String name = raw == null ? "" : raw.trim();
+        if (name.isEmpty()) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID, "通道名称不能为空");
+        }
+        if (RESERVED_NAMES.contains(name.toUpperCase(Locale.ROOT))) {
+            throw new BusinessException(ErrorCode.PARAM_INVALID,
+                    "通道名称不能与协议名相同：" + name);
+        }
+        repo.findByName(name).ifPresent(existing -> {
+            if (excludeId == null || !existing.getId().equals(excludeId)) {
+                throw new BusinessException(ErrorCode.CONFLICT,
+                        "通道名称已存在：" + name);
+            }
+        });
     }
 
     public void delete(Long id) {
