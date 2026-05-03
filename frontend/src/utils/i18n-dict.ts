@@ -82,7 +82,7 @@ export const NAV_LABEL = {
   dashboard: '综合看板',
   collector: '数据采集',
   floorplan: '设备分布图',
-  alarms: '告警',
+  alarms: '报警',
   meters: '表计',
   cost: '成本核算',
   bills: '账单',

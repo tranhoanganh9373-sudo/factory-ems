@@ -31,7 +31,7 @@ interface FormValues {
 }
 
 export default function AlarmWebhookPage() {
-  useDocumentTitle('告警 - 通知配置');
+  useDocumentTitle('报警 - 通知配置');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const [form] = Form.useForm<FormValues>();
@@ -128,7 +128,7 @@ export default function AlarmWebhookPage() {
 
   return (
     <div>
-      <PageHeader title="告警通知配置" />
+      <PageHeader title="报警通知配置" />
 
       <Row gutter={16}>
         <Col xs={24} lg={14}>
@@ -237,7 +237,7 @@ export default function AlarmWebhookPage() {
           }}
           columns={[
             { title: 'ID', dataIndex: 'id', width: 80 },
-            { title: '告警 ID', dataIndex: 'alarmId', width: 100 },
+            { title: '报警 ID', dataIndex: 'alarmId', width: 100 },
             {
               title: '尝试次数',
               dataIndex: 'attempts',
@@ -275,7 +275,7 @@ export default function AlarmWebhookPage() {
               width: 100,
               render: (_, row) =>
                 row.status === 'FAILED' ? (
-                  <Popconfirm title="重发该告警的 webhook？" onConfirm={() => retry.mutate(row.id)}>
+                  <Popconfirm title="重发该报警的 webhook？" onConfirm={() => retry.mutate(row.id)}>
                     <Button size="small" loading={retry.isPending && retry.variables === row.id}>
                       重发
                     </Button>

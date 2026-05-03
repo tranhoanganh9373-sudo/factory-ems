@@ -92,7 +92,7 @@ public class AlarmServiceImpl implements AlarmService {
     }
 
     /**
-     * 手动解除告警。除业务流程外，刷新 {@code ems.alarm.resolved.total{reason="manual"}} counter
+     * 手动解除报警。除业务流程外，刷新 {@code ems.alarm.resolved.total{reason="manual"}} counter
      * 以及 {@code ems.alarm.active.count{type}} gauge（同步刷新该 type 的最新计数；其他 type 等
      * 下一轮 detector scan 触发的 refresh）。
      */
@@ -135,7 +135,7 @@ public class AlarmServiceImpl implements AlarmService {
                 })
                 .count();
 
-        // top offenders：各设备 ACTIVE+ACKED 告警数前 5
+        // top offenders：各设备 ACTIVE+ACKED 报警数前 5
         Map<Long, Long> activeByDevice = new HashMap<>();
         countByDevice(activeByDevice, AlarmStatus.ACTIVE);
         countByDevice(activeByDevice, AlarmStatus.ACKED);

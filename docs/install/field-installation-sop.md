@@ -187,7 +187,7 @@ done
 | 24h 通讯成功率 | ≥ 99%（< 95% 看哪台表掉队） |
 | 电压/电流读数与现场万用表 | 误差 < 2% |
 | 整点电量增量 | 与上小时功率 × 1h 误差 < 5% |
-| 拔掉一根 485 线后 EMS 状态 | 5 分钟内变 ERROR + 触发告警 |
+| 拔掉一根 485 线后 EMS 状态 | 5 分钟内变 ERROR + 触发报警 |
 | 重新插上 EMS 状态 | 1 分钟内自动恢复 CONNECTED |
 
 验收文档：填一份《现场验收记录表》归档，包括项目名、楼层、表号、安装日期、施工人、调试人、24h 成功率截图。
@@ -203,7 +203,7 @@ done
 | 单台表持续超时 | 站号冲突 / 这台表波特率没改 / 这台表硬件坏 |
 | 全部功率为负 | 整段 CT 反了，软件改方向最快 |
 | 偶发数据跳变（电压瞬间到 99999） | byte_order 偶尔错位（不严重）/ 仪表瞬时干扰；可在 EMS 加 `clamp` 规则 |
-| EMS 一切正常但 24h 后告警「数据漂移」 | 电量寄存器溢出 / 累计字段断电后清零 → 找仪表手册看溢出处理策略 |
+| EMS 一切正常但 24h 后报警「数据漂移」 | 电量寄存器溢出 / 累计字段断电后清零 → 找仪表手册看溢出处理策略 |
 
 ---
 
@@ -224,7 +224,7 @@ done
 - 通道导入示例：[channel-config-import.json](./channel-config-import.json) + `scripts/csv-to-channels.py` + `scripts/import-channels.sh`
 - 仪表批量导入：`scripts/csv-to-meters.py` + `scripts/import-meters.sh`（或前端 `/meters` 页"批量导入"按钮，v2 新增）
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 月报自动化 SOP：[report-automation-sop.md](./report-automation-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)

@@ -189,7 +189,7 @@ ems-timeseries/src/test/java/com/ems/timeseries/contract/
 └── MeterCatalogContractTest.java      // meter SPI 接口契约
 
 ems-alarm/src/test/java/com/ems/alarm/contract/
-└── AlarmSinkContractTest.java         // 告警输出格式 (webhook+inapp)
+└── AlarmSinkContractTest.java         // 报警输出格式 (webhook+inapp)
 ```
 
 ```java
@@ -292,7 +292,7 @@ class RollupConsistencyIT {
 // 1. 登录 → 仪表盘加载 → KPI 卡片有数据
 // 2. 导航到计量点管理 → 列表加载 → 点击详情
 // 3. 导航到日度报表 → 选择日期 → 表格渲染
-// 4. 告警规则页 → 创建规则 → 列表出现新规则
+// 4. 报警规则页 → 创建规则 → 列表出现新规则
 // 5. 导出报表 → 下载 Excel 文件不损坏
 ```
 
@@ -400,7 +400,7 @@ ems-core (1→3 个测试文件):
 │   ├── seed-meters.sql      (100 个计量点 + 电/水/气 3 种能源类型)
 │   ├── seed-tariffs.sql     (3 种电价模板 × 12 个月的时段表)
 │   ├── seed-orgtree.sql     (工厂→车间→产线 三级组织树)
-│   └── seed-alarm-rules.sql (5 条典型告警规则)
+│   └── seed-alarm-rules.sql (5 条典型报警规则)
 │
 ├── InfluxDB seed (通过 InfluxDB v2 API)
 │   ├── 过去 12 个月 × 20 个 meter × 1h rollup 数据

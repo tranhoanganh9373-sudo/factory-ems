@@ -5,7 +5,7 @@ import { StatusTag } from './StatusTag';
 describe('StatusTag', () => {
   it.each([
     ['success', '在线'],
-    ['warning', '告警'],
+    ['warning', '报警'],
     ['error', '严重'],
     ['info', '已确认'],
     ['default', '离线'],

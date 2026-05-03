@@ -1,4 +1,4 @@
-# 采集中断告警 · Webhook 接入指南
+# 采集中断报警 · Webhook 接入指南
 
 > **更新于**：2026-04-29（Phase E 完成时）
 > **撰写依据**：spec §13 + WebhookChannel/WebhookSigner/GenericJsonAdapter 实际实现
@@ -16,19 +16,19 @@
 | **IM 推送** | 钉钉自定义机器人、企业微信群机器人、Slack Incoming Webhook |
 | **工单系统** | Jira Automation、PagerDuty Events API、飞书多维表格 |
 | **SIEM / 监控平台** | Splunk HTTP Event Collector、Grafana Oncall、自建 ELK |
-| **自建告警平台** | 内部运营中台、自定义设备管理系统 |
+| **自建报警平台** | 内部运营中台、自定义设备管理系统 |
 
 ### 不需要 Webhook 的场景
 
 以下情况不用配 Webhook，站内通知（alarm_inbox）就够了：
 
 - 值班人员全天在 EMS UI 里监控，不需要外部推送
-- 只需要记录告警历史，不需要实时触达
+- 只需要记录报警历史，不需要实时触达
 - 接收方需要双向交互（Webhook 是单向推送，不支持从接收方回调 EMS）
 
 ### 替代方案
 
-EMS 默认为每条告警写入站内 alarm_inbox 通知，不用任何配置就能在 EMS UI 的"系统健康 → 告警历史"和"通知中心"查看。Webhook 是站内通知的补充，二者同时生效。
+EMS 默认为每条报警写入站内 alarm_inbox 通知，不用任何配置就能在 EMS UI 的"系统健康 → 报警历史"和"通知中心"查看。Webhook 是站内通知的补充，二者同时生效。
 
 > **首版说明**：恢复事件（`alarm.resolved`）目前只触发站内通知，不发 Webhook。
 
@@ -58,7 +58,7 @@ EMS 默认为每条告警写入站内 alarm_inbox 通知，不用任何配置就
 
 点击后，EMS 用当前保存的配置向接收方发送一条 `alarm.test` 事件：
 
-- 不创建真实告警，使用占位 Sample Alarm 数据
+- 不创建真实报警，使用占位 Sample Alarm 数据
 - 页面显示：HTTP 状态码 + 请求耗时（ms）
 - 不写入 `webhook_delivery_log`，不占用重试次数
 
@@ -66,7 +66,7 @@ EMS 默认为每条告警写入站内 alarm_inbox 通知，不用任何配置就
 
 ### 启用 / 禁用开关
 
-`enabled=false` 时，EMS 跳过 Webhook 派发逻辑，所有告警事件仍正常写入站内通知。
+`enabled=false` 时，EMS 跳过 Webhook 派发逻辑，所有报警事件仍正常写入站内通知。
 
 > [配置页截图：showing enabled toggle 开关状态]
 
@@ -83,14 +83,14 @@ EMS 默认为每条告警写入站内 alarm_inbox 通知，不用任何配置就
 | 字段 | 类型 | 必填 | 含义 | 示例 |
 |------|------|:----:|------|------|
 | `event` | string | ✅ | 事件类型：`alarm.triggered` / `alarm.resolved` / `alarm.test` | `alarm.triggered` |
-| `alarm_id` | int | ✅ | 告警 ID，用于关联同一告警的不同事件（触发 / 恢复） | `12345` |
+| `alarm_id` | int | ✅ | 报警 ID，用于关联同一报警的不同事件（触发 / 恢复） | `12345` |
 | `device_id` | int | ✅ | 设备数据库 ID（`meters.id`） | `88` |
 | `device_type` | string | ✅ | 设备类型：`METER` / `COLLECTOR`（首版仅 `METER`） | `METER` |
 | `device_code` | string | ✅ | 设备编码（人类可读标识符） | `M-A01-001` |
 | `device_name` | string | ✅ | 设备显示名称 | `一号车间总表` |
-| `alarm_type` | string | ✅ | 告警类型：`SILENT_TIMEOUT` / `CONSECUTIVE_FAIL` | `SILENT_TIMEOUT` |
+| `alarm_type` | string | ✅ | 报警类型：`SILENT_TIMEOUT` / `CONSECUTIVE_FAIL` | `SILENT_TIMEOUT` |
 | `severity` | string | ✅ | 严重程度（首版仅 `WARNING`） | `WARNING` |
-| `triggered_at` | string | ✅ | 告警触发时间（ISO 8601 含时区） | `2026-04-29T08:15:30+08:00` |
+| `triggered_at` | string | ✅ | 报警触发时间（ISO 8601 含时区） | `2026-04-29T08:15:30+08:00` |
 | `last_seen_at` | string | 否 | 设备最后一次成功上报时间；`SILENT_TIMEOUT` 必带，`CONSECUTIVE_FAIL` 可为 `null` | `2026-04-29T08:00:12+08:00` |
 | `detail` | object | 否 | 触发上下文（阈值配置 / 快照错误计数等），可按需扩展 | `{ "threshold_silent_seconds": 600 }` |
 
@@ -332,7 +332,7 @@ def build_dingtalk_message(p: dict) -> dict:
     return {
         "msgtype": "markdown",
         "markdown": {
-            "title": f"[采集告警] {p['device_code']}",
+            "title": f"[采集报警] {p['device_code']}",
             "text": text,
         },
     }
@@ -371,7 +371,7 @@ if __name__ == "__main__":
 {
   "msgtype": "markdown",
   "markdown": {
-    "title": "[采集告警] M-A01-001",
+    "title": "[采集报警] M-A01-001",
     "text": "### ⚠️ 设备数据中断\n\n- **设备**：M-A01-001 一号车间总表\n- **类型**：SILENT_TIMEOUT\n- **严重程度**：WARNING\n- **触发时间**：2026-04-29T08:15:30+08:00\n- **最后数据**：2026-04-29T08:00:12+08:00\n\n[查看详情](https://ems.example.com/alarms/history?id=12345)"
   }
 }
@@ -408,7 +408,7 @@ def verify_ems_signature(body: bytes, sig_header: str) -> bool:
 def build_wechat_work_message(p: dict) -> dict:
     last_seen = p.get("last_seen_at") or "暂无"
     content = (
-        f"# ⚠️ 采集告警 — {p['device_code']}\n\n"
+        f"# ⚠️ 采集报警 — {p['device_code']}\n\n"
         f"> 设备：**{p['device_name']}**\n"
         f"> 类型：{p['alarm_type']}\n"
         f"> 严重程度：{p['severity']}\n"
@@ -452,7 +452,7 @@ if __name__ == "__main__":
 **企微 Markdown 渲染效果**
 
 ```
-# ⚠️ 采集告警 — M-A01-001
+# ⚠️ 采集报警 — M-A01-001
 
 > 设备：一号车间总表
 > 类型：SILENT_TIMEOUT
@@ -467,7 +467,7 @@ if __name__ == "__main__":
 
 ### 6.3 自定义后端（直接消费）
 
-适合把告警事件写入自研运营平台、工单系统或消息队列的场景。
+适合把报警事件写入自研运营平台、工单系统或消息队列的场景。
 
 **完整接收器（Python / Flask）**
 
@@ -528,7 +528,7 @@ def receive():
 
 
 def handle_triggered(payload: dict) -> None:
-    """处理告警触发事件，写入自研平台或工单系统"""
+    """处理报警触发事件，写入自研平台或工单系统"""
     logger.info(
         "Alarm triggered: alarm_id=%s device=%s type=%s severity=%s",
         payload["alarm_id"],
@@ -588,7 +588,7 @@ T+370s    第 4 次重试 -> 失败
 
 | 字段 | 含义 |
 |------|------|
-| `alarm_id` | 关联的告警 ID |
+| `alarm_id` | 关联的报警 ID |
 | `attempts` | 已尝试次数（含初次发送） |
 | `response_status` | 最后一次 HTTP 响应状态码 |
 | `response_ms` | 最后一次请求耗时（ms） |
@@ -625,7 +625,7 @@ LIMIT 50;
 
 1. 进入 系统健康 → Webhook 配置页，找到目标配置行
 2. 点"测试发送"按钮
-3. EMS 用当前保存配置发送 `alarm.test` 事件（用最近一条 ACTIVE 告警数据；没有就用占位 Sample Alarm）
+3. EMS 用当前保存配置发送 `alarm.test` 事件（用最近一条 ACTIVE 报警数据；没有就用占位 Sample Alarm）
 4. 页面显示 HTTP 状态码 + 请求耗时
 5. 不写 `webhook_delivery_log`，不计入重试次数
 
@@ -672,7 +672,7 @@ openssl rand -hex 32
 
 HTTP 明文传输会导致：
 
-- Payload 里的设备信息、告警时间泄露
+- Payload 里的设备信息、报警时间泄露
 - 中间人可伪造 Webhook 请求（虽然有签名保护，但明文会暴露更多上下文）
 
 接收方必须部署 TLS 证书，`url` 字段以 `https://` 开头。
@@ -711,10 +711,10 @@ https://your-server.com/ems-webhook?token=your-private-token
 |------|---------|---------|
 | 配置后完全没收到任何 Webhook | `enabled=false` / URL 填写错误 / 防火墙阻断 | 查 `webhook_delivery_log` 是否有记录；用 webhook.site 替换 URL 确认可达性；检查接收方服务器防火墙规则 |
 | 收到 Webhook 但签名验证失败（403） | Secret 两端不一致 / Body 被中间网关修改（如 gzip 压缩、去除空白） | 用 §8.3 的 `curl` 命令 + 已知 Secret 重算签名，确认算法实现；检查中间代理是否修改了 Body |
-| 多次收到同一告警事件 | 重试机制触发（接收方返回了 5xx）/ 接收方未做幂等去重 | 用 `(alarm_id, event)` 元组去重，参考 §5.2；检查 `webhook_delivery_log.attempts` 字段 |
-| 接收方收到告警时间比触发晚 5 分钟 | 接收方前几次返回 5xx，触发退避重试 [10s, 60s, 300s]，最长约 6 分钟 | 查 `webhook_delivery_log.attempts` 和 `last_error`；优化接收方可用性 |
+| 多次收到同一报警事件 | 重试机制触发（接收方返回了 5xx）/ 接收方未做幂等去重 | 用 `(alarm_id, event)` 元组去重，参考 §5.2；检查 `webhook_delivery_log.attempts` 字段 |
+| 接收方收到报警时间比触发晚 5 分钟 | 接收方前几次返回 5xx，触发退避重试 [10s, 60s, 300s]，最长约 6 分钟 | 查 `webhook_delivery_log.attempts` 和 `last_error`；优化接收方可用性 |
 | 部分接收方请求超时 | `timeout_ms` 设置太小 / 接收方处理太慢 | 调大 `timeout_ms`（最大 30000ms）；接收方改为先返回 `200 OK` 再异步处理 |
-| `webhook_delivery_log` 没有任何记录 | EMS 实例异常 / 告警派发任务未启动 / Webhook 功能未启用 | 检查 EMS 服务日志（搜索 `WebhookChannel`）；确认 `webhook_config.enabled=true` |
+| `webhook_delivery_log` 没有任何记录 | EMS 实例异常 / 报警派发任务未启动 / Webhook 功能未启用 | 检查 EMS 服务日志（搜索 `WebhookChannel`）；确认 `webhook_config.enabled=true` |
 | 部分接收方超时而其他正常 | 各 `webhook_config` 的 `timeout_ms` 配置不同 / 接收方地域网络差异 | 分别检查各配置的 `timeout_ms`；查 `webhook_delivery_log.response_ms` 分布 |
 
 ---
@@ -754,7 +754,7 @@ public class DingTalkAdapter implements WebhookAdapter {
         Map<String, Object> msg = Map.of(
             "msgtype", "markdown",
             "markdown", Map.of(
-                "title", "[采集告警] " + deviceCode,
+                "title", "[采集报警] " + deviceCode,
                 "text", text
             )
         );
@@ -799,7 +799,7 @@ void buildPayload_silentTimeout_returnsValidDingTalkMarkdown() {
 
 ## 更多资源
 
-- [alarm-config-reference.md](./alarm-config-reference.md) — 告警配置完整参考（阈值、派发渠道等）
+- [alarm-config-reference.md](./alarm-config-reference.md) — 报警配置完整参考（阈值、派发渠道等）
 - [alarm-data-model.md](./alarm-data-model.md) — 数据模型（alarm、webhook_delivery_log 等表结构）
-- [alarm-detection-rules.md](./alarm-detection-rules.md) — 告警检测规则（SILENT_TIMEOUT / CONSECUTIVE_FAIL 触发条件）
+- [alarm-detection-rules.md](./alarm-detection-rules.md) — 报警检测规则（SILENT_TIMEOUT / CONSECUTIVE_FAIL 触发条件）
 - spec §13 — Webhook Payload 字段词典与对接示例原始规格

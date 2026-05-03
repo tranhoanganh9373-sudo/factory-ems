@@ -1,4 +1,4 @@
-# Verification — 采集中断告警 ems-alarm 2026-04-29
+# Verification — 采集中断报警 ems-alarm 2026-04-29
 
 ## 范围
 - spec: docs/superpowers/specs/2026-04-29-acquisition-alarm-design.md

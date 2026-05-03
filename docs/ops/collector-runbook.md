@@ -359,7 +359,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 适合场景：一台多功能仪表通过一个 TCP socket 暴露 N 个测量回路。
 
-### 11.2 状态告警接入 audit_logs
+### 11.2 状态报警接入 audit_logs
 
 `AlarmTransitionListener` 实现 `DevicePoller.StateTransitionListener`，每次状态切换写一条
 audit：
@@ -396,7 +396,7 @@ audit：
 
 #### 装机后（远程跟踪）
 
-- [ ] 接入 Prometheus 抓取 `ems.collector.*` metrics，告警规则：
+- [ ] 接入 Prometheus 抓取 `ems.collector.*` metrics，报警规则：
       `failure_rate > 0.05 持续 10min` 或 `state=UNREACHABLE > 30min`
 - [ ] 24 小时内复查 `/admin/audit` 看是否有 `COLLECTOR_STATE_CHANGE` 异常
 - [ ] 1 周内做一次 buffer flush 复查：`SELECT count(*) FROM collector_buffer WHERE sent=0` < 100

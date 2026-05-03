@@ -1,6 +1,6 @@
 # 电价 + 分摊 + 账单上线 SOP（把电量变成钱）
 
-> **场景**：采集 + 看板 + 告警都已上线后，把电量真正变成"钱"——录入工业分时电价、配（可选的）成本分摊规则、出月度账单。
+> **场景**：采集 + 看板 + 报警都已上线后，把电量真正变成"钱"——录入工业分时电价、配（可选的）成本分摊规则、出月度账单。
 >
 > **前置**：
 > - `/dashboard` 能看见 50 块表的实时数据
@@ -302,6 +302,6 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 月报自动化 SOP：[report-automation-sop.md](./report-automation-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)

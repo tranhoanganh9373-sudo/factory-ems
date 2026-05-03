@@ -83,7 +83,7 @@ export default function DashboardPage() {
               </Col>
               <Col span={12}>
                 <Statistic
-                  title="当前告警"
+                  title="当前报警"
                   value={summary?.alarmCount ?? 0}
                   valueStyle={{ color: (summary?.alarmCount ?? 0) > 0 ? '#ff4d4f' : undefined }}
                 />

@@ -204,7 +204,7 @@ EMS_BASE_URL=https://ems.example.com EMS_TOKEN=<jwt> \
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)
 - 桥接脚本：`scripts/monthly-report-mail.sh`

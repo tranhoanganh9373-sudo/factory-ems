@@ -182,12 +182,12 @@ export default function MetersPage() {
       },
     },
     {
-      title: '告警',
+      title: '报警',
       key: 'alarmStatus',
       width: 90,
       render: (_, r) => {
         if (!r.enabled) return <Tag color="default">未启用</Tag>;
-        if (activeAlarmDeviceIds.has(r.id)) return <Tag color="error">告警中</Tag>;
+        if (activeAlarmDeviceIds.has(r.id)) return <Tag color="error">报警中</Tag>;
         return <Tag color="success">正常</Tag>;
       },
     },

@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * <p>不变量：同 (host, port) 的 master 实例 全局唯一；引用计数严格匹配 acquire/release。
  *
- * <p>Plan 1.5.3 Phase A。Phase B 后续把告警通过 StateTransitionListener 写 audit_logs。
+ * <p>Plan 1.5.3 Phase A。Phase B 后续把报警通过 StateTransitionListener 写 audit_logs。
  */
 @Component
 public class TcpConnectionPool {

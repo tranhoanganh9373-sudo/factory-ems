@@ -5,16 +5,16 @@
 > **受众**：客户管理 / 工程值班（on-call）/ 业务运维
 > **文档关系**：
 > - [observability-config-reference.md](./observability-config-reference.md) — 环境变量 / 启停 / 资源预算
-> - [observability-slo-rules.md](./observability-slo-rules.md) — 4 SLO + 16 条告警规则详解
+> - [observability-slo-rules.md](./observability-slo-rules.md) — 4 SLO + 16 条报警规则详解
 > - [observability-metrics-dictionary.md](./observability-metrics-dictionary.md) — 17 个业务指标字典
 
 ---
 
 ## 1. 概述、受众与文档关系
 
-本文档面向客户管理人员、工程值班（on-call）和业务运维，说明 factory-ems 可观测性栈提供的 7 个 Grafana Dashboard 怎么用：每个 dashboard 给谁用、面板有哪些、怎么看、关联哪些告警、跨 dashboard 怎么下钻。
+本文档面向客户管理人员、工程值班（on-call）和业务运维，说明 factory-ems 可观测性栈提供的 7 个 Grafana Dashboard 怎么用：每个 dashboard 给谁用、面板有哪些、怎么看、关联哪些报警、跨 dashboard 怎么下钻。
 
-**不在本文档范围内**：指标采集原理、告警规则表达式、部署与运维操作——这些分别由 [observability-metrics-dictionary.md](./observability-metrics-dictionary.md)、[observability-slo-rules.md](./observability-slo-rules.md) 与 [observability-deployment.md](../ops/observability-deployment.md) 覆盖。
+**不在本文档范围内**：指标采集原理、报警规则表达式、部署与运维操作——这些分别由 [observability-metrics-dictionary.md](./observability-metrics-dictionary.md)、[observability-slo-rules.md](./observability-slo-rules.md) 与 [observability-deployment.md](../ops/observability-deployment.md) 覆盖。
 
 **访问入口**：Grafana 部署在 `http://<host>:3000`，首次登录密码见 `ops/observability/scripts/grafana-init.sh` 生成的随机密码。所有 dashboard 通过 Grafana provisioning 自动注册，不用手工导入。
 
@@ -24,12 +24,12 @@
 
 | ID | 名称 | URL Path | 受众 | 主要面板 | Phase |
 |----|------|----------|------|---------|-------|
-| D1 | factory-ems · SLO Overview | `/d/slo-overview/` | 工程值班、客户管理 | 4 SLO stat + 错误预算 gauge + 可用性趋势 + 燃烧率 + firing 告警表 | E1 ✅ |
+| D1 | factory-ems · SLO Overview | `/d/slo-overview/` | 工程值班、客户管理 | 4 SLO stat + 错误预算 gauge + 可用性趋势 + 燃烧率 + firing 报警表 | E1 ✅ |
 | D2 | factory-ems · 基础设施 | `/d/infra-overview/` | 工程运维 | CPU/内存/容器数/重启数 stat + CPU/内存/磁盘/网络趋势 + 容器 CPU/内存 Top 10 + 容器列表 | E2 ✅ |
 | D3 | factory-ems · JVM | `/d/jvm-overview/` | 工程运维 | Heap 使用率/活跃线程/已加载类/GC 停顿率 stat + Heap/Non-heap/GC/线程/连接池/会话/日志趋势 | E2 ✅ |
 | D4 | factory-ems · HTTP | `/d/http-overview/` | 工程运维 | RPS/p95/p99/5xx 错误率 stat + 延迟趋势 + RPS by URI + 状态码饼图 + 错误率趋势 + 慢端点/高错误端点表 | E2 ✅ |
 | D5 | factory-ems · Collector | `/d/ems-collector/` | 工程值班、业务运维 | 在线/离线设备 stat + 失败率/Poll 耗时/失败原因/在线趋势 + Top 10 失败设备表 | E3 ✅ |
-| D6 | factory-ems · Alarm | `/d/ems-alarm/` | 工程值班、业务运维 | 活跃告警/24h 触发/自动恢复 stat + 告警 by type + Detector 耗时 + Webhook 投递 + 触发 vs 恢复 + Top 5 type 表 | E3 ✅ |
+| D6 | factory-ems · Alarm | `/d/ems-alarm/` | 工程值班、业务运维 | 活跃报警/24h 触发/自动恢复 stat + 报警 by type + Detector 耗时 + Webhook 投递 + 触发 vs 恢复 + Top 5 type 表 | E3 ✅ |
 | D7 | factory-ems · Meter | `/d/ems-meter/` | 工程值班、业务运维 | 最大 lag/入库速率/24h 丢弃 stat + Lag vs SLO gauge + 入库 by 能源类型 + 丢弃 by reason + Lag 趋势 + 能源类型入库量表 | E3 ✅ |
 
 > 所有 dashboard 都是只读（`editable: false`），刷新间隔 30 秒，默认时间窗口 6 小时。要自定义见 [第 12 节](#12-自定义-dashboard)。
@@ -42,7 +42,7 @@
 
 ### 3.1 受众与用途场景
 
-- **工程值班**：当班开始时快速确认系统整体健康状态；收到告警通知时的第一落点。
+- **工程值班**：当班开始时快速确认系统整体健康状态；收到报警通知时的第一落点。
 - **客户管理**：给客户展示服务质量、确认 SLO 合规状态；用于月度质量回顾会。
 
 ### 3.2 面板列表
@@ -55,8 +55,8 @@
 | 4 | 调度漂移 (max abs) | stat | 采集任务实际执行时间与计划时间的最大偏差（SLO 目标：< 60s，v1 占位） |
 | 5 | 可用性错误预算剩余 | gauge | 本月可用性 SLO 错误预算剩余比例（0 = 本月已违约） |
 | 6 | 可用性 30 天趋势 | timeseries | 30 天滚动窗口可用率历史曲线 |
-| 7 | 可用性燃烧率 (1h vs 6h) | timeseries | 1 小时与 6 小时燃烧率，以及快速/慢速告警阈值参考线 |
-| 8 | 当前 firing 告警 | table | Prometheus ALERTS 中当前处于 firing 状态的告警列表（alertname / severity / team / instance） |
+| 7 | 可用性燃烧率 (1h vs 6h) | timeseries | 1 小时与 6 小时燃烧率，以及快速/慢速报警阈值参考线 |
+| 8 | 当前 firing 报警 | table | Prometheus ALERTS 中当前处于 firing 状态的报警列表（alertname / severity / team / instance） |
 
 ### 3.3 关键面板细节
 
@@ -81,21 +81,21 @@
 **燃烧率趋势（面板 7）**
 
 图中有 4 条线：
-- 1h burn（短窗口快速燃烧率）：超过 14.4×（图中参考线）触发快速响应告警，表示 1 小时内已消耗约 1/20 的月度错误预算。
-- 6h burn（长窗口慢速燃烧率）：超过 6×（图中参考线）触发慢速响应告警，表示按当前速率持续下去，约 5 天会耗尽月度预算。
+- 1h burn（短窗口快速燃烧率）：超过 14.4×（图中参考线）触发快速响应报警，表示 1 小时内已消耗约 1/20 的月度错误预算。
+- 6h burn（长窗口慢速燃烧率）：超过 6×（图中参考线）触发慢速响应报警，表示按当前速率持续下去，约 5 天会耗尽月度预算。
 - 两条参考线是常数，方便直接对比当前燃烧率有没有越线。
 
-**firing 告警表（面板 8）**
+**firing 报警表（面板 8）**
 
-列出当前所有处于触发（firing）状态的告警，字段：
-- **alertname**：告警名称，与 [observability-slo-rules.md](./observability-slo-rules.md) 中告警列表对应。
+列出当前所有处于触发（firing）状态的报警，字段：
+- **alertname**：报警名称，与 [observability-slo-rules.md](./observability-slo-rules.md) 中报警列表对应。
 - **severity**：严重级别（`critical` / `warning`）。
 - **team**：负责团队。
-- **instance**：触发告警的服务实例。
+- **instance**：触发报警的服务实例。
 
-### 3.4 关联告警
+### 3.4 关联报警
 
-与本 dashboard 直接关联的告警（详见 [observability-slo-rules.md](./observability-slo-rules.md)）：
+与本 dashboard 直接关联的报警（详见 [observability-slo-rules.md](./observability-slo-rules.md)）：
 
 - **EmsAvailabilityBurnRateFast**（critical）：1h 燃烧率 > 14.4×
 - **EmsAvailabilityBurnRateSlow**（warning）：6h 燃烧率 > 6×
@@ -106,7 +106,7 @@
 
 - 可用性红了 → 跳 D2 基础设施 dashboard，确认宿主机是不是 CPU/内存耗尽或者容器重启了。
 - 数据新鲜度红了 → 跳 D7 Meter dashboard，查哪个能源类型入库速率掉了；再跳 D5 Collector dashboard，查失败设备。
-- firing 告警表 → 点 alertname 超链接（如果配了 Alertmanager 联动）跳到告警详情。
+- firing 报警表 → 点 alertname 超链接（如果配了 Alertmanager 联动）跳到报警详情。
 
 ---
 
@@ -146,7 +146,7 @@
 
 **容器列表（面板 11）**：表格合并 CPU 和内存两列，按 CPU 降序。`CPU (cores)` 是每秒消耗的 CPU 秒数（< 1 表示不足一核），`Memory (bytes)` 是实时内存占用字节数。
 
-### 4.4 关联告警
+### 4.4 关联报警
 
 - **EmsInstanceDown**（critical）：factory-ems 实例连续 1 分钟 down，与容器重启计数器联动。
 
@@ -194,7 +194,7 @@
 
 **连接池（面板 10）**：`active` 接近 `max` 时连接池快耗尽，请求会开始排队等连接。一般 `active ≤ max × 0.8` 属健康区间。
 
-### 5.4 关联告警
+### 5.4 关联报警
 
 - **EmsHighHeapUsage**（warning）：Heap 使用率持续 > 85%，详见 [observability-slo-rules.md](./observability-slo-rules.md)。
 
@@ -240,7 +240,7 @@
 
 **状态码分布（面板 7）**：正常情况下圆圈主体是绿色（2xx）。出现大面积橙/红（4xx/5xx）表示有批量请求出错。悬停各扇形可看具体状态码计数。
 
-### 6.4 关联告警
+### 6.4 关联报警
 
 - **EmsApiLatencyHigh**（critical）：p99 延迟持续 ≥ 1s，详见 [observability-slo-rules.md](./observability-slo-rules.md)。
 
@@ -257,7 +257,7 @@
 
 ### 7.1 受众与用途场景
 
-- **工程值班**：设备大量离线或采集失败告警触发后，定位问题设备和适配器。
+- **工程值班**：设备大量离线或采集失败报警触发后，定位问题设备和适配器。
 - **业务运维**：每日巡检设备在线状态，确认新接入的设备能正常上线。
 
 ### 7.2 面板列表
@@ -299,7 +299,7 @@
 
 堆叠图按 `reason` 标签分类（如 `timeout`、`connection_refused`、`parse_error`、`other`）。v1 阶段大多数失败原因会归入 `other`，这是预期行为，后续版本会细化分类。`timeout` 比例高时重点查设备网络延迟或设备固件是不是卡死。
 
-### 7.4 关联告警
+### 7.4 关联报警
 
 - **EmsCollectorPollSlow**（warning）：采集器 poll p95 延迟持续过高，详见 [observability-slo-rules.md](./observability-slo-rules.md)。
 - **EmsCollectorOfflineDevices**（critical）：离线设备占比持续 ≥ 20%。
@@ -318,22 +318,22 @@
 
 ### 8.1 受众与用途场景
 
-- **工程值班**：确认告警检测引擎运行正常、Webhook 投递不积压、告警自动恢复比例健康。
-- **业务运维**：监控设备告警活跃数量，判断要不要人工介入。
+- **工程值班**：确认报警检测引擎运行正常、Webhook 投递不积压、报警自动恢复比例健康。
+- **业务运维**：监控设备报警活跃数量，判断要不要人工介入。
 
 ### 8.2 面板列表
 
 | 顺序 | 面板名称 | 类型 | 一句话含义 |
 |------|---------|------|-----------|
-| 1 | 活跃 silent_timeout | stat | 当前处于"静默超时"告警状态的设备数（设备长时间无数据上报） |
-| 2 | 活跃 consecutive_fail | stat | 当前处于"连续采集失败"告警状态的设备数 |
-| 3 | 24h 触发总数 | stat | 过去 24 小时内新产生的告警数量 |
-| 4 | 24h 自动恢复占比 | stat | 过去 24 小时内，告警中自动恢复（无需人工干预）的占比 |
-| 5 | 活跃告警 by type | timeseries（堆叠） | 按告警类型（silent_timeout / consecutive_fail）分色堆叠展示活跃数量历史 |
-| 6 | Detector 扫描耗时 p95 | timeseries | 告警检测引擎每轮扫描的 p95 耗时历史 |
+| 1 | 活跃 silent_timeout | stat | 当前处于"静默超时"报警状态的设备数（设备长时间无数据上报） |
+| 2 | 活跃 consecutive_fail | stat | 当前处于"连续采集失败"报警状态的设备数 |
+| 3 | 24h 触发总数 | stat | 过去 24 小时内新产生的报警数量 |
+| 4 | 24h 自动恢复占比 | stat | 过去 24 小时内，报警中自动恢复（无需人工干预）的占比 |
+| 5 | 活跃报警 by type | timeseries（堆叠） | 按报警类型（silent_timeout / consecutive_fail）分色堆叠展示活跃数量历史 |
+| 6 | Detector 扫描耗时 p95 | timeseries | 报警检测引擎每轮扫描的 p95 耗时历史 |
 | 7 | Webhook 投递速率 by outcome / attempt | timeseries | 按投递结果（success/failure）和重试次数分色展示投递速率 |
-| 8 | 触发 vs 恢复速率 | timeseries | 告警触发速率与恢复速率历史（两线平衡说明系统自愈能力良好） |
-| 9 | Top 5 type 触发 24h | table | 过去 24 小时内触发数量最多的 5 个告警类型 |
+| 8 | 触发 vs 恢复速率 | timeseries | 报警触发速率与恢复速率历史（两线平衡说明系统自愈能力良好） |
+| 9 | Top 5 type 触发 24h | table | 过去 24 小时内触发数量最多的 5 个报警类型 |
 
 ### 8.3 关键面板细节
 
@@ -341,11 +341,11 @@
 
 这是衡量系统自愈能力的核心指标：
 
-- 绿色（≥ 80%）：自愈能力强，大多数告警在问题解决后自动关闭，人工负担轻。
-- 黄色（50% ~ 80%）：部分告警要人工关闭，运维需要定期清理。
-- 红色（< 50%）：告警大量积压未自动恢复，要么设备处于持续异常状态，要么自动恢复逻辑有问题，需要重点排查。
+- 绿色（≥ 80%）：自愈能力强，大多数报警在问题解决后自动关闭，人工负担轻。
+- 黄色（50% ~ 80%）：部分报警要人工关闭，运维需要定期清理。
+- 红色（< 50%）：报警大量积压未自动恢复，要么设备处于持续异常状态，要么自动恢复逻辑有问题，需要重点排查。
 
-**活跃告警 stat 阈值（面板 1 / 2）**
+**活跃报警 stat 阈值（面板 1 / 2）**
 
 | 指标 | 绿色 | 黄色 | 红色 |
 |------|------|------|------|
@@ -358,16 +358,16 @@
 - `success · attempt=1`：首次投递即成功（理想状态）。
 - `failure · attempt=3`：重试 3 次仍失败（需检查接收方 URL 是否可达）。
 
-如果 `failure` 系列出现并持续存在，要立刻检查 Webhook 接收端，不然客户收不到告警通知。
+如果 `failure` 系列出现并持续存在，要立刻检查 Webhook 接收端，不然客户收不到报警通知。
 
-### 8.4 关联告警
+### 8.4 关联报警
 
 - **EmsWebhookFailureRate**（warning）：Webhook 投递失败率持续过高，详见 [observability-slo-rules.md](./observability-slo-rules.md)。
 
 ### 8.5 下钻路径
 
 - Webhook 投递持续失败 → 查 webhook-bridge 服务日志（Loki：过滤 `compose_service=webhook-bridge`）→ 确认钉钉/企微接收 URL 是不是可达。
-- 活跃告警数突增 → 跳 D5 Collector dashboard，看是不是大批设备离线导致批量触发。
+- 活跃报警数突增 → 跳 D5 Collector dashboard，看是不是大批设备离线导致批量触发。
 - Detector 扫描耗时持续升高 → p95 > 几秒说明设备数量已接近当前检测容量，要评估扩容或调整扫描间隔。
 
 ---
@@ -378,7 +378,7 @@
 
 ### 9.1 受众与用途场景
 
-- **工程值班**：能源计量数据入库延迟告警触发后，定位是哪种能源类型写入堆积。
+- **工程值班**：能源计量数据入库延迟报警触发后，定位是哪种能源类型写入堆积。
 - **业务运维**：每日确认各能源类型（电、水、气、热）入库速率正常，关注数据丢弃情况。
 
 ### 9.2 面板列表
@@ -401,7 +401,7 @@
 量规表盘范围 0 ~ 300 秒：
 - 绿色（< 180s）：数据新鲜度良好，满足 SLO。
 - 黄色（180s ~ 300s）：接近 SLO 边界，要关注趋势。
-- 红色（= 300s）：已触及 SLO 上限，对应 `EmsDataFreshnessViolation` 告警触发条件。
+- 红色（= 300s）：已触及 SLO 上限，对应 `EmsDataFreshnessViolation` 报警触发条件。
 
 这与 D1 SLO Overview 中"数据新鲜度"stat 面板用的是同一组阈值（180s / 300s），两处颜色含义一致。
 
@@ -420,7 +420,7 @@ v1 阶段大多数丢弃原因显示为 `other`，这是预期行为（v1 丢弃
 
 堆叠图中各能源类型各占一层颜色。总入库速率不变但某一类型层消失，说明该类型的采集设备全部离线，要立刻查对应设备状态（跳 D5 Collector）。
 
-### 9.4 关联告警
+### 9.4 关联报警
 
 - **EmsDataFreshnessViolation**（critical）：max lag ≥ 300s 持续 5 分钟，详见 [observability-slo-rules.md](./observability-slo-rules.md)。
 
@@ -460,21 +460,21 @@ D1 SLO Overview 里的"可用性 (30d)" stat 面板，内部计算窗口固定 3
 
 ## 11. 下钻路径示例
 
-下面以"数据新鲜度告警触发"为例，走完整故障排查链路。
+下面以"数据新鲜度报警触发"为例，走完整故障排查链路。
 
 ### 场景背景
 
-凌晨 3:20，on-call 工程师收到 `EmsDataFreshnessViolation` 告警通知：max lag ≥ 300s 已持续 5 分钟。
+凌晨 3:20，on-call 工程师收到 `EmsDataFreshnessViolation` 报警通知：max lag ≥ 300s 已持续 5 分钟。
 
-### 第 1 步：SLO Overview 确认告警范围
+### 第 1 步：SLO Overview 确认报警范围
 
 打开 D1 SLO Overview（`/d/slo-overview/`）。
 
 - "数据新鲜度 (max lag)" stat 面板红色，当前值约 320s。
 - "可用性 (30d)" stat 仍是绿色，说明服务实例没宕机。
-- "firing 告警表"里只有 `EmsDataFreshnessViolation` 一条记录，范围有限。
+- "firing 报警表"里只有 `EmsDataFreshnessViolation` 一条记录，范围有限。
 
-[截图：SLO Overview — 数据新鲜度面板红色，其他面板绿色，firing 告警表有一行]
+[截图：SLO Overview — 数据新鲜度面板红色，其他面板绿色，firing 报警表有一行]
 
 ### 第 2 步：Meter Dashboard 定位能源类型
 
@@ -575,12 +575,12 @@ v1 Grafana 使用自建用户体系（spec §10.6 + §15）：
 
 ### 时区不一致
 
-**症状**：Grafana 显示的时间和日志/告警通知中的时间差好几小时。
+**症状**：Grafana 显示的时间和日志/报警通知中的时间差好几小时。
 
 **原因与处理**：
 - Prometheus 内部所有时间戳是 UTC。
 - Grafana 默认按浏览器本地时区显示（如 UTC+8）。
-- 告警通知（Alertmanager）默认也用 UTC。
+- 报警通知（Alertmanager）默认也用 UTC。
 
 时区展示和预期不符时，在 Grafana 用户设置（Profile → Preferences → Timezone）里统一设成 `Asia/Shanghai`。
 

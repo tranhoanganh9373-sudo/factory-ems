@@ -113,7 +113,7 @@ CREATE TABLE channel (
     name            VARCHAR(128) NOT NULL UNIQUE,
     protocol        VARCHAR(32)  NOT NULL,           -- MODBUS_TCP / MODBUS_RTU / OPC_UA / MQTT / VIRTUAL
     enabled         BOOLEAN NOT NULL DEFAULT true,
-    is_virtual      BOOLEAN NOT NULL DEFAULT false,  -- VIRTUAL 协议标记，用于过滤告警/对账
+    is_virtual      BOOLEAN NOT NULL DEFAULT false,  -- VIRTUAL 协议标记，用于过滤报警/对账
     protocol_config JSONB NOT NULL,                  -- sealed interface 序列化结果
     description     TEXT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -329,7 +329,7 @@ class OpcUaTransport implements Transport {
 证书首次连接时若不在 TrustStore：
 - 拒绝连接
 - 记录指纹到 `ChannelStateRegistry.lastErrorMessage = "Untrusted server certificate: SHA-256: xx:xx:..."`
-- 触发告警 `OPC_UA_CERT_PENDING`
+- 触发报警 `OPC_UA_CERT_PENDING`
 - 管理员通过 `POST /api/v1/collector/{id}/trust-cert { thumbprint }` 批准
 
 ### 6.3 MqttTransport
@@ -420,7 +420,7 @@ class VirtualTransport implements Transport {
 }
 ```
 
-Sample 的 `tags` 强制带 `virtual=true` 标识，下游告警/对账逻辑过滤。
+Sample 的 `tags` 强制带 `virtual=true` 标识，下游报警/对账逻辑过滤。
 
 ---
 
@@ -574,7 +574,7 @@ class FilesystemSecretResolver implements SecretResolver {
 2. 校验 `~/.ems/secrets/opcua/certs/trusted/` 中是否存在
 3. 不存在：
    - 调用 `OpcUaCertificateStore.addPending(cert, channelId, endpointUrl)` 把 `.der` + `.json` 元数据写入 `pending/`（POSIX `rw-------`，幂等）
-   - 发布 `ChannelCertificatePendingEvent` → `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 告警（同 channel 同时只有一条 ACTIVE）
+   - 发布 `ChannelCertificatePendingEvent` → `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 报警（同 channel 同时只有一条 ACTIVE）
    - 抛出 `TransportException` 拒绝连接
 4. 管理员在 `/admin/cert-approval` 页面（`<PageHeader title="证书审批" />`）查看待审批证书列表
    - 后端 `GET /api/v1/collector/cert-pending` 列出 `PendingCertificate(thumbprint, channelId, endpointUrl, firstSeenAt, subjectDn)`
@@ -582,12 +582,12 @@ class FilesystemSecretResolver implements SecretResolver {
 5. 批准 → `POST /api/v1/collector/{channelId}/trust-cert { thumbprint }`：
    - `OpcUaCertificateStore.approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，同步删除 `.json`
    - 审计日志 `CERT_TRUST`
-   - 发布 `ChannelCertificateApprovedEvent` → 同步自动解除告警（`AUTO` 原因）
+   - 发布 `ChannelCertificateApprovedEvent` → 同步自动解除报警（`AUTO` 原因）
 6. 拒绝 → `DELETE /api/v1/collector/cert-pending/{thumbprint}`：
-   - `OpcUaCertificateStore.reject(thumbprint)` 把 `.der` 移到 `rejected/` 留证（不再触发告警，但允许后续审计）
+   - `OpcUaCertificateStore.reject(thumbprint)` 把 `.der` 移到 `rejected/` 留证（不再触发报警，但允许后续审计）
 7. Channel 重连周期到达后自动重试连接
 
-> **事件链同步性**：`ApplicationEventPublisher` 默认走 Spring 同步多播器；`@EnableAsync` 仅作用于 `@Async` 注解（如 webhook executor）。因此 pending 事件保存告警与 `addPending` 在同一线程完成，前端见到 cert 时告警必已存在；不存在「approve 早于 pending listener」的竞态。
+> **事件链同步性**：`ApplicationEventPublisher` 默认走 Spring 同步多播器；`@EnableAsync` 仅作用于 `@Async` 注解（如 webhook executor）。因此 pending 事件保存报警与 `addPending` 在同一线程完成，前端见到 cert 时报警必已存在；不存在「approve 早于 pending listener」的竞态。
 
 ### 8.3.bis 客户端 .pfx 上传 → PEM 服务端转换（已实现）
 
@@ -741,11 +741,11 @@ Drawer 详情包含：完整状态、订阅列表、最近 20 条样本（OPC UA
 
 WebSocket `/ws/realtime` 扩展 topic `collector.state` → 推送增量更新，前端无需轮询。
 
-### 9.6 告警联动
+### 9.6 报警联动
 
 - 连续 5 次失败 → 触发 `COMMUNICATION_FAULT`
 - 证书未批准 → 触发 `OPC_UA_CERT_PENDING`
-- VIRTUAL 协议**不参与告警**
+- VIRTUAL 协议**不参与报警**
 
 ### 9.7 工作量
 
@@ -823,7 +823,7 @@ test('admin creates OPC UA channel and verifies diagnostics', async ({ page }) =
 | MQTT broker 性能瓶颈 | 中 | 低 | 单 broker 连接 + topic 复用；订阅数 > 1000 才需要分片 |
 | JSONB 反序列化 schema 漂移 | 高 | 中 | `@JsonTypeInfo` + sealed interface 严格约束；Flyway 不修改既有 JSON 结构 |
 | 凭据文件权限被运维误改 | 高 | 低 | 启动时校验 `secretsDir` 权限 ≤ 700，不符则启动失败 |
-| 虚拟协议数据被误认为真实数据 | 中 | 中 | DB 字段 `is_virtual`；前端图表标识；不参与告警与对账 |
+| 虚拟协议数据被误认为真实数据 | 中 | 中 | DB 字段 `is_virtual`；前端图表标识；不参与报警与对账 |
 
 ---
 
@@ -836,7 +836,7 @@ test('admin creates OPC UA channel and verifies diagnostics', async ({ page }) =
 | 3 | VIRTUAL 协议 | 2 天 | 低风险，可生产试点 1-2 channel |
 | 4 | OPC UA（含 Milo spike） | 5 天 | 先连 1 个非关键 PLC |
 | 5 | MQTT（含 mosquitto 部署） | 3 天 | - |
-| 6 | 诊断页 + 告警联动 | 2 天 | - |
+| 6 | 诊断页 + 报警联动 | 2 天 | - |
 | 7 | Actuator + Prometheus | 1 天 | - |
 
 **总工期：约 16 个工作日**（不含 buffer）。

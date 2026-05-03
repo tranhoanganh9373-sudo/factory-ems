@@ -1,4 +1,4 @@
-# 采集中断告警 · 配置参数参考
+# 采集中断报警 · 配置参数参考
 
 > **更新于**：2026-04-29（Phase A 完成时）
 > **撰写依据**：[spec §12](../superpowers/specs/2026-04-29-acquisition-alarm-design.md) + 实际落地的 application.yml 默认值
@@ -7,16 +7,16 @@
 
 ## 1. 全局默认配置（application.yml）
 
-采集中断告警系统的核心参数都在 `ems-app/src/main/resources/application.yml` 集中配置，前缀 `ems.alarm`。下表列出 7 个全局参数的类型、默认值、有效范围及调优建议。
+采集中断报警系统的核心参数都在 `ems-app/src/main/resources/application.yml` 集中配置，前缀 `ems.alarm`。下表列出 7 个全局参数的类型、默认值、有效范围及调优建议。
 
 > **重要**：所有参数修改后需要重启 ems-app 才生效（首版不支持热更新）。要快速调试某一设备的阈值，用 §2 设备级覆盖。
 
 | 参数 | 类型 | 默认值 | 有效范围 | 含义 | 调优建议 |
 |------|------|--------|--------|------|---------|
-| `default-silent-timeout-seconds` | int | 600 | ≥ 1 | 全局静默超时阈值（秒）。设备无新数据超过此时长触发告警 | 高频采集（≤ 5s）：调到 60-120s；低频（≥ 60s）：调到 1800-3600s。一般为采集周期的 5-10 倍 |
-| `default-consecutive-fail-count` | int | 3 | ≥ 1 | 全局连续失败次数阈值。collector 连错此次数触发告警 | 网络稳定环境调 2-3；高干扰环境调 5-10 避免误报 |
+| `default-silent-timeout-seconds` | int | 600 | ≥ 1 | 全局静默超时阈值（秒）。设备无新数据超过此时长触发报警 | 高频采集（≤ 5s）：调到 60-120s；低频（≥ 60s）：调到 1800-3600s。一般为采集周期的 5-10 倍 |
+| `default-consecutive-fail-count` | int | 3 | ≥ 1 | 全局连续失败次数阈值。collector 连错此次数触发报警 | 网络稳定环境调 2-3；高干扰环境调 5-10 避免误报 |
 | `poll-interval-seconds` | int | 60 | ≥ 10 | 检测引擎扫描周期（秒）。每隔此时长扫一次所有设备 | < 100 设备：可调到 30；> 1000 设备：建议 120-180 减小 DB 压力 |
-| `suppression-window-seconds` | int | 300 | ≥ 0 | 抑制窗口（秒）。RESOLVED 后此时长内不再触发同类告警；ACTIVE 触发后此时长内不允许 AUTO 恢复 | 抖动设备调到 600-1800；稳定设备可调到 60-120 |
+| `suppression-window-seconds` | int | 300 | ≥ 0 | 抑制窗口（秒）。RESOLVED 后此时长内不再触发同类报警；ACTIVE 触发后此时长内不允许 AUTO 恢复 | 抖动设备调到 600-1800；稳定设备可调到 60-120 |
 | `webhook-retry-max` | int | 3 | ≥ 0 | Webhook 失败重试最大次数 | 接收方 SLA 高可调到 1-2；接收方不稳定可调到 5 |
 | `webhook-retry-backoff-seconds` | List<int> | [10, 60, 300] | 长度 ≥ retry-max，每项 ≥ 1 | 重试退避秒数数组。第 N 次重试等待此数组第 N-1 项秒数 | 长度必须 ≥ retry-max；常见 `[5,30,120]` 快重试或 `[60,600,3600]` 长退避 |
 | `webhook-timeout-default-ms` | int | 5000 | 1000-30000 | Webhook 默认超时（毫秒），`webhook_config.timeout_ms` 未设置时使用 | 内网接收方调 1000-2000；外网调 5000-10000 |
@@ -53,12 +53,12 @@
 
 ### 场景 A：高可靠工控（电力 / 水务）
 
-适用于对可靠性要求极高的关键设备。特点：检测灵敏、告警快、多次重试保证通知送达。
+适用于对可靠性要求极高的关键设备。特点：检测灵敏、报警快、多次重试保证通知送达。
 
 ```yaml
 ems.alarm:
-  default-silent-timeout-seconds: 120        # 2 分钟无数据即告警
-  default-consecutive-fail-count: 2          # 2 次失败立即告警
+  default-silent-timeout-seconds: 120        # 2 分钟无数据即报警
+  default-consecutive-fail-count: 2          # 2 次失败立即报警
   poll-interval-seconds: 30                  # 30 秒扫一次，响应快
   suppression-window-seconds: 60             # 短抑制窗，快速响应
   webhook-retry-max: 5                       # 最多重试 5 次

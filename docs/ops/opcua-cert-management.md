@@ -31,7 +31,7 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | `OpcUaCertificateStore` 接入 transport 启动流程 | ✅ 已接入；`OpcUaTransport.buildCertificateValidator` 校验服务端证书 |
 | 服务端证书审批 REST API | ✅ 已实装：`GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` |
 | 前端证书审批页 | ✅ `/admin/cert-approval`（ADMIN-only） |
-| `OPC_UA_CERT_PENDING` 告警自动联动 | ✅ pending 时创建 ACTIVE 告警，approve 时自动 RESOLVE |
+| `OPC_UA_CERT_PENDING` 报警自动联动 | ✅ pending 时创建 ACTIVE 报警，approve 时自动 RESOLVE |
 | `.pfx` 客户端证书 multipart 上传 | ✅ `POST /api/v1/secrets/opcua/cert`（ADMIN）— 后端解析 PKCS#12 → 落盘成 PEM (encrypted PKCS#8) — 见 §5.2 |
 
 > **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维走 §3 信任目录约定 + §4 审批 SOP；客户端 `.pfx` 走 §5.2 的 multipart 上传端点。
@@ -91,7 +91,7 @@ ls -la ~/.ems/secrets/opcua/certs/pending/
 
 1. 把客户端 PEM 证书与私钥放入 secret 路径（详见 §6）
 2. 在 `/collector` 创建 channel 时填 `证书引用` 与 `证书密码引用`（如需要）
-3. 启用通道；首次连接服务端时若服务端证书未在 `trusted/`，transport 抛 `TransportException` + 同步触发 `OPC_UA_CERT_PENDING` 告警
+3. 启用通道；首次连接服务端时若服务端证书未在 `trusted/`，transport 抛 `TransportException` + 同步触发 `OPC_UA_CERT_PENDING` 报警
 4. 按 §5 完成审批后通道自动重连
 
 ---
@@ -104,10 +104,10 @@ ls -la ~/.ems/secrets/opcua/certs/pending/
 2. transport `start()` 调用 Milo `connect`，服务端返回其 X.509 证书
 3. `OpcUaTransport.buildCertificateValidator` 调用 `OpcUaCertificateStore.isTrusted(serverCert)`
 4. 不在 trusted 目录 → 调 `addPending(cert, channelId, endpointUrl)` 把 `.der` + `.json` 写到 `pending/`，发布 `ChannelCertificatePendingEvent`，抛 `TransportException` 拒绝连接
-5. `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 告警（同 channel 同时只有一条 ACTIVE）
+5. `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 报警（同 channel 同时只有一条 ACTIVE）
 6. 管理员打开 `/admin/cert-approval`（ADMIN-only） → 列出待审批证书，每 10 秒自动刷新
 7. 点 **「批准」** → 前端调 `POST /api/v1/collector/{channelId}/trust-cert { thumbprint }`
-8. 后端 `approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，发布 `ChannelCertificateApprovedEvent`，自动 RESOLVE 告警
+8. 后端 `approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，发布 `ChannelCertificateApprovedEvent`，自动 RESOLVE 报警
 9. 下次 transport 重连周期到达即恢复 `CONNECTED`
 
 也可通过命令行直接审批：
@@ -219,7 +219,7 @@ chmod 600 ~/.ems/secrets/opcua/certs/trusted/*.der
 
 | 现象 | 排查 |
 |---|---|
-| channel 一直 `ERROR`，错误是 `Untrusted server certificate` | 服务端证书已落入 `pending/` 并触发 `OPC_UA_CERT_PENDING` 告警，按 §5.1 在 `/admin/cert-approval` 审批 |
+| channel 一直 `ERROR`，错误是 `Untrusted server certificate` | 服务端证书已落入 `pending/` 并触发 `OPC_UA_CERT_PENDING` 报警，按 §5.1 在 `/admin/cert-approval` 审批 |
 | 把证书放入 trusted 目录后仍然 ERROR | 检查文件名是否含 thumbprint 后缀（`*-<sha256>.der`）；权限是否 600；指纹大小写是否小写 hex |
 | `OpcUaCertificateStore.init()` 失败 | 检查 `${ems.secrets.dir}` 目录可写；常见原因是容器 uid 不匹配 |
 | 启动后 trusted 目录是空的但 transport CONNECTED | 当前是 `NONE` 模式，不需要证书。若想强制证书校验请把通道改成 `SIGN` 或 `SIGN_AND_ENCRYPT` |

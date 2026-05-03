@@ -269,7 +269,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 | ③ 通道导入 | `meter-register-mapping-template.csv` + `csv-to-channels.py` + `import-channels.sh` + 前端"批量导入" | ✅ |
 | ④ 看板上线 | `dashboard-commissioning-sop.md` | ✅ |
 | ⑤ 5 分钟 demo | `dashboard-demo-quickstart.md` + `demo-up.sh` | ✅ |
-| ⑥ 告警上线 | `alarm-commissioning-sop.md` | ✅ |
+| ⑥ 报警上线 | `alarm-commissioning-sop.md` | ✅ |
 | ⑦ 账单上线 | `billing-commissioning-sop.md` | ✅ |
 | ⑧ 月报自动化 | `report-automation-sop.md` + `monthly-report-mail.sh` | ✅ |
 | ⑨ 生产能效 | 本文 | ✅ |
@@ -282,7 +282,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 看板演示快速上手：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 选表指南：[meter-selection-guide.md](./meter-selection-guide.md)
 - 通道批量导入：`scripts/csv-to-channels.py` + `scripts/import-channels.sh`

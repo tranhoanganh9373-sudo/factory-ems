@@ -28,7 +28,7 @@ export function AlarmBell() {
           type="text"
           icon={<BellOutlined style={{ fontSize: 18, color: 'white' }} />}
           onClick={() => setOpen(true)}
-          aria-label="告警中心"
+          aria-label="报警中心"
         />
       </Badge>
       <AlarmCenterDrawer open={open} onClose={() => setOpen(false)} />

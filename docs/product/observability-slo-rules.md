@@ -1,7 +1,7 @@
-# 可观测性 · SLO 规则与告警参考
+# 可观测性 · SLO 规则与报警参考
 
 > **更新于**：2026-04-29（Phase D 完成时）
-> **撰写依据**：spec §9（SLO + 告警设计）+ Phase D 实际落地规则文件
+> **撰写依据**：spec §9（SLO + 报警设计）+ Phase D 实际落地规则文件
 > **受众**：客户管理 / 运维工程师（SRE）
 > **文档关系**：
 > - [observability-config-reference.md](./observability-config-reference.md) — 环境变量 / 启停 / 资源预算
@@ -12,12 +12,12 @@
 
 ## 1. 概述
 
-本文档定义 factory-ems 可观测性栈的 4 个服务级别目标（SLO）、16 条告警规则（5 critical + 9 warning + 2 burn-rate）、Alertmanager 路由策略，以及与客户合同的对应关系，面向运维工程师和客户管理人员。
+本文档定义 factory-ems 可观测性栈的 4 个服务级别目标（SLO）、16 条报警规则（5 critical + 9 warning + 2 burn-rate）、Alertmanager 路由策略，以及与客户合同的对应关系，面向运维工程师和客户管理人员。
 
 架构一览：
 
 ```
-Prometheus 抓取 → 录制规则（SLI 计算）→ 告警规则（阈值判断）→ Alertmanager（路由 + 抑制）→ 通知渠道
+Prometheus 抓取 → 录制规则（SLI 计算）→ 报警规则（阈值判断）→ Alertmanager（路由 + 抑制）→ 通知渠道
 ```
 
 ---
@@ -97,7 +97,7 @@ ems:slo:latency:error_budget_remaining
 **错误预算解释**：
 - 这里的预算衡量的是"当前 p99 距离上限还有多远"
 - p99 = 0.5s → 剩余 50% 预算；p99 = 1s → 预算归零；p99 > 1s → 已违约
-- v1 延迟 SLO 的 burn-rate 告警列入路线图（§10）
+- v1 延迟 SLO 的 burn-rate 报警列入路线图（§10）
 
 ---
 
@@ -133,7 +133,7 @@ ems:slo:freshness:error_budget_remaining
 **错误预算解释**：
 - lag = 0s → 预算 100%；lag = 150s → 预算 50%；lag ≥ 300s → 预算归零
 - `ems_meter_reading_lag_seconds` 由 CollectorService 每 30 秒更新一次
-- Critical 告警在 lag > 600s（10 分钟）时触发（见 §3）
+- Critical 报警在 lag > 600s（10 分钟）时触发（见 §3）
 
 ---
 
@@ -148,7 +148,7 @@ ems:slo:freshness:error_budget_remaining
 
 > **v1 重要说明**：应用还没发出 `ems_app_scheduled_drift_seconds` 指标（Phase B4 已标记为延期）。
 > 当前 SLI 记录规则返回常量 `0`，SLO 面板能正常渲染但不反映真实值。
-> 对应的 warning 告警 `EmsSchedulerDrift` 在 v1 不会触发。
+> 对应的 warning 报警 `EmsSchedulerDrift` 在 v1 不会触发。
 > Phase F 真实 drift 信号接入后会重新评估此 SLO。
 
 **关键 PromQL**（来自 D1 录制规则）：
@@ -173,7 +173,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 ---
 
-## 3. Critical 告警（5 条）
+## 3. Critical 报警（5 条）
 
 > **路由**：`severity="critical"` → multi-channel receiver（邮件 + 钉钉 + 企微 + 通用 webhook）
 > **预期响应时间**：5 分钟内开始处理
@@ -197,7 +197,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 3. 确认 Prometheus 到实例的网络连通性
 4. 参考 runbook → [`#emsappdown`](https://internal/docs/ops/observability-runbook.md#emsappdown)
 
-**影响范围**：业务全停。所有数据采集、告警检测、计费计算都依赖应用在线。抑制规则激活（详见 §6）。
+**影响范围**：业务全停。所有数据采集、报警检测、计费计算都依赖应用在线。抑制规则激活（详见 §6）。
 
 ---
 
@@ -285,7 +285,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 ---
 
-## 4. Warning 告警（9 条）
+## 4. Warning 报警（9 条）
 
 > **路由**：`severity="warning"` → default-email receiver（仅邮件）
 > **预期响应时间**：24 小时内处理
@@ -333,7 +333,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | alarm |
 
-**含义**：告警检测扫描的 p95 执行时间超过 10 秒，持续 15 分钟，可能导致告警检测延迟。
+**含义**：报警检测扫描的 p95 执行时间超过 10 秒，持续 15 分钟，可能导致报警检测延迟。
 
 **处置思路**：检查检测规则数量、数据库查询性能、是不是有积压的待处理读数。
 参考 runbook → [`#emsalarmdetectorslow`](https://internal/docs/ops/observability-runbook.md#emsalarmdetectorslow)
@@ -349,7 +349,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | alarm |
 
-**含义**：告警 webhook 投递失败率超过 20%，持续 15 分钟，客户的钉钉/企微/自定义通知可能大量丢失。
+**含义**：报警 webhook 投递失败率超过 20%，持续 15 分钟，客户的钉钉/企微/自定义通知可能大量丢失。
 
 **处置思路**：检查目标 webhook 端点的响应码、网络连通性、签名配置有没有变更。
 参考 runbook → [`#emswebhookfailurerate`](https://internal/docs/ops/observability-runbook.md#emswebhookfailurerate)
@@ -365,7 +365,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | backend |
 
-> **v1 说明**：此告警在 v1 不会触发。`ems:slo:scheduler_drift:max_seconds` 当前返回常量 `0`（Phase B4 drift 埋点延期）。规则已声明以保持和规格对齐；Phase F 接入真实信号后会自动激活。
+> **v1 说明**：此报警在 v1 不会触发。`ems:slo:scheduler_drift:max_seconds` 当前返回常量 `0`（Phase B4 drift 埋点延期）。规则已声明以保持和规格对齐；Phase F 接入真实信号后会自动激活。
 
 **含义**：调度任务的触发时间偏差超过 60 秒（SLO scheduler-drift 目标），可能是定时器或 JVM GC 有问题。
 
@@ -430,18 +430,18 @@ ems:slo:scheduler_drift:error_budget_remaining
 | **severity** | warning |
 | **team** | alarm |
 
-**含义**：`silent_timeout` 类型的活跃告警积压超过 50 条，持续 30 分钟，可能是设备静默超时规则触发条件异常，或者客户运营侧有大量未处理告警。
+**含义**：`silent_timeout` 类型的活跃报警积压超过 50 条，持续 30 分钟，可能是设备静默超时规则触发条件异常，或者客户运营侧有大量未处理报警。
 
-**处置思路**：检查静默超时阈值配置是否合理、确认有没有批量设备网络问题、联系客户运营人员处理积压告警。
+**处置思路**：检查静默超时阈值配置是否合理、确认有没有批量设备网络问题、联系客户运营人员处理积压报警。
 参考 runbook → [`#emsalarmbacklog`](https://internal/docs/ops/observability-runbook.md#emsalarmbacklog)
 
 ---
 
-## 5. 燃烧率告警（2 条）
+## 5. 燃烧率报警（2 条）
 
 ### 5.1 原理：双窗口错误预算燃烧率
 
-燃烧率（Burn Rate）是 Google SRE Workbook 推荐的告警策略，解决传统阈值告警"过去好不代表未来没问题"的问题。
+燃烧率（Burn Rate）是 Google SRE Workbook 推荐的报警策略，解决传统阈值报警"过去好不代表未来没问题"的问题。
 
 **核心思路**：
 - SLO 允许 30 天内有 0.5% 的不可用时间（即"错误预算"= 0.005）
@@ -452,7 +452,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 - 短窗口（1h）：灵敏，捕捉突发故障
 - 长窗口（6h）：稳定，过滤噪声，捕捉持续慢速恶化
 
-**v1 覆盖范围**：只有可用性 SLO 接入了燃烧率告警；延迟/新鲜度/调度漂移的 burn-rate 告警列入 Plan #4 路线图。
+**v1 覆盖范围**：只有可用性 SLO 接入了燃烧率报警；延迟/新鲜度/调度漂移的 burn-rate 报警列入 Plan #4 路线图。
 
 ---
 
@@ -494,7 +494,7 @@ ems:slo:scheduler_drift:error_budget_remaining
 
 ### 5.4 燃烧率与 4 个 SLO 的对应关系
 
-| SLO | v1 燃烧率告警 | 路线图 |
+| SLO | v1 燃烧率报警 | 路线图 |
 |-----|--------------|--------|
 | 可用性 | EmsBudgetBurnFastAvailability (critical) + EmsBudgetBurnSlowAvailability (warning) | 已上线 |
 | 延迟 | 暂无 | Plan #4 — 容错强化阶段 |
@@ -510,17 +510,17 @@ ems:slo:scheduler_drift:error_budget_remaining
 来自 `ops/observability/alertmanager/alertmanager.yml`：
 
 ```
-所有告警
+所有报警
 ├── severity="critical"  → multi-channel（邮件 + 钉钉 + 企微 + 通用 webhook）
 └── severity="warning"   → default-email（仅邮件）
     （默认 receiver：default-email）
 ```
 
 **分组策略**（`group_by: [alertname, severity]`）：
-- 同一告警名加相同 severity 的告警合并成一条通知
-- `group_wait: 30s` — 等 30 秒聚合同批到来的告警
-- `group_interval: 5m` — 同组新告警到来后，至少等 5 分钟再发送更新
-- `repeat_interval: 4h` — 已激活的告警每 4 小时重复提醒一次
+- 同一报警名加相同 severity 的报警合并成一条通知
+- `group_wait: 30s` — 等 30 秒聚合同批到来的报警
+- `group_interval: 5m` — 同组新报警到来后，至少等 5 分钟再发送更新
+- `repeat_interval: 4h` — 已激活的报警每 4 小时重复提醒一次
 
 ### 6.2 通知渠道配置
 
@@ -545,9 +545,9 @@ inhibit_rules:
     equal: [instance]
 ```
 
-**效果**：`EmsAppDown` 对某个实例触发时，同一实例上的所有其他 `Ems.*` 告警会被自动抑制，不发送通知。
+**效果**：`EmsAppDown` 对某个实例触发时，同一实例上的所有其他 `Ems.*` 报警会被自动抑制，不发送通知。
 
-**原因**：应用实例宕机后，延迟升高、连接池耗尽、数据新鲜度劣化等下游告警都是宕机的直接后果。同时发出这些告警只会造成通知洪泛（alert spam），干扰故障响应。
+**原因**：应用实例宕机后，延迟升高、连接池耗尽、数据新鲜度劣化等下游报警都是宕机的直接后果。同时发出这些报警只会造成通知洪泛（alert spam），干扰故障响应。
 
 ---
 
@@ -596,16 +596,16 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 | 特性 | 静默（Silence） | 抑制（Inhibition） |
 |------|-----------------|-------------------|
-| 触发方式 | 人工设置 | 自动（由另一告警触发） |
-| 持续时间 | 人工控制 | 与 source 告警共存亡 |
-| 用途 | 维护期 | 根因/派生告警去重 |
+| 触发方式 | 人工设置 | 自动（由另一报警触发） |
+| 持续时间 | 人工控制 | 与 source 报警共存亡 |
+| 用途 | 维护期 | 根因/派生报警去重 |
 | 配置位置 | Alertmanager UI / amtool | `alertmanager.yml` |
 
-当前 factory-ems 的抑制规则（§6.3）只有一条：`EmsAppDown` 触发时抑制同实例所有 `Ems.*` 告警。`EmsAppDown` 一恢复，抑制就自动解除，被抑制的告警仍满足触发条件就会重新发出通知。
+当前 factory-ems 的抑制规则（§6.3）只有一条：`EmsAppDown` 触发时抑制同实例所有 `Ems.*` 报警。`EmsAppDown` 一恢复，抑制就自动解除，被抑制的报警仍满足触发条件就会重新发出通知。
 
 ### 7.3 默认 Receiver 行为
 
-没被特定路由匹配的告警（当前规则集里理论上不存在）会落到 `default-email` receiver。这是 Alertmanager 的安全兜底，保证所有告警至少有一个邮件通知渠道。
+没被特定路由匹配的报警（当前规则集里理论上不存在）会落到 `default-email` receiver。这是 Alertmanager 的安全兜底，保证所有报警至少有一个邮件通知渠道。
 
 ---
 
@@ -636,7 +636,7 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 对客户的实际意义：
 - 支持近实时决策（如发现用电异常后 5 分钟内能看到数据变化）
 - 计费周期内每小时最多影响 1 个采样点的准确性
-- 超过 10 分钟（2× SLO）触发 critical 告警，运维介入
+- 超过 10 分钟（2× SLO）触发 critical 报警，运维介入
 
 ### 8.4 错误预算的策略价值
 
@@ -653,38 +653,38 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ### 9.1 promtool 测试用例
 
-所有告警规则都配有 `promtool test rules` 单元测试，位于：
+所有报警规则都配有 `promtool test rules` 单元测试，位于：
 
 ```
 ops/observability/prometheus/rules/_tests/
-├── critical-alerts_test.yml    # 5 条 critical 告警 × 2 cases = 10 个测试
-├── warning-alerts_test.yml     # 9 条 warning 告警 × 2 cases = 18 个测试
-└── burn-rate_test.yml          # 2 条 burn-rate 告警 × 2 cases = 4 个测试
+├── critical-alerts_test.yml    # 5 条 critical 报警 × 2 cases = 10 个测试
+├── warning-alerts_test.yml     # 9 条 warning 报警 × 2 cases = 18 个测试
+└── burn-rate_test.yml          # 2 条 burn-rate 报警 × 2 cases = 4 个测试
 ```
 
 **总计：32 个测试用例**
 
-每条告警都有：
-- 正例（Positive）：注入超过阈值的时间序列，验证告警在预期 `eval_time` 内触发，并检查 `severity`、`team` 等关键标签
-- 负例（Negative）：注入正常数据，验证告警不触发（`exp_alerts: []`）
+每条报警都有：
+- 正例（Positive）：注入超过阈值的时间序列，验证报警在预期 `eval_time` 内触发，并检查 `severity`、`team` 等关键标签
+- 负例（Negative）：注入正常数据，验证报警不触发（`exp_alerts: []`）
 
 **本地运行**：
 
 ```bash
-# 运行所有告警规则测试
+# 运行所有报警规则测试
 promtool test rules \
   ops/observability/prometheus/rules/_tests/critical-alerts_test.yml \
   ops/observability/prometheus/rules/_tests/warning-alerts_test.yml \
   ops/observability/prometheus/rules/_tests/burn-rate_test.yml
 
-# 仅运行 critical 告警测试
+# 仅运行 critical 报警测试
 promtool test rules ops/observability/prometheus/rules/_tests/critical-alerts_test.yml
 ```
 
 ### 9.2 测试策略说明
 
-- 测试验证的是告警是否触发（标签断言）和是否静默（空 exp_alerts）
-- annotation 模板渲染（`humanizePercentage`、`humanizeDuration` 等）不在单元测试中断言，由 F2 smoke 测试（端到端告警注入）覆盖
+- 测试验证的是报警是否触发（标签断言）和是否静默（空 exp_alerts）
+- annotation 模板渲染（`humanizePercentage`、`humanizeDuration` 等）不在单元测试中断言，由 F2 smoke 测试（端到端报警注入）覆盖
 - `EmsSchedulerDrift` 的正例测试暂缓，等 Phase F 接入真实 drift 信号后补充
 
 ### 9.3 CI 集成（v1 待办）
@@ -698,9 +698,9 @@ Phase F1 目标：
 
 ### 9.4 客户验收标准
 
-每条告警在交付验收时要满足：
-- 至少通过一次 synthetic 告警注入（人工制造满足触发条件的场景）
-- 在 Alertmanager UI 确认告警路由到正确的 receiver
+每条报警在交付验收时要满足：
+- 至少通过一次 synthetic 报警注入（人工制造满足触发条件的场景）
+- 在 Alertmanager UI 确认报警路由到正确的 receiver
 - 在对应通知渠道（邮件/钉钉/企微）收到通知样例
 
 具体注入方法看 Phase F2 `obs-smoke` 端到端脚本（F2 完成后补充链接）。
@@ -714,13 +714,13 @@ Phase F1 目标：
 | 任务 | 内容 |
 |------|------|
 | F1 CI 集成 | 将 32 条 promtool 测试集成到 CI，阻断不合格的规则变更 |
-| F2 obs-smoke | 端到端告警注入脚本：每条告警至少触发一次，验证全链路通知 |
-| F3 runbook | 每条告警的完整操作手册（`docs/ops/observability-runbook.md`） |
+| F2 obs-smoke | 端到端报警注入脚本：每条报警至少触发一次，验证全链路通知 |
+| F3 runbook | 每条报警的完整操作手册（`docs/ops/observability-runbook.md`） |
 
 ### Plan #4 容错强化阶段（中期）
 
-- 给延迟 SLO（latency）、新鲜度 SLO（freshness）补充燃烧率告警
-- 调度漂移 SLO：等 Phase B4 `ems_app_scheduled_drift_seconds` 埋点完成后，替换 v1 占位规则，并补充 burn-rate 告警
+- 给延迟 SLO（latency）、新鲜度 SLO（freshness）补充燃烧率报警
+- 调度漂移 SLO：等 Phase B4 `ems_app_scheduled_drift_seconds` 埋点完成后，替换 v1 占位规则，并补充 burn-rate 报警
 
 ### Plan #6 SSO 接入 Grafana（中期）
 
@@ -745,9 +745,9 @@ Phase F1 目标：
 
 ---
 
-## 附录：告警快速索引
+## 附录：报警快速索引
 
-| 告警名 | 严重性 | Team | `for:` | 关键阈值 |
+| 报警名 | 严重性 | Team | `for:` | 关键阈值 |
 |--------|--------|------|--------|----------|
 | EmsAppDown | critical | ops | 2m | up == 0 |
 | EmsAppHighErrorRate | critical | backend | 5m | exception rate > 1/s |

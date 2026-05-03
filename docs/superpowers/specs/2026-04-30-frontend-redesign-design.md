@@ -69,7 +69,7 @@ ThemeStore (Zustand, localStorage)
 | `--ems-color-border` | `#E2E5E9` | 分割线/边框 |
 | `--ems-color-border-strong` | `#C9CED4` | 强边框 |
 | `--ems-color-success` | `#1B7A3E` | 正常 |
-| `--ems-color-warning` | `#E37A00` | 告警 |
+| `--ems-color-warning` | `#E37A00` | 报警 |
 | `--ems-color-error` | `#C8201F` | 严重 |
 | `--ems-color-info` | `#0E6BB8` | 提示 |
 
@@ -91,7 +91,7 @@ ThemeStore (Zustand, localStorage)
 | `--ems-color-border` | `#252F3E` | 边框 |
 | `--ems-color-border-strong` | `#3A4658` | 强边框 |
 | `--ems-color-success` | `#3DCB6E` | 正常 |
-| `--ems-color-warning` | `#FFA940` | 告警 |
+| `--ems-color-warning` | `#FFA940` | 报警 |
 | `--ems-color-error` | `#FF6464` | 严重 |
 | `--ems-color-info` | `#4FA8FF` | 提示 |
 
@@ -243,7 +243,7 @@ function densityForRoute(pathname: string): 'small' | 'middle' {
 | `CRITICAL` / `MAJOR` / `MINOR` / `WARNING` | 严重 / 重要 / 次要 / 提醒 |
 | `MODBUS_TCP` / `MODBUS_RTU` | Modbus TCP / Modbus RTU（保留协议名） |
 | Dashboard / Collector / Floorplan | 综合看板 / 数据采集 / 设备分布图 |
-| Alarms / Meters / Cost / Bills | 告警 / 表计 / 成本核算 / 账单 |
+| Alarms / Meters / Cost / Bills | 报警 / 表计 / 成本核算 / 账单 |
 | Tariff / Report / Admin | 电价 / 报表 / 系统管理 |
 
 **保留原文**：API 路径、配置 key、SI 单位（kWh/kW/V/A/Hz）、ISO 时间戳、设备标识符。
@@ -274,7 +274,7 @@ function densityForRoute(pathname: string): 'small' | 'middle' {
 
 - 顶部 4 个 KPI Card（电、水、气、综合能耗）
   - 大数字（28px Mono）+ 趋势箭头 + 与昨日对比
-- 主图区 2x2：用电曲线（折线）、能源结构（环形）、车间对比（条形）、告警实时流（List）
+- 主图区 2x2：用电曲线（折线）、能源结构（环形）、车间对比（条形）、报警实时流（List）
 - ECharts 主题统一：背景透明、网格淡色、字色用 var(--ems-color-text-secondary)
 
 ### 9.4 表格模板
@@ -439,7 +439,7 @@ frontend/src/
 
 - `npm run dev` 启动后用 gstack 在浏览器打开：
   - 切换浅/深主题，验证全局响应
-  - 登录、Dashboard、告警表格、表单提交、平面图加载
+  - 登录、Dashboard、报警表格、表单提交、平面图加载
   - 控制台无报错
 
 ## 12. 迁移计划（10 阶段）
@@ -515,7 +515,7 @@ frontend/src/
 - 不重构状态管理（保留 Zustand + React Query）
 - 不引入新依赖
 - 不重做路由结构
-- 不修改数据采集/告警逻辑
+- 不修改数据采集/报警逻辑
 - 不替换 Logo 设计或公司名（沿用用户提供素材）
 - 不做移动端适配（仍以桌面 1920×1080 为基准）
 - 不做无障碍 WCAG 全审计（仅遵循对比度基线）

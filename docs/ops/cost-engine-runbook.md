@@ -163,7 +163,7 @@ PENDING ──(worker 接管)──► RUNNING ──(成功)──► SUCCESS
 
 - `cost_allocation_run` 表 `status`+`finished_at-started_at` 可直接画分位线。
 - `cost_allocation_line` 总条数随时间增长应近线性；突然斜率变化 → 跑了大期间或重复期间。
-- worker 异常落库为 `error_message`；在 ELK / Grafana 上对 `cost-alloc run id=.* FAILED` 关键字告警即可。
+- worker 异常落库为 `error_message`；在 ELK / Grafana 上对 `cost-alloc run id=.* FAILED` 关键字报警即可。
 
 ---
 

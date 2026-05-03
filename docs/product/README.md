@@ -37,7 +37,7 @@
 | [auth-audit-feature-overview.md](./auth-audit-feature-overview.md) | 认证 + 审计 | 4 角色 + 节点权限 + JWT + @Audited 切面 |
 | [platform-internals-overview.md](./platform-internals-overview.md) | 平台底座 | ems-core 公共件 + ems-timeseries InfluxDB rollup 三级聚合 |
 
-### 子项目：采集中断告警（ems-alarm，2026-04-29 起）
+### 子项目：采集中断报警（ems-alarm，2026-04-29 起）
 
 | 文档 | 受众 | 范围 | Phase 负责人 |
 |------|------|------|-------------|
@@ -59,9 +59,9 @@
 | [observability-feature-overview.md](./observability-feature-overview.md) | 销售/客户 | 功能概览 + 价值主张 + 适用场景 + 与 ems-alarm 协同 | Phase G ✅ |
 | [observability-config-reference.md](./observability-config-reference.md) | 实施工程师 | 配置参考（env / yml / 启停 / 升级 / 预算 / FAQ） | Phase A ✅ |
 | [observability-metrics-dictionary.md](./observability-metrics-dictionary.md) | 数据/集成工程师 | 17 个业务指标字典 + cardinality + PromQL 模板 | Phase B ✅ |
-| [observability-slo-rules.md](./observability-slo-rules.md) | 客户管理/运维 | 4 SLO + 16 告警 + 路由 + 客户视角 | Phase D ✅ |
+| [observability-slo-rules.md](./observability-slo-rules.md) | 客户管理/运维 | 4 SLO + 16 报警 + 路由 + 客户视角 | Phase D ✅ |
 | [observability-dashboards-guide.md](./observability-dashboards-guide.md) | 客户/工程值班/运维 | 7 dashboard 使用指南 + 下钻路径 | Phase E ✅ |
-| [observability-user-guide.md](./observability-user-guide.md) | 客户运维 | Grafana 操作手册 + SLO 解读 + 告警响应 + 维护模式 + FAQ | Phase G ✅ |
+| [observability-user-guide.md](./observability-user-guide.md) | 客户运维 | Grafana 操作手册 + SLO 解读 + 报警响应 + 维护模式 + FAQ | Phase G ✅ |
 
 ## 与 docs/ops 的边界
 

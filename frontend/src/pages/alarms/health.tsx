@@ -5,7 +5,7 @@ import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 
 export default function AlarmHealthPage() {
-  useDocumentTitle('告警 - 健康');
+  useDocumentTitle('报警 - 健康');
   const { data: summary, isLoading } = useQuery({
     queryKey: ['alarms', 'health'],
     queryFn: alarmApi.healthSummary,
@@ -15,7 +15,7 @@ export default function AlarmHealthPage() {
 
   return (
     <div>
-      <PageHeader title="告警健康" />
+      <PageHeader title="报警健康" />
       <Row gutter={16}>
         <Col xs={24} sm={12} lg={6}>
           <Card loading={isLoading}>
@@ -38,7 +38,7 @@ export default function AlarmHealthPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card loading={isLoading}>
             <Statistic
-              title="告警中"
+              title="报警中"
               value={summary?.alarmCount ?? 0}
               valueStyle={{ color: '#ff4d4f' }}
             />
@@ -57,7 +57,7 @@ export default function AlarmHealthPage() {
 
       <Row gutter={16} style={{ marginTop: 16 }}>
         <Col span={24}>
-          <Card title="Top 异常设备（按活动告警数）">
+          <Card title="Top 异常设备（按活动报警数）">
             <Table
               rowKey="deviceId"
               loading={isLoading}
@@ -67,7 +67,7 @@ export default function AlarmHealthPage() {
                 { title: '设备 ID', dataIndex: 'deviceId', width: 120 },
                 { title: '设备编码', dataIndex: 'deviceCode' },
                 {
-                  title: '活动告警数',
+                  title: '活动报警数',
                   dataIndex: 'activeAlarmCount',
                   align: 'right',
                   width: 140,

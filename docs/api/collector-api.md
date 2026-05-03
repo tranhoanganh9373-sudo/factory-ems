@@ -251,7 +251,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ]
 ```
 
-ADMIN-only。当 OPC UA channel 在 SIGN/SIGN_AND_ENCRYPT 模式下连接到信任库未收录的服务端时，证书会落入 `pending/`，同时触发 `OPC_UA_CERT_PENDING` 告警。
+ADMIN-only。当 OPC UA channel 在 SIGN/SIGN_AND_ENCRYPT 模式下连接到信任库未收录的服务端时，证书会落入 `pending/`，同时触发 `OPC_UA_CERT_PENDING` 报警。
 
 ### §2.6 批准服务端证书
 
@@ -262,7 +262,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   http://localhost:8888/api/v1/collector/7/trust-cert
 ```
 
-→ `204 No Content`。后端将 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，自动解除关联告警。下次重连周期到达即恢复。
+→ `204 No Content`。后端将 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，自动解除关联报警。下次重连周期到达即恢复。
 
 ### §2.7 拒绝服务端证书
 
@@ -271,7 +271,7 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
   http://localhost:8888/api/v1/collector/cert-pending/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
 ```
 
-→ `204 No Content`。`.der` 移到 `rejected/` 留证；不再触发告警，但允许后续审计。
+→ `204 No Content`。`.der` 移到 `rejected/` 留证；不再触发报警，但允许后续审计。
 
 ---
 
@@ -476,4 +476,4 @@ ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRe
 - 用户操作指南：[docs/product/collector-protocols-user-guide.md](../product/collector-protocols-user-guide.md)
 - OPC UA 证书运维：[docs/ops/opcua-cert-management.md](../ops/opcua-cert-management.md)
 - 设计文档：`docs/superpowers/specs/2026-04-30-collector-protocols-design.md`
-- 告警相关 API：[alarm-api.md](./alarm-api.md)
+- 报警相关 API：[alarm-api.md](./alarm-api.md)

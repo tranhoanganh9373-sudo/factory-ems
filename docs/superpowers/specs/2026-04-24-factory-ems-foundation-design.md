@@ -55,7 +55,7 @@
 ### 2.1 明确不在子项目 1 范围内
 
 - 工业协议采集（Modbus / OPC-UA / IEC-104 等）—— 外部采集软件已解决
-- 告警 / 短信 / 邮件通知
+- 报警 / 短信 / 邮件通知
 - 成本分摊与账单（子项目 2）
 - 能效诊断与节能建议（子项目 3）
 - MES / ERP 对接（产量采用人工填报）
@@ -345,7 +345,7 @@ RollupScheduler (Spring @Scheduled)
   └── MonthlyRollupJob  每月 1 日 00:30 读 daily 累加     → upsert ts_rollup_monthly
 ```
 
-所有 upsert 用 `ON CONFLICT (..) DO UPDATE` 保证幂等；失败写 `rollup_job_failures` 指数退避重试（5min→30min→2h），3 次失败停止自动重试并告警。
+所有 upsert 用 `ON CONFLICT (..) DO UPDATE` 保证幂等；失败写 `rollup_job_failures` 指数退避重试（5min→30min→2h），3 次失败停止自动重试并报警。
 
 补跑 API：`POST /api/v1/ops/rollup/rebuild?granularity=HOURLY&from=...&to=...`，仅 ADMIN。
 
@@ -539,7 +539,7 @@ ADMIN 走旁路返回 `ALL_NODE_IDS_MARKER` 哨兵（`-1L`），查询时不加 
 | `ForbiddenException` | 403 | 权限不足 | WARN |
 | `UnauthorizedException` | 401 | 未登录 / token 失效 | DEBUG |
 | `ConflictException` | 409 | 并发冲突 | WARN |
-| 未分类 `RuntimeException` | 500 | Bug | ERROR + 堆栈 + 告警 |
+| 未分类 `RuntimeException` | 500 | Bug | ERROR + 堆栈 + 报警 |
 
 ### 9.2 全局异常处理
 
@@ -576,7 +576,7 @@ Actuator + Micrometer 暴露 `/actuator/prometheus`：
 - `/actuator/health/readiness`：PG + InfluxDB 可连
 - 仅内网访问（Nginx 限 IP）
 
-### 9.7 告警规则（外部监控系统执行）
+### 9.7 报警规则（外部监控系统执行）
 
 - 5xx 错误率 > 1% 持续 5 分钟
 - `rollup_job_failures_total` 增速 > 0

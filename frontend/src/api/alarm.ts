@@ -100,7 +100,7 @@ export interface DeliveryLogDTO {
   createdAt: string;
 }
 
-// ───── 告警操作 ─────
+// ───── 报警操作 ─────
 export const alarmApi = {
   list: (params: {
     status?: AlarmStatus;

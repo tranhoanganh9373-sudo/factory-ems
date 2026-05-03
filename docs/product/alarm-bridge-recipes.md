@@ -1,4 +1,4 @@
-# 告警桥接配方（飞书 / 邮件 / 短信）
+# 报警桥接配方（飞书 / 邮件 / 短信）
 
 > **适用版本**：v1.0.0-ga（首版）｜ 最近更新：2026-05-01
 > **受众**：客户开发对接 / 现场实施工程师
@@ -34,7 +34,7 @@ EMS Webhook ──HTTP POST──> 桥接服务（Python / Node / Go）
                               ├─ 3. 格式转换（generic-json → 目标平台 JSON / 文本）
                               ├─ 4. 调目标平台 API
                               └─ 5. 返回 200（即使下游失败也建议 200，避免 EMS 重试堆积；
-                                            真正失败用本地告警，不指望 EMS 重发）
+                                            真正失败用本地报警，不指望 EMS 重发）
 ```
 
 **部署形态**：FaaS（阿里云函数计算、腾讯云 SCF、AWS Lambda），或一台 1C1G 小虚机跑 Flask + nginx 即可。
@@ -104,7 +104,7 @@ def feishu_sign(secret: str, ts: int) -> str:
 
 
 def to_feishu_card(p: dict) -> dict:
-    title = "🔴 设备失联告警" if p["alarm_type"] == "SILENT_TIMEOUT" else "🔴 采集连续失败"
+    title = "🔴 设备失联报警" if p["alarm_type"] == "SILENT_TIMEOUT" else "🔴 采集连续失败"
     last_seen = p.get("last_seen_at") or "—"
     detail = p.get("detail") or {}
     return {
@@ -122,7 +122,7 @@ def to_feishu_card(p: dict) -> dict:
                     {"is_short": True, "text": {"tag": "lark_md",
                         "content": f"**最后上报**\n{last_seen}"}},
                     {"is_short": True, "text": {"tag": "lark_md",
-                        "content": f"**告警 ID**\n{p['alarm_id']}"}},
+                        "content": f"**报警 ID**\n{p['alarm_id']}"}},
                     {"is_short": False, "text": {"tag": "lark_md",
                         "content": f"**阈值快照**\n```\n{json.dumps(detail, ensure_ascii=False, indent=2)}\n```"}},
                 ]
@@ -200,15 +200,15 @@ SMTP_HOST = os.environ["SMTP_HOST"]               # smtp.example.com
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
 SMTP_USER = os.environ["SMTP_USER"]               # alarm@example.com
 SMTP_PASS = os.environ["SMTP_PASS"]
-MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "EMS 告警机器人")
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "EMS 报警机器人")
 MAIL_TO = [x.strip() for x in os.environ["MAIL_TO"].split(",")]  # 多人逗号分隔
 
 
 def to_email(p: dict) -> tuple[str, str]:
-    subject = f"[EMS 告警] {p['device_name']} 失联（{p['device_code']}）"
+    subject = f"[EMS 报警] {p['device_name']} 失联（{p['device_code']}）"
     body = f"""
-告警类型：{p['alarm_type']}
-告警 ID：{p['alarm_id']}
+报警类型：{p['alarm_type']}
+报警 ID：{p['alarm_id']}
 设备：{p['device_name']}（编码 {p['device_code']}，ID {p['device_id']}）
 触发时间：{p['triggered_at']}
 最后上报：{p.get('last_seen_at') or '—'}
@@ -265,7 +265,7 @@ gunicorn -w 1 -b 0.0.0.0:8081 app:app
 
 - 用专用发件邮箱（如 `alarm@your-company.com`），不要拿员工个人邮箱。
 - 发件域名配 SPF + DKIM + DMARC，否则 Gmail / Outlook 大概率进垃圾箱。
-- 高频告警合并：同一 device 30 分钟内多次触发只发一封（在桥接服务里加 30min TTL 去重）。
+- 高频报警合并：同一 device 30 分钟内多次触发只发一封（在桥接服务里加 30min TTL 去重）。
 
 ---
 
@@ -297,7 +297,7 @@ client = AcsClient(AK, SK, "cn-hangzhou")
 
 
 def to_sms_params(p: dict) -> dict:
-    """模板示例：'EMS 告警：${device}失联，触发时间${time}，请尽快处理'"""
+    """模板示例：'EMS 报警：${device}失联，触发时间${time}，请尽快处理'"""
     return {
         "device": f"{p['device_name']}({p['device_code']})"[:30],  # 阿里云模板变量限长
         "time": p["triggered_at"][11:19],  # 只截 HH:MM:SS
@@ -349,15 +349,15 @@ gunicorn -w 1 -b 0.0.0.0:8082 app:app
 
 - 签名 SignName：必须用企业实名（个人开发者只能用 `阿里云短信测试`）。审核 1-2 小时。
 - 模板 TemplateCode：变量数 ≤ 5 个、单变量 ≤ 30 字符、整条 ≤ 70 字符。审核 1-2 小时。
-- 模板示例：`【松羽科技】EMS告警：${device}失联，时间${time}，请处理。回TD退订` —— 必须含"回 TD 退订"等运营商合规要求。
+- 模板示例：`【松羽科技】EMS报警：${device}失联，时间${time}，请处理。回TD退订` —— 必须含"回 TD 退订"等运营商合规要求。
 - 腾讯云 SMS API 不同但形态相同（`SmsClient.SendSms`），代码替换即可。
 - 海外用 Twilio：`twilio.rest.Client(SID, TOKEN).messages.create(to, from_, body)`，不用模板审核但单条 ≈ 0.5 元。
 
 ### §5.5 成本与频控
 
-- 一条告警发 2 个号码 = 2 条计费。每月 100 次告警 × 2 = 200 条 ≈ 30 元。
+- 一条报警发 2 个号码 = 2 条计费。每月 100 次报警 × 2 = 200 条 ≈ 30 元。
 - 在桥接服务里加严重度过滤（首版 severity 都是 WARNING，后续 v1.7 会出分级）和夜间静默窗口（如 23:00-7:00 只发 P0）。
-- 加全天上限（如同一号码每日 ≤ 20 条），防止循环告警把短信费打爆。
+- 加全天上限（如同一号码每日 ≤ 20 条），防止循环报警把短信费打爆。
 
 ---
 
@@ -365,7 +365,7 @@ gunicorn -w 1 -b 0.0.0.0:8082 app:app
 
 | 主题 | 要点 |
 |---|---|
-| **重试** | EMS 默认 3 次重试（指数退避，详见 [alarm-webhook-integration.md §7](./alarm-webhook-integration.md)）。桥接服务返回 200 就算成功，下游真失败请在桥接侧落本地日志 + 单独告警，不要返回 5xx 让 EMS 反复重发——重发只会复制下游账单（短信费、邮件配额）。 |
+| **重试** | EMS 默认 3 次重试（指数退避，详见 [alarm-webhook-integration.md §7](./alarm-webhook-integration.md)）。桥接服务返回 200 就算成功，下游真失败请在桥接侧落本地日志 + 单独报警，不要返回 5xx 让 EMS 反复重发——重发只会复制下游账单（短信费、邮件配额）。 |
 | **幂等** | EMS 重试可能让同一 `(alarm_id, event)` 多次到达。§2 的 `is_duplicate` 是内存版只供单实例 demo；多实例或重启不丢请用 `Redis SETNX key 1 EX 86400`。 |
 | **限流** | 飞书机器人单 webhook 默认 100 次/分；阿里云 SMS 单签名 1000 次/天默认配额。配桥接时务必看官方文档配额，避免一次故障刷爆。 |
 | **观测** | 桥接服务自身要暴露 `/healthz`，把"已转发 / 已去重 / 下游失败"分别打 metric（Prometheus counter），接到 ems-observability 同一 Grafana。 |
@@ -428,7 +428,7 @@ EMS 端在 `/alarm/webhook` 只能配一个 URL（首版限制），所以三种
 ## §8 已知限制与路线图
 
 - **首版只能配 1 个全局 Webhook**：上面的"扇出"是临时方案；v2.x 计划支持多端点 + 按端点分流（见 [alarm-feature-overview.md §5](./alarm-feature-overview.md)）。
-- **首版无严重程度分级**：所有告警 severity = WARNING，桥接侧无法按级别分发到不同收件群或号码。v1.7+ 路线图含 severity 分级。
+- **首版无严重程度分级**：所有报警 severity = WARNING，桥接侧无法按级别分发到不同收件群或号码。v1.7+ 路线图含 severity 分级。
 - **首版只发 `alarm.triggered`**：不发 `alarm.resolved`，桥接服务收不到"恢复"事件，IM 卡片、邮件、短信无法标"已恢复"。要标的话，订阅站内 `/api/v1/alarm/inbox` 轮询。
 - **首版无用户级订阅**：所有具备 ADMIN / OPERATOR 角色的用户都收到全量站内通知；外部桥接由桥接代码自己决定收件名单。
 
@@ -437,7 +437,7 @@ EMS 端在 `/alarm/webhook` 只能配一个 URL（首版限制），所以三种
 ## §9 相关文档
 
 - Webhook 协议规约（必读）：[alarm-webhook-integration.md](./alarm-webhook-integration.md)
-- 告警功能概览：[alarm-feature-overview.md](./alarm-feature-overview.md)
-- 告警用户手册：[alarm-user-guide.md](./alarm-user-guide.md)
-- 告警 API：[../api/alarm-api.md](../api/alarm-api.md)
+- 报警功能概览：[alarm-feature-overview.md](./alarm-feature-overview.md)
+- 报警用户手册：[alarm-user-guide.md](./alarm-user-guide.md)
+- 报警 API：[../api/alarm-api.md](../api/alarm-api.md)
 - 平台总览：[product-overview.md](./product-overview.md)

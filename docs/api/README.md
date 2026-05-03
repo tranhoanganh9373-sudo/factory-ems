@@ -14,7 +14,7 @@
 
 | 文档 | 范围 | Phase 负责人 |
 |------|------|-------------|
-| [alarm-api.md](./alarm-api.md) | 采集中断告警 16 个端点完整规约 | Phase F ✅ |
+| [alarm-api.md](./alarm-api.md) | 采集中断报警 16 个端点完整规约 | Phase F ✅ |
 | [observability-metrics-api.md](./observability-metrics-api.md) | factory-ems metrics 抓取协议 + 17 业务指标速查 + 自定义集成示例 | Phase G ✅ |
 
 > **其余模块 API 规约待补**：组织树 / 仪表 / 电价 / 报表 / 成本 / 账单 / 平面图 / 仪表盘 / 班次 / 认证 等模块的 HTTP 端点目前以"接口入口"形式列在各 [`../product/*-feature-overview.md`](../product/) 文档的 §7 章节，完整 OpenAPI 规约逐步补齐中。集成开发请暂时以 `feature-overview` 文档 + 后端代码 `@*Mapping` 注解为准。

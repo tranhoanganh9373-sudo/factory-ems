@@ -131,7 +131,7 @@ export default function AppLayout() {
           },
           {
             key: '/alarms/history',
-            label: <Link to="/alarms/history">告警历史</Link>,
+            label: <Link to="/alarms/history">报警历史</Link>,
           },
           {
             key: '/alarms/rules',

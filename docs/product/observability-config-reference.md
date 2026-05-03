@@ -22,9 +22,9 @@ ops/observability/
 │       ├── slo-latency.yml         # API p99 延迟规则
 │       ├── slo-freshness.yml       # 数据新鲜度规则
 │       ├── slo-scheduler-drift.yml # 调度漂移规则
-│       ├── critical-alerts.yml     # 5 条 critical 告警
-│       ├── warning-alerts.yml      # 11 条 warning 告警
-│       ├── burn-rate-alerts.yml    # 燃烧率告警
+│       ├── critical-alerts.yml     # 5 条 critical 报警
+│       ├── warning-alerts.yml      # 11 条 warning 报警
+│       ├── burn-rate-alerts.yml    # 燃烧率报警
 │       └── _tests/                 # promtool test rules 用例
 │           ├── critical-alerts_test.yml
 │           ├── warning-alerts_test.yml
@@ -47,7 +47,7 @@ ops/observability/
 │       ├── jvm-overview.json       # D3 JVM
 │       ├── http-overview.json      # D4 HTTP
 │       ├── ems-collector.json      # D5 采集模块
-│       ├── ems-alarm.json          # D6 告警模块
+│       ├── ems-alarm.json          # D6 报警模块
 │       └── ems-meter.json          # D7 能源计量模块
 ├── webhook-bridge/
 │   ├── Dockerfile                  # distroless + Go binary
@@ -66,7 +66,7 @@ ops/observability/
 
 把 `.env.obs.example` 复制成 `.env.obs`，按下表填写。`.env.obs` 不要提交到 git（已在 `.gitignore` 中）。
 
-> **空值行为总则**：告警通道相关变量（SMTP / 钉钉 / 企微 / 通用 webhook）留空时，Alertmanager 会静默跳过该接收方，不会导致启动失败。至少配一个告警通道才能收到通知。
+> **空值行为总则**：报警通道相关变量（SMTP / 钉钉 / 企微 / 通用 webhook）留空时，Alertmanager 会静默跳过该接收方，不会导致启动失败。至少配一个报警通道才能收到通知。
 
 | 变量 | 必填 | 默认值 | 空值行为 |
 |------|------|--------|---------|
@@ -75,7 +75,7 @@ ops/observability/
 | `OBS_PROMETHEUS_RETENTION` | 否 | `30d` | 使用 30 天保留期；磁盘占用约 5 GB（见 §6 资源预算） |
 | `OBS_LOKI_RETENTION` | 否 | `336h`（14 天） | 使用 14 天保留期；磁盘占用约 8 GB |
 | `OBS_TEMPO_RETENTION` | 否 | `72h`（3 天） | 使用 3 天保留期；磁盘占用约 2 GB |
-| `OBS_SMTP_HOST` | 否 | 空 | 邮件告警通道不可用；其他通道不受影响 |
+| `OBS_SMTP_HOST` | 否 | 空 | 邮件报警通道不可用；其他通道不受影响 |
 | `OBS_SMTP_USER` | 否 | 空 | 同上（SMTP 三项需同时配置才有效） |
 | `OBS_SMTP_PASSWORD` | 否 | 空 | 同上 |
 | `OBS_ALERT_RECEIVER_EMAIL` | 否 | 空 | 无邮件接收者；SMTP 配置也不生效 |
@@ -97,17 +97,17 @@ OBS_PROMETHEUS_RETENTION=30d
 OBS_LOKI_RETENTION=336h
 OBS_TEMPO_RETENTION=72h
 
-# 可选：邮件告警
+# 可选：邮件报警
 OBS_SMTP_HOST=smtp.example.com:587
 OBS_SMTP_USER=alerts@example.com
 OBS_SMTP_PASSWORD=your-smtp-password
 OBS_ALERT_RECEIVER_EMAIL=oncall@example.com,ops@example.com
 
-# 可选：钉钉告警（机器人 webhook + 加签密钥）
+# 可选：钉钉报警（机器人 webhook + 加签密钥）
 OBS_DINGTALK_WEBHOOK=https://oapi.dingtalk.com/robot/send?access_token=xxx
 OBS_DINGTALK_SECRET=SECxxx
 
-# 可选：企微告警
+# 可选：企微报警
 OBS_WECHAT_WEBHOOK=https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx
 ```
 
@@ -222,7 +222,7 @@ docker compose -f ops/observability/docker-compose.obs.yml logs -f grafana
 ### 4.3 Alertmanager 维护期静默
 
 ```bash
-# 在维护窗口内，临时静默所有 warning 级别告警（例如 2 小时）
+# 在维护窗口内，临时静默所有 warning 级别报警（例如 2 小时）
 # 需先进入 alertmanager 容器或在有 amtool 的机器上执行
 amtool --alertmanager.url=http://localhost:9093 \
   silence add severity=warning \
@@ -291,9 +291,9 @@ docker compose -f docker-compose.yml up -d
 
 ## 7. FAQ
 
-### Q1：钉钉 / 企微 webhook 不通，告警收不到
+### Q1：钉钉 / 企微 webhook 不通，报警收不到
 
-**症状**：告警在 Alertmanager UI（`http://localhost:9093`）中能看到，但钉钉 / 企微 没收到消息。
+**症状**：报警在 Alertmanager UI（`http://localhost:9093`）中能看到，但钉钉 / 企微 没收到消息。
 
 **排查步骤**：
 
@@ -394,6 +394,6 @@ docker compose -f ops/observability/docker-compose.obs.yml up -d
 
 - **完整设计规格**：[2026-04-29-observability-stack-design.md](../superpowers/specs/2026-04-29-observability-stack-design.md)
 - **指标字典**（spec §8）：待 Phase B 落实 → `observability-metrics-dictionary.md`
-- **SLO 与告警规则**（spec §9）：待 Phase D 落实 → `observability-slo-rules.md`
+- **SLO 与报警规则**（spec §9）：待 Phase D 落实 → `observability-slo-rules.md`
 - **Dashboard 使用指南**（spec §10）：待后续 Phase 落实 → `observability-dashboards-guide.md`
 - **运维 Runbook**（启停详解 / 排障 / 备份）：待后续 Phase 落实 → `docs/ops/observability-runbook.md`

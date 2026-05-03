@@ -172,5 +172,5 @@ rm -rf ./data/collector
 
 每跑一次 dry-run，把下列信息回写到 `docs/ops/collector-runbook.md`：
 - 步骤 5/6 客户最常踩的坑（认证 token、防火墙、寄存器地址 0/1-based）
-- 步骤 6 典型降级延迟（用于现场告警阈值调整）
+- 步骤 6 典型降级延迟（用于现场报警阈值调整）
 - preflight 漏检的项（补到脚本）

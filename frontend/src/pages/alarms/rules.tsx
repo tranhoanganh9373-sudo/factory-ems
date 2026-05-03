@@ -32,7 +32,7 @@ interface FormValues {
 }
 
 export default function AlarmRulesPage() {
-  useDocumentTitle('告警 - 规则');
+  useDocumentTitle('报警 - 规则');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { hasRole } = useAuthStore();
@@ -116,7 +116,7 @@ export default function AlarmRulesPage() {
 
   return (
     <div>
-      <PageHeader title="告警规则" />
+      <PageHeader title="报警规则" />
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>

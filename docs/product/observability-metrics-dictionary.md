@@ -2,14 +2,14 @@
 
 > **更新于**：2026-04-29（Phase B 完成时）
 > **撰写依据**：[spec §8](../superpowers/specs/2026-04-29-observability-stack-design.md)（§8.1–§8.7）+ Phase B1–B4 实际源码
-> **受众**：数据/集成工程师、Dashboard 开发者、Prometheus 告警规则作者
+> **受众**：数据/集成工程师、Dashboard 开发者、Prometheus 报警规则作者
 > **关联文档**：[observability-config-reference.md](./observability-config-reference.md)（env 参数 + 启停）
 
 ---
 
 ## 1. 概述
 
-本字典描述 factory-ems 应用层注册的 17 个业务 metrics（Phase B），分为采集、告警、计量、应用跨模块四类。
+本字典描述 factory-ems 应用层注册的 17 个业务 metrics（Phase B），分为采集、报警、计量、应用跨模块四类。
 
 **怎么用这份文档：**
 
@@ -41,7 +41,7 @@
 | 模块 | Java 源文件 | 指标数量 | 状态 |
 |------|------------|---------|------|
 | ems-collector（采集） | `CollectorMetrics.java` | 5 | Phase B1 完成 |
-| ems-alarm（告警） | `AlarmMetrics.java` | 5 | Phase B2 完成 |
+| ems-alarm（报警） | `AlarmMetrics.java` | 5 | Phase B2 完成 |
 | ems-meter（计量） | `MeterMetrics.java` | 3 | Phase B3 完成 |
 | ems-app（应用跨模块） | `AppMetrics.java` + `SchedulerInstrumentationAspect.java` | 2 active + 1 AOP + 1 deferred = 4 | Phase B4 完成 |
 | **合计** | | **17（含 1 个 v1 deferred）** | |
@@ -79,7 +79,7 @@
 | `disconnected` | 设备断开连接 |
 | `other` | 其他 / 未分类异常 |
 
-**实施差异（粒度说明）**：spec §8.2 写的是"单次寄存器读"，但 v1 `DevicePoller` 的 poll 循环是"一次 cycle = 多寄存器顺序读"。实际粒度为 cycle 级：一次 cycle 所有寄存器全部成功 → `read.success.total +1`；cycle 失败（重试耗尽）→ `read.failure.total +1`。这不影响 `rate()` 告警规则的语义（详见 `CollectorMetrics.java` javadoc）。
+**实施差异（粒度说明）**：spec §8.2 写的是"单次寄存器读"，但 v1 `DevicePoller` 的 poll 循环是"一次 cycle = 多寄存器顺序读"。实际粒度为 cycle 级：一次 cycle 所有寄存器全部成功 → `read.success.total +1`；cycle 失败（重试耗尽）→ `read.failure.total +1`。这不影响 `rate()` 报警规则的语义（详见 `CollectorMetrics.java` javadoc）。
 
 **典型 PromQL：**
 
@@ -97,28 +97,28 @@ ems_collector_devices_online
   / (ems_collector_devices_online + ems_collector_devices_offline)
 ```
 
-**告警覆盖**：`EmsCollectorPollSlow`（poll p95 > 30s）、`EmsCollectorOfflineDevices`（offline 占比 > 10%）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
+**报警覆盖**：`EmsCollectorPollSlow`（poll p95 > 30s）、`EmsCollectorOfflineDevices`（offline 占比 > 10%）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
 
 ---
 
-### 4.2 ems-alarm 告警模块（5 个）
+### 4.2 ems-alarm 报警模块（5 个）
 
 | # | 指标名称 | 类型 | 单位 | Labels | 含义 | 数据更新方式 |
 |---|---------|------|------|--------|------|------------|
-| 6 | `ems.alarm.detector.duration` | Timer (histogram) | seconds | — | 告警检测器一轮扫描耗时 | 事件驱动：`AlarmDetectorImpl.scan()` finally 块记录 |
-| 7 | `ems.alarm.active.count` | Gauge | count（条） | `type` | 当前处于 ACTIVE 或 ACKED 状态的告警数 | 混合：detector scan 完成后刷新；`AlarmServiceImpl.resolve()` 手动恢复后同步更新 |
-| 8 | `ems.alarm.created.total` | Counter | count（条） | `type` | 累计触发（创建）告警次数 | 事件驱动：`AlarmDetectorImpl.fire()` 中递增 |
-| 9 | `ems.alarm.resolved.total` | Counter | count（条） | `reason` | 累计恢复（resolve）告警次数 | 事件驱动：`tryAutoResolve`（自动）或 `AlarmServiceImpl.resolve()`（手动）后递增 |
+| 6 | `ems.alarm.detector.duration` | Timer (histogram) | seconds | — | 报警检测器一轮扫描耗时 | 事件驱动：`AlarmDetectorImpl.scan()` finally 块记录 |
+| 7 | `ems.alarm.active.count` | Gauge | count（条） | `type` | 当前处于 ACTIVE 或 ACKED 状态的报警数 | 混合：detector scan 完成后刷新；`AlarmServiceImpl.resolve()` 手动恢复后同步更新 |
+| 8 | `ems.alarm.created.total` | Counter | count（条） | `type` | 累计触发（创建）报警次数 | 事件驱动：`AlarmDetectorImpl.fire()` 中递增 |
+| 9 | `ems.alarm.resolved.total` | Counter | count（条） | `reason` | 累计恢复（resolve）报警次数 | 事件驱动：`tryAutoResolve`（自动）或 `AlarmServiceImpl.resolve()`（手动）后递增 |
 | 10 | `ems.alarm.webhook.delivery.duration` | Timer (histogram) | seconds | `outcome`, `attempt` | webhook 单次调用耗时（含重试区分） | 事件驱动：`WebhookChannelImpl` 每次投递后记录 |
 
 **Label 枚举值：**
 
-`type`（告警类型，`KNOWN_TYPES` set 归一化）：
+`type`（报警类型，`KNOWN_TYPES` set 归一化）：
 
 | 值 | 含义 |
 |----|------|
-| `silent_timeout` | 静默超时告警 |
-| `consecutive_fail` | 连续失败告警 |
+| `silent_timeout` | 静默超时报警 |
+| `consecutive_fail` | 连续失败报警 |
 | `other` | 其他 / 未分类类型 |
 
 `reason`（恢复原因，`KNOWN_REASONS` set 归一化）：
@@ -144,18 +144,18 @@ histogram_quantile(0.95,
   rate(ems_alarm_detector_duration_seconds_bucket[10m])
 )
 
-# 当前各类型活跃告警数
+# 当前各类型活跃报警数
 ems_alarm_active_count
 
 # webhook 失败率（所有 attempt 汇总）
 sum(rate(ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}[5m]))
   / sum(rate(ems_alarm_webhook_delivery_duration_seconds_count[5m]))
 
-# 某类型告警创建速率（近 1 小时）
+# 某类型报警创建速率（近 1 小时）
 rate(ems_alarm_created_total{type="consecutive_fail"}[1h])
 ```
 
-**告警覆盖**：`EmsAlarmDetectorSlow`（p95 > 10s）、`EmsWebhookFailureRate`（失败率 > 20%）、`EmsAlarmBacklog`（静默超时积压 > 50 条）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
+**报警覆盖**：`EmsAlarmDetectorSlow`（p95 > 10s）、`EmsWebhookFailureRate`（失败率 > 20%）、`EmsAlarmBacklog`（静默超时积压 > 50 条）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
 
 ---
 
@@ -203,7 +203,7 @@ sum by (energy_type) (rate(ems_meter_reading_insert_rate_total[5m])) * 60
 rate(ems_meter_reading_dropped_total[5m])
 ```
 
-**告警覆盖**：`EmsDataFreshnessCritical`（lag > 600s = 10min）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
+**报警覆盖**：`EmsDataFreshnessCritical`（lag > 600s = 10min）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
 
 ---
 
@@ -226,7 +226,7 @@ rate(ems_meter_reading_dropped_total[5m])
 
 | task 值 | 所属类 | 功能 |
 |---------|--------|------|
-| `AlarmDetectorImpl.run` | `AlarmDetectorImpl` | 告警检测扫描 |
+| `AlarmDetectorImpl.run` | `AlarmDetectorImpl` | 报警检测扫描 |
 | `CollectorService.refreshDeviceGauges` | `CollectorService` | 刷新设备在线/离线 gauge |
 | `RollupJob.*`（4 个） | `ems-timeseries` 中的汇总任务 | 历史数据汇总 |
 
@@ -242,14 +242,14 @@ histogram_quantile(0.95,
   )
 )
 
-# 未处理异常速率（用于告警 EmsAppHighErrorRate）
+# 未处理异常速率（用于报警 EmsAppHighErrorRate）
 rate(ems_app_exception_total[5m])
 
 # 审计写入速率（按操作类型）
 sum by (action) (rate(ems_app_audit_write_total_total[5m]))
 ```
 
-**告警覆盖**：`EmsAppHighErrorRate`（exception rate > 1/s）、`EmsSchedulerDrift`（调度漂移 > 60s，Phase D PromQL 推导）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
+**报警覆盖**：`EmsAppHighErrorRate`（exception rate > 1/s）、`EmsSchedulerDrift`（调度漂移 > 60s，Phase D PromQL 推导）— 详见 `docs/product/observability-slo-rules.md`（Phase D）。
 
 ---
 
@@ -306,7 +306,7 @@ v1 阶段工厂设备规模预计 < 5000 台，cardinality 可控（success：50
 
 这些指标覆盖 JVM 健康、HTTP SLO、数据库连接池、日志异常率四个维度，与业务指标互补。
 
-**SLO 关联**：`http_server_requests_seconds_bucket` 用于 API 延迟 SLO（p99 ≤ 1s）；`hikaricp_connections_active / hikaricp_connections_max` 用于连接池耗尽告警（`EmsDbConnectionPoolExhausted`）。
+**SLO 关联**：`http_server_requests_seconds_bucket` 用于 API 延迟 SLO（p99 ≤ 1s）；`hikaricp_connections_active / hikaricp_connections_max` 用于连接池耗尽报警（`EmsDbConnectionPoolExhausted`）。
 
 ---
 
@@ -341,7 +341,7 @@ abs(
 )
 ```
 
-**告警规则**：`EmsSchedulerDrift`（漂移 > 60s，for 5m）在 Phase D 通过此推导实现。
+**报警规则**：`EmsSchedulerDrift`（漂移 > 60s，for 5m）在 Phase D 通过此推导实现。
 
 ### 7.4 未来启用方法（如需应用侧 Gauge）
 
@@ -382,7 +382,7 @@ abs(
 
 ## 9. 常用 PromQL 模板
 
-下面这些模板可以直接在 Grafana Explore 或告警规则里用：
+下面这些模板可以直接在 Grafana Explore 或报警规则里用：
 
 ```promql
 # 模板 1：Counter 增长率（events/秒）
@@ -413,7 +413,7 @@ sum(rate(ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}[5m
 # 模板 5：Counter 时间窗内总量
 increase(ems_alarm_created_total[1h])
 
-# 模板 6：Gauge + 阈值比较（用于告警 expr）
+# 模板 6：Gauge + 阈值比较（用于报警 expr）
 max(ems_meter_reading_lag_seconds) > 300
 
 # 模板 7：多维度 sum by（Dashboard 数据聚合）

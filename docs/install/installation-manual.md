@@ -35,7 +35,7 @@
 
 ### 2.1 时钟同步
 
-EMS 大量依赖时间戳，时序数据、告警状态机、审计日志、电价分时全部基于本机时钟。部署机时钟漂移 > 5 秒会导致数据错乱。
+EMS 大量依赖时间戳，时序数据、报警状态机、审计日志、电价分时全部基于本机时钟。部署机时钟漂移 > 5 秒会导致数据错乱。
 
 ```bash
 # Ubuntu/Debian
@@ -54,7 +54,7 @@ chronyc tracking | grep "Last offset"   # 应在 ms 级别
 
 ### 2.2 时区
 
-容器默认 UTC。如果业务习惯按本地时区看时间戳（报表、审计、告警），有两种方案：
+容器默认 UTC。如果业务习惯按本地时区看时间戳（报表、审计、报警），有两种方案：
 
 方案 A（推荐）：保留容器内 UTC，让前端按浏览器本地时区渲染。
 
@@ -662,7 +662,7 @@ scrape_configs:
 
 直接用 ops/observability/grafana/dashboards/ 里 7 个预设 JSON 文件，导入 Grafana。详见 `docs/product/observability-dashboards-guide.md`。
 
-### 11.3 告警接入
+### 11.3 报警接入
 
 Prometheus AlertManager 配置进 `ops/observability/prometheus/alerts.yml`，16 条规则覆盖 4 个 SLO。详见 `docs/product/observability-slo-rules.md`。
 
@@ -792,11 +792,11 @@ A：当前版本前端 / API 都 hard-code 在根路径 `/`。反代到子路径
 
 | 从 → 到 | 直接升级? | 说明 |
 |---|---|---|
-| 1.5.x → 1.6.x | ✅ | 引入告警，新表 |
+| 1.5.x → 1.6.x | ✅ | 引入报警，新表 |
 | 1.6.x → 1.7.x | ✅ | 引入 observability，新指标 |
 | 1.7.x → 2.0.x | ✅ | 引入 cost，新表 |
 | 2.0.x → 2.1.x | ✅ | 引入 billing，新表 |
-| 2.1.x → 2.2.x | ✅ | 告警增强 |
+| 2.1.x → 2.2.x | ✅ | 报警增强 |
 | 2.2.x → 2.3.x | ✅ | collector 协议层重构（兼容现有配置）|
 | 1.x → 2.0+ | ⚠️ 跨大版本，建议先升到 1.7.x，再升到 2.0.x | |
 
@@ -825,7 +825,7 @@ A：当前版本前端 / API 都 hard-code 在根路径 `/`。反代到子路径
 4. 仪表导入：`scripts/csv-to-meters.py` + `scripts/import-meters.sh`（或前端 `/meters` 页"批量导入"按钮，v2 新增）
 5. 看板上线：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 6. 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-7. 告警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+7. 报警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 8. 账单上线：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 9. 月报自动化：[report-automation-sop.md](./report-automation-sop.md)
 10. 生产能效：[production-energy-sop.md](./production-energy-sop.md)

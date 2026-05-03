@@ -32,12 +32,12 @@ Phase C — 观测栈基础设施（7 commits, C1–C7）
 - C6 8e998f6 docker-compose.obs.yml + 启停脚本
 - C7 e3e6457 deployment 装机指南
 
-Phase D — SLO + 告警（6 commits, D1–D6）
+Phase D — SLO + 报警（6 commits, D1–D6）
 - D1 ece7244 4 SLO 录制规则
 - D2 d84df2a 5 条 critical
 - D3/D4 28f5474 9 warning + 2 burn-rate
 - D5 d666c03 promtool 32 用例
-- D6 dca1056 SLO + 告警规则文档
+- D6 dca1056 SLO + 报警规则文档
 
 Phase E — Grafana dashboards（4 commits, E1–E4）
 - E1 6d92242 SLO Overview + provisioning

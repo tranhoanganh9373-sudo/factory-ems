@@ -2,7 +2,7 @@
 
 > 适用版本：v1.7.0+ ｜ 受众：客户运维 / IT 接口人 / 站点工程师 ｜ 最近更新：2026-04-29
 
-本指南面向客户侧运维人员（NOC / IT / 现场工程师），讲怎么在 Grafana 中查看系统健康、读懂 SLO、收到告警邮件后定位问题、计划维护期暂停告警等日常操作。Prometheus / Loki / Tempo 的内部管理不在本文档范围内，由 factory-ems 工程团队负责。
+本指南面向客户侧运维人员（NOC / IT / 现场工程师），讲怎么在 Grafana 中查看系统健康、读懂 SLO、收到报警邮件后定位问题、计划维护期暂停报警等日常操作。Prometheus / Loki / Tempo 的内部管理不在本文档范围内，由 factory-ems 工程团队负责。
 
 > 您拿到的是 Grafana viewer（只读）角色，可以查看所有面向客户的仪表盘，但不能编辑、不能创建静默、不能管理用户。要扩权，按 [第 5 节](#5-如何申请-viewer-账号) 流程申请。
 
@@ -117,24 +117,24 @@
 | < 30% | 告急，冻结非紧急变更 |
 | 0% | 当月已违约，需要故障复盘加厂方沟通 |
 
-### 2.4 燃烧率与 firing 告警表
+### 2.4 燃烧率与 firing 报警表
 
-- 可用性燃烧率 (1h vs 6h) timeseries：1 小时燃烧率（红线）和 6 小时燃烧率（橙线），和快速/慢速告警阈值参考线对比。短窗口飙升说明突发故障；长窗口持续高位说明慢速恶化。
-- 当前 firing 告警 table：列出 Prometheus 当前处于触发状态的告警，显示 `alertname` / `severity` / `team` / `instance`。空表表示当前无活跃告警。
+- 可用性燃烧率 (1h vs 6h) timeseries：1 小时燃烧率（红线）和 6 小时燃烧率（橙线），和快速/慢速报警阈值参考线对比。短窗口飙升说明突发故障；长窗口持续高位说明慢速恶化。
+- 当前 firing 报警 table：列出 Prometheus 当前处于触发状态的报警，显示 `alertname` / `severity` / `team` / `instance`。空表表示当前无活跃报警。
 
 ---
 
-## 3. 如何在收到告警邮件后定位
+## 3. 如何在收到报警邮件后定位
 
-### 3.1 告警邮件长什么样
+### 3.1 报警邮件长什么样
 
-每封告警邮件来自 Alertmanager，主要字段：
+每封报警邮件来自 Alertmanager，主要字段：
 
 | 字段 | 含义 | 示例 |
 |------|------|------|
 | Subject（主题） | `[FIRING:1] <alertname> <severity>` | `[FIRING:1] EmsDataFreshnessCritical critical` |
 | Severity | `critical`（红） / `warning`（黄） | critical |
-| Summary | 告警一句话描述 | "电表读数滞后超过 10 分钟" |
+| Summary | 报警一句话描述 | "电表读数滞后超过 10 分钟" |
 | Description | 触发条件详情，含触发时刻 PromQL 当前值 | "max lag = 723s（阈值 600s）" |
 | `runbook_url` | 跳转到工程团队 runbook 的链接 | `https://internal/docs/ops/observability-runbook.md#emsdatafreshnesscritical` |
 
@@ -144,19 +144,19 @@
 
 **第一步：点开 runbook 链接**
 
-邮件正文末尾有 `runbook_url`。点开后会跳到 [observability-runbook.md](../ops/observability-runbook.md) 的对应章节，里面有该条告警的"症状 → 排查 → 修复"全流程。这是工程团队维护的标准操作手册。
+邮件正文末尾有 `runbook_url`。点开后会跳到 [observability-runbook.md](../ops/observability-runbook.md) 的对应章节，里面有该条报警的"症状 → 排查 → 修复"全流程。这是工程团队维护的标准操作手册。
 
 **第二步：打开 SLO Overview 看趋势**
 
 进入 D1 dashboard，把时间范围切到 `Last 1 hour`，看对应 SLO 是不是同步劣化：
 
-- `EmsAppDown` / 燃烧率告警 → 看 **可用性 30 天趋势**
+- `EmsAppDown` / 燃烧率报警 → 看 **可用性 30 天趋势**
 - `EmsAppLatencyHigh` → 看 **API p99 (5m)**
 - `EmsDataFreshnessCritical` → 看 **数据新鲜度**
 
 **第三步：下钻到对应 dashboard**
 
-| 告警类型 | 下钻 dashboard |
+| 报警类型 | 下钻 dashboard |
 |---------|---------------|
 | `EmsAppDown` / `EmsDiskSpaceCritical` / 燃烧率 | D2 基础设施（工程团队） |
 | `EmsAppLatencyHigh` / `EmsDbConnectionPoolExhausted` / `EmsJvmMemoryHigh` | D3 JVM / D4 HTTP（工程团队） |
@@ -164,7 +164,7 @@
 | `EmsAlarmDetectorSlow` / `EmsWebhookFailureRate` / `EmsAlarmBacklog` | D6 Alarm |
 | `EmsDataFreshnessCritical` | D7 Meter |
 
-> 客户 viewer 角色没有 D2/D3/D4 访问权限。告警指向基础设施时，跳到第五步联系工程团队。
+> 客户 viewer 角色没有 D2/D3/D4 访问权限。报警指向基础设施时，跳到第五步联系工程团队。
 
 **第四步：用 Loki Explore 查日志上下文**
 
@@ -182,18 +182,18 @@
 
 **第五步：升级到工程团队**
 
-告警 5 分钟内没自动恢复，或 dashboard 读数解释不了时，按以下渠道升级：
+报警 5 分钟内没自动恢复，或 dashboard 读数解释不了时，按以下渠道升级：
 
 | 严重度 | 升级路径 |
 |-------|---------|
-| critical | 立即电话 + 钉钉 @ on-call 工程师，提供告警截图 + dashboard 截图 |
+| critical | 立即电话 + 钉钉 @ on-call 工程师，提供报警截图 + dashboard 截图 |
 | warning | 在 24h 内通过工单系统提交，附 alertname + 起始时刻 |
 
 ---
 
-## 4. 如何在维护期暂停告警
+## 4. 如何在维护期暂停报警
 
-计划停机、版本升级、网络改造等期间，要提前为对应实例创建告警静默（Silence），避免误报洪泛。
+计划停机、版本升级、网络改造等期间，要提前为对应实例创建报警静默（Silence），避免误报洪泛。
 
 > **角色边界**：按 §5 权限矩阵，VIEWER 角色（默认客户运维账号）不能创建/解除 silence。客户运维侧的标准动作是：
 >
@@ -208,14 +208,14 @@
 amtool 是 Alertmanager 官方 CLI，部署在观测栈服务器上。
 
 ```bash
-# 创建一个 2 小时的静默，覆盖所有 factory-ems 告警
+# 创建一个 2 小时的静默，覆盖所有 factory-ems 报警
 amtool silence add \
   --alertmanager.url=http://localhost:9093 \
   --duration=2h \
   --comment="计划维护：升级 v1.7.0 by 张三" \
   alertname=~"Ems.*" job="factory-ems"
 
-# 仅静默某个具体告警 + 特定实例
+# 仅静默某个具体报警 + 特定实例
 amtool silence add \
   --alertmanager.url=http://localhost:9093 \
   --duration=1h \
@@ -231,7 +231,7 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ### 4.2 方法 B：Grafana UI（可视化，工程团队执行）
 
-1. 左侧菜单 → **Alerting**（告警） → **Silences**（静默）。
+1. 左侧菜单 → **Alerting**（报警） → **Silences**（静默）。
 2. 点击右上角 **New silence**（新建静默）。
 3. 在 **Matchers**（匹配器）区域填入标签条件，例如 `alertname=EmsAppDown`、`job=factory-ems`。
 4. 设置 **Start**（开始时间）和 **Duration**（时长，如 `2h`）。
@@ -242,11 +242,11 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ### 4.3 时机与注意事项
 
-- 建议：维护开始前 5 分钟创建，避免脚本启动瞬间触发短促告警。
+- 建议：维护开始前 5 分钟创建，避免脚本启动瞬间触发短促报警。
 - 建议：维护结束后立即 expire，不要等自然过期，以免真实故障被掩盖。
 - 建议：静默时长不要超过维护窗口加 30 分钟缓冲。
-- 重要：观测栈的 silence 不抑制 ems-alarm 业务告警（采集中断告警）。维护涉及电表/采集器停机的，同时在 EMS 应用内开启设备维护模式（参见 [alarm-user-guide.md §3.3](./alarm-user-guide.md)）。
-- 重要：基于 `EmsAppDown` 的抑制规则会在 EmsAppDown 触发时自动屏蔽同实例的下游告警，但维护期手动 silence 仍然是更可靠的做法。
+- 重要：观测栈的 silence 不抑制 ems-alarm 业务报警（采集中断报警）。维护涉及电表/采集器停机的，同时在 EMS 应用内开启设备维护模式（参见 [alarm-user-guide.md §3.3](./alarm-user-guide.md)）。
+- 重要：基于 `EmsAppDown` 的抑制规则会在 EmsAppDown 触发时自动屏蔽同实例的下游报警，但维护期手动 silence 仍然是更可靠的做法。
 
 ---
 
@@ -287,7 +287,7 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 - 创建、修改、解除 Alertmanager silence
 - 创建、删除其他用户
 - 查看工程团队专属的 D2/D3/D4 基础设施仪表盘
-- 直接改告警阈值（要联系工程团队改 `prometheus/rules/*.yml`）
+- 直接改报警阈值（要联系工程团队改 `prometheus/rules/*.yml`）
 
 > 工程团队 Editor / Admin 角色账号不暴露给客户，所有需要管理动作的请求统一交给工程团队执行。
 
@@ -295,16 +295,16 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 
 ## 6. FAQ
 
-### Q1：没收到告警邮件，第一步看哪？
+### Q1：没收到报警邮件，第一步看哪？
 
 按以下顺序排查：
 
 1. 邮箱垃圾箱 / 拦截规则：Alertmanager 邮件经常因来源 IP 不熟被识别为垃圾邮件。
 2. SMTP 配置：联系工程团队检查 `OBS_SMTP_HOST` / `OBS_SMTP_USER` / `OBS_SMTP_PASSWORD` 是否正确，必要时让工程团队在 `obs-smoke` 里跑一次测试发送。
 3. 接收人地址：确认 `OBS_ALERT_RECEIVER_EMAIL` 列表中包含您的邮箱。
-4. 告警是不是真触发：在 Grafana → Alerting → Alert rules 看 `Firing` 状态。没触发就是没邮件，属正常。
+4. 报警是不是真触发：在 Grafana → Alerting → Alert rules 看 `Firing` 状态。没触发就是没邮件，属正常。
 
-### Q2：告警 runbook 链接打不开怎么办？
+### Q2：报警 runbook 链接打不开怎么办？
 
 `runbook_url` 默认指向内网地址（如 `https://internal/...`），客户网络可能无法直连。处理方式：
 
@@ -321,22 +321,22 @@ amtool silence expire --alertmanager.url=http://localhost:9093 <silence-id>
 - 抓取目标 down：D2 基础设施面板的"运行容器数" stat 异常，说明栈本身故障。
 - 客户角色限制：D2/D3/D4 对 viewer 角色不可见，看到 "Access denied" 是预期行为，不是故障。
 
-### Q4：告警出现误报怎么处理？
+### Q4：报警出现误报怎么处理？
 
-误报 = 告警触发但实际无业务影响。处置：
+误报 = 报警触发但实际无业务影响。处置：
 
-1. 不要立刻关静默——先记下告警时刻和当时的业务现象。
+1. 不要立刻关静默——先记下报警时刻和当时的业务现象。
 2. 24 小时内提交工单，附上 alertname、起止时刻、您的判断（为什么是误报）。
 3. 工程团队收到反馈后会调整 PromQL 阈值或 `for:` 时间窗，再走 promtool 测试加 CI 验证流程。
 4. 阈值改动要重启 Prometheus 才生效，工程团队会安排在低峰期变更。
 
-### Q5：维护期间的告警还会进 email / 钉钉吗？
+### Q5：维护期间的报警还会进 email / 钉钉吗？
 
-已 silence 的告警不会。Alertmanager 评估时会检查每条告警有没有被 silence 命中——命中则不发任何通知，但 Prometheus 内部仍记录告警状态。Silence 过期后告警仍处于 firing，会重新发送通知。
+已 silence 的报警不会。Alertmanager 评估时会检查每条报警有没有被 silence 命中——命中则不发任何通知，但 Prometheus 内部仍记录报警状态。Silence 过期后报警仍处于 firing，会重新发送通知。
 
-**注意**：观测栈 silence 不影响 ems-alarm 业务告警。后者由 EMS 应用自身的"维护模式"开关控制，参见 [alarm-user-guide.md §3.3](./alarm-user-guide.md)。
+**注意**：观测栈 silence 不影响 ems-alarm 业务报警。后者由 EMS 应用自身的"维护模式"开关控制，参见 [alarm-user-guide.md §3.3](./alarm-user-guide.md)。
 
-### Q6：我能改告警阈值吗？
+### Q6：我能改报警阈值吗？
 
 viewer 角色不能。阈值定义在 Prometheus 规则文件 `ops/observability/prometheus/rules/*.yml` 里。要调整的话：
 
@@ -350,12 +350,12 @@ viewer 角色不能。阈值定义在 Prometheus 规则文件 `ops/observability
 
 1. 可用性 < 99.5%：触发 `EmsBudgetBurnSlowAvailability`（warning）后会有邮件通知；持续恶化会触发 `EmsBudgetBurnFastAvailability`（critical），需要立即响应。
 2. p99 > 1s：触发 `EmsAppLatencyHigh`（warning）。
-3. 数据新鲜度 > 300s：还没到告警，到 600s（10 分钟）才触发 `EmsDataFreshnessCritical`。
-4. 应对动作：按对应告警邮件的 runbook 流程处理；本月多次跌破时，月底召开 SLO 复盘会，和工程团队一起确认根因和改进项。
+3. 数据新鲜度 > 300s：还没到报警，到 600s（10 分钟）才触发 `EmsDataFreshnessCritical`。
+4. 应对动作：按对应报警邮件的 runbook 流程处理；本月多次跌破时，月底召开 SLO 复盘会，和工程团队一起确认根因和改进项。
 
-### Q8：观测栈告警与采集中断告警（ems-alarm）有什么不同？
+### Q8：观测栈报警与采集中断报警（ems-alarm）有什么不同？
 
-| 维度 | 观测栈告警（本文档） | ems-alarm 业务告警 |
+| 维度 | 观测栈报警（本文档） | ems-alarm 业务报警 |
 |------|--------------------|---------------------|
 | 关注对象 | 应用 / JVM / 数据流 / 资源（系统侧） | 单设备数据是否中断（业务侧） |
 | 触发条件 | Prometheus PromQL 评估 | 数据库扫描 SILENT_TIMEOUT / CONSECUTIVE_FAIL |
@@ -364,7 +364,7 @@ viewer 角色不能。阈值定义在 Prometheus 规则文件 `ops/observability
 | 维护模式 | Alertmanager Silence | EMS 应用设备级维护开关 |
 | 文档 | 本文档 + [observability-slo-rules.md](./observability-slo-rules.md) | [alarm-user-guide.md](./alarm-user-guide.md) |
 
-> 同一类问题可能同时触发两边告警（比如设备掉线 → ems-alarm 触发 SILENT_TIMEOUT，同时 collector poll 失败率上升触发 EmsCollectorOfflineDevices）。按各自的处置流程分别响应。
+> 同一类问题可能同时触发两边报警（比如设备掉线 → ems-alarm 触发 SILENT_TIMEOUT，同时 collector poll 失败率上升触发 EmsCollectorOfflineDevices）。按各自的处置流程分别响应。
 
 ---
 
@@ -378,11 +378,11 @@ viewer 角色不能。阈值定义在 Prometheus 规则文件 `ops/observability
 | **SLO（Service Level Objective）** | 服务级别目标，对外承诺的质量指标，例如可用性 ≥ 99.5%。 |
 | **SLI（Service Level Indicator）** | 服务级别指标，对应 SLO 的具体度量值，由 PromQL 实时计算（如 `ems:slo:availability:sli_30d`）。 |
 | **Error Budget（错误预算）** | SLO 允许出错的剩余余量，0 = 已违约，1 = 完整未用。 |
-| **Critical / Warning** | 告警严重级别。Critical 需 5 分钟内响应（多通道通知），Warning 需 24 小时内处理（仅邮件）。 |
-| **Silence（静默）** | 在 Alertmanager 中临时屏蔽特定告警的通知，常用于计划维护期。 |
+| **Critical / Warning** | 报警严重级别。Critical 需 5 分钟内响应（多通道通知），Warning 需 24 小时内处理（仅邮件）。 |
+| **Silence（静默）** | 在 Alertmanager 中临时屏蔽特定报警的通知，常用于计划维护期。 |
 | **Loki Query** | Loki 的日志查询语言（LogQL），用于从聚合日志中过滤关键字、时间窗等。本指南只涉及简单 `{label="value"} \|= "keyword"` 查询。 |
-| **PromQL** | Prometheus 的查询语言，用于计算指标。普通 viewer 不需要直接写，但需理解告警阈值条件由它表达。 |
-| **Adapter（适配器）** | 采集器（Collector）针对不同设备协议的实现，如 modbus、opc-ua。`EmsCollectorPollSlow` 告警按 adapter 区分。 |
+| **PromQL** | Prometheus 的查询语言，用于计算指标。普通 viewer 不需要直接写，但需理解报警阈值条件由它表达。 |
+| **Adapter（适配器）** | 采集器（Collector）针对不同设备协议的实现，如 modbus、opc-ua。`EmsCollectorPollSlow` 报警按 adapter 区分。 |
 | **Collector cycle（采集周期）** | 采集器对一台设备的一次完整 poll 操作，从发起请求到收到响应或超时。 |
 | **p95 / p99 latency** | 把所有请求按响应时间排序，p95 是最快的 95% 请求的最长耗时，p99 同理。p99 描述"最慢的 1% 请求"上限。 |
 | **Burn rate（燃烧率）** | 错误预算消耗速度。1× = 正常速度；14.4× 表示当前 1 小时不可用率达正常预算的 14.4 倍，约 2 天耗尽月预算。 |
@@ -393,9 +393,9 @@ viewer 角色不能。阈值定义在 Prometheus 规则文件 `ops/observability
 
 - [可观测性栈功能概览](./observability-feature-overview.md) — 销售/客户视角的价值主张
 - [可观测性栈配置参考](./observability-config-reference.md) — 系统管理员配置详解
-- [可观测性栈 SLO 与告警](./observability-slo-rules.md) — 4 SLO + 16 告警客户视角
+- [可观测性栈 SLO 与报警](./observability-slo-rules.md) — 4 SLO + 16 报警客户视角
 - [可观测性栈 Metrics 字典](./observability-metrics-dictionary.md) — 指标定义与 PromQL
 - [可观测性栈 Dashboard 使用指南](./observability-dashboards-guide.md) — 7 dashboard 用法
 - [部署文档](../ops/observability-deployment.md) — 工程团队部署指引
-- [运维 Runbook](../ops/observability-runbook.md) — 工程团队 16 告警一键处置
-- [采集中断告警 · 用户指南](./alarm-user-guide.md) — 业务告警操作手册
+- [运维 Runbook](../ops/observability-runbook.md) — 工程团队 16 报警一键处置
+- [采集中断报警 · 用户指南](./alarm-user-guide.md) — 业务报警操作手册

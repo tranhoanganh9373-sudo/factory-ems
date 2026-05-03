@@ -58,7 +58,7 @@
 5. **异步用专用 Executor**：`costAllocationExecutor` core=1 max=2 queue=20，与 Plan 1.3 的 `reportExportExecutor` 隔离。一次 run 跑 30s 不能挤掉报表导出。
 6. **TaskDecorator 透传 SecurityContext**：复用 Plan 1.3 的 `SecurityContextTaskDecorator`。
 7. **dry-run 不落库**：`AllocationAlgorithm.allocate()` 返回 `List<AllocationLine>` 流，由 caller 决定是否 persist。`dryRun()` 不创建 run、不调 saveAll。
-8. **负残差策略**：`RESIDUAL` 算法发现 `residual < 0` 时 clamp 到 0、写 warn 日志、写 `cost_allocation_run.error_message` 但 status 仍 SUCCESS（带告警标记），不阻塞。MVP 后续再做"按比例缩 deductMeter"。
+8. **负残差策略**：`RESIDUAL` 算法发现 `residual < 0` 时 clamp 到 0、写 warn 日志、写 `cost_allocation_run.error_message` 但 status 仍 SUCCESS（带报警标记），不阻塞。MVP 后续再做"按比例缩 deductMeter"。
 9. **币种和精度**：所有金额 `NUMERIC(18, 4)`、Java 用 `BigDecimal`、scale=4、`RoundingMode.HALF_UP`。`quantity` 同样 4 位。**禁止用 double**。
 10. **测点用量来源**：本 Plan 直接读子项目 1 的 `ts_rollup_hourly`（已经按测点 × 小时 SUM），不要读 Influx raw 1 分钟数据——量太大。
 11. **跨零点沿用 v1 规则**：`if (!start.isBefore(end)) endDt = endDt.plusDays(1)`；`tariff` 时段命中复用 `TariffPriceLookupService` 实现，不重写。
