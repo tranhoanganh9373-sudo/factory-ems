@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-import com.ems.app.config.PvFeatureProperties;
+import com.ems.core.config.PvFeatureProperties;
 
 @SpringBootApplication(scanBasePackages = "com.ems")
 @EntityScan(basePackages = "com.ems")
