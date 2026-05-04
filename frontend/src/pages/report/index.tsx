@@ -15,8 +15,10 @@ import {
   Granularity,
   ReportRequest,
 } from '@/api/report';
+import { useFeatureFlags } from '@/api/features';
 import { useReportTasksStore } from '@/stores/reportTasks';
 import AsyncTaskList from './AsyncTaskList';
+import { CarbonPanel } from './CarbonPanel';
 
 const { RangePicker } = DatePicker;
 
@@ -51,9 +53,12 @@ export default function ReportPage() {
   const addTask = useReportTasksStore((s) => s.addTask);
   const pruneExpired = useReportTasksStore((s) => s.pruneExpired);
 
+  const { data: features } = useFeatureFlags();
+
   // Watch form fields for dependent selects
   const orgNodeId = Form.useWatch('orgNodeId', form);
   const energyTypes = Form.useWatch('energyTypes', form);
+  const timeRange = Form.useWatch('timeRange', form) as [Dayjs, Dayjs] | undefined;
 
   const { data: tree = [] } = useQuery({
     queryKey: ['orgtree'],
@@ -243,6 +248,14 @@ export default function ReportPage() {
         <Divider />
 
         <AsyncTaskList />
+
+        {features?.pv && orgNodeId != null && timeRange != null && (
+          <CarbonPanel
+            orgNodeId={orgNodeId}
+            from={timeRange[0].toISOString()}
+            to={timeRange[1].toISOString()}
+          />
+        )}
       </Card>
     </>
   );
