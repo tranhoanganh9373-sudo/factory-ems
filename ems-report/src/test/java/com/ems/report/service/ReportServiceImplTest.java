@@ -5,6 +5,9 @@ import com.ems.core.constant.ValueKind;
 import com.ems.core.exception.BusinessException;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
+import com.ems.meter.entity.EnergySource;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import com.ems.report.dto.ReportRequest;
 import com.ems.report.dto.ReportRow;
 import com.ems.report.service.impl.ReportServiceImpl;
@@ -36,9 +39,9 @@ class ReportServiceImplTest {
 
     static final Instant T0 = Instant.parse("2026-04-25T00:00:00Z");
     static final Instant T1 = Instant.parse("2026-04-25T01:00:00Z");
-    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "Meter-1", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "Meter-2", 11L, "M-2", 2L, "WATER", "m3", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "Meter-3", 10L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "Meter-1", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "Meter-2", 11L, "M-2", 2L, "WATER", "m3", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "Meter-3", 10L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
 
     @BeforeEach
     void setup() {
