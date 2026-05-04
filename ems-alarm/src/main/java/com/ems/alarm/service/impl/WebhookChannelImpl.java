@@ -70,10 +70,18 @@ public class WebhookChannelImpl implements WebhookChannel {
     public void sendTriggered(Alarm a) {
         cfgRepo.findFirstByOrderByIdAsc()
                 .filter(WebhookConfig::isEnabled)
-                .ifPresent(cfg -> attemptDelivery(a, cfg, 1));
+                .ifPresent(cfg -> attemptDelivery(a, cfg, 1, "alarm.triggered"));
     }
 
-    private void attemptDelivery(Alarm a, WebhookConfig cfg, int attempt) {
+    @Override
+    @Async("webhookExecutor")
+    public void sendResolved(Alarm a) {
+        cfgRepo.findFirstByOrderByIdAsc()
+                .filter(WebhookConfig::isEnabled)
+                .ifPresent(cfg -> attemptDelivery(a, cfg, 1, "alarm.resolved"));
+    }
+
+    private void attemptDelivery(Alarm a, WebhookConfig cfg, int attempt, String eventType) {
         WebhookAdapter adapter = adaptersByType.getOrDefault(cfg.getAdapterType(),
                 adaptersByType.get("GENERIC_JSON"));
         Meter m = meterRepo.findById(a.getDeviceId()).orElse(null);
@@ -86,7 +94,7 @@ public class WebhookChannelImpl implements WebhookChannel {
         try {
             HttpRequest req = HttpRequest.newBuilder(URI.create(cfg.getUrl()))
                     .header("Content-Type", "application/json")
-                    .header("X-EMS-Event", "alarm.triggered")
+                    .header("X-EMS-Event", eventType)
                     .header("X-EMS-Signature", sig)
                     .timeout(Duration.ofMillis(cfg.getTimeoutMs()))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -101,19 +109,19 @@ public class WebhookChannelImpl implements WebhookChannel {
                         res.statusCode(), (int) dur, body);
             } else {
                 scheduleRetry(a, cfg, attempt, "HTTP " + res.statusCode(),
-                        res.statusCode(), (int) dur, body);
+                        res.statusCode(), (int) dur, body, eventType);
             }
         } catch (Exception e) {
             long dur = System.currentTimeMillis() - start;
             metrics.recordWebhookDelivery("failure", attempt, Duration.ofMillis(dur));
             scheduleRetry(a, cfg, attempt,
                     e.getClass().getSimpleName() + ": " + e.getMessage(),
-                    null, (int) dur, body);
+                    null, (int) dur, body, eventType);
         }
     }
 
     private void scheduleRetry(Alarm a, WebhookConfig cfg, int attempt, String error,
-                               Integer status, int durMs, String body) {
+                               Integer status, int durMs, String body, String eventType) {
         if (attempt > props.webhookRetryMax()) {
             writeDeliveryLog(a, attempt, DeliveryStatus.FAILED, error, status, durMs, body);
             log.error("Webhook delivery failed after {} attempts: alarm_id={}, last_error={}",
@@ -122,7 +130,7 @@ public class WebhookChannelImpl implements WebhookChannel {
         }
         int backoffSec = props.webhookRetryBackoffSeconds().get(attempt - 1);
         retryScheduler.schedule(
-                () -> attemptDelivery(a, cfg, attempt + 1),
+                () -> attemptDelivery(a, cfg, attempt + 1, eventType),
                 backoffSec,
                 TimeUnit.SECONDS);
     }
@@ -172,6 +180,6 @@ public class WebhookChannelImpl implements WebhookChannel {
             .orElseThrow(() -> new IllegalStateException(
                 "Alarm not found: deliveryLogId=" + deliveryLogId
                     + " alarmId=" + old.getAlarmId()));
-        cfgRepo.findFirstByOrderByIdAsc().ifPresent(cfg -> attemptDelivery(a, cfg, 1));
+        cfgRepo.findFirstByOrderByIdAsc().ifPresent(cfg -> attemptDelivery(a, cfg, 1, "alarm.triggered"));
     }
 }

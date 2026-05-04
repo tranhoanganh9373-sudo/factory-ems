@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 @Configuration
-@EnableConfigurationProperties(AlarmProperties.class)
+@EnableConfigurationProperties({AlarmProperties.class, TopologyAlarmProperties.class})
 @EnableAsync
 @EnableScheduling
 public class AlarmModuleConfig {
