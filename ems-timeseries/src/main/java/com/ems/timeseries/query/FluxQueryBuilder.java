@@ -272,7 +272,8 @@ public final class FluxQueryBuilder {
             .append("  |> filter(fn: (r) => r._measurement == \"").append(escapeQuotes(measurement)).append("\")\n")
             .append("  |> filter(fn: (r) => r._field == \"value\")\n")
             .append("  |> filter(fn: (r) => contains(value: r.meter_code, set: ").append(set).append("))\n")
-            .append("  |> group(columns: [\"meter_code\", \"energy_type\"])\n")
+            // _start/_stop must stay in the group key — integral() on bounded ranges requires it.
+            .append("  |> group(columns: [\"meter_code\", \"energy_type\", \"_start\", \"_stop\"])\n")
             .append("  |> integral(unit: 1h)\n")
             .append("  |> keep(columns: [\"meter_code\", \"energy_type\", \"_value\"])")
             .toString();

@@ -133,7 +133,8 @@ export default function FloorplanEditorPage() {
         meterId: pickMeter,
         xRatio,
         yRatio,
-        label: meter ? meter.code : null,
+        // 缺省用 name 做用户可读的显示；想自定义可在右侧表格里改
+        label: meter ? meter.name : null,
       },
     ]);
     setPickMeter(undefined);
@@ -235,7 +236,11 @@ export default function FloorplanEditorPage() {
                       <Text
                         x={12}
                         y={-6}
-                        text={p.label ?? meter?.code ?? `M${p.meterId}`}
+                        text={
+                          p.label && p.label !== meter?.code
+                            ? p.label
+                            : meter?.name ?? meter?.code ?? `M${p.meterId}`
+                        }
                         fontSize={12}
                         fill={tokens.labelText}
                         shadowColor="black"

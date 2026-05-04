@@ -334,7 +334,8 @@ public class DashboardServiceImpl implements DashboardService {
         List<SankeyDTO.Node> nodes = new ArrayList<>(involved.size());
         for (Long id : involved) {
             MeterRecord m = byId.get(id);
-            String label = m.code() + (m.name() != null ? " " + m.name() : "");
+            // 用户视图优先显示名称；缺失时回落到编码。
+            String label = m.name() != null && !m.name().isBlank() ? m.name() : m.code();
             nodes.add(new SankeyDTO.Node(String.valueOf(id), label, m.energyTypeCode(), m.unit()));
         }
         nodes.sort(Comparator.comparing(SankeyDTO.Node::id));

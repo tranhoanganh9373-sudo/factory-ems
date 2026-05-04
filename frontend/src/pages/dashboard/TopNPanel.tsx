@@ -37,13 +37,31 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
       width: 60,
       render: (_, __, idx) => idx + 1,
     },
-    { title: '编码', dataIndex: 'code', key: 'code', width: 120 },
     {
-      title: '名称',
+      title: '测点',
       dataIndex: 'name',
       key: 'name',
-      render: (name, record) =>
-        onMeterClick ? <a onClick={() => onMeterClick(record.meterId)}>{name}</a> : name,
+      render: (name, record) => {
+        const primary = name || record.code;
+        const node = onMeterClick ? (
+          <a onClick={() => onMeterClick(record.meterId)}>{primary}</a>
+        ) : (
+          primary
+        );
+        return (
+          <span>
+            {node}
+            {name && record.code ? (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12, marginLeft: 8 }}
+              >
+                {record.code}
+              </Typography.Text>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       title: '能源类型',
