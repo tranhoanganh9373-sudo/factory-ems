@@ -425,6 +425,51 @@ EMS 端在 `/alarm/webhook` 只能配一个 URL（首版限制），所以三种
 
 ---
 
+## §6.5 拓扑一致性自动报警 (v1.1.5)
+
+`alarm_type = TOPOLOGY_NEGATIVE_RESIDUAL` is fired hourly when a parent meter's reading deviates more than 15% below its direct children's sum (negative residual = data quality issue: CT mis-multiplier / wrong topology / duplicated submeter). It auto-acks when the deviation recovers to within 10%.
+
+**Webhook payload fields populated in `detail`:**
+
+- `parent_code`, `parent_name` — the parent meter
+- `energy_type` — e.g. `ELEC`
+- `residual_ratio` — negative number, e.g. `-0.184` (i.e. -18.4%)
+- `children_count` — direct children participating in the comparison
+- `trigger_threshold`, `exit_threshold` — currently `-0.15` / `-0.10`
+- `first_seen_at` — ISO-8601 timestamp
+- (recovery only) `auto_ack_reason`, `auto_ack_at`, `recovery_ratio`
+
+The `X-EMS-Event` header is `alarm.triggered` for ENTER and `alarm.resolved` for the auto-ack EXIT (this is the only alarm type that fires both; see §6 for general behavior).
+
+**Recommended bridge-rendered templates:**
+
+ENTER (Feishu / email / SMS body):
+
+```
+【数据质量】{parent_name} 子表合计与父表偏差 {residual_ratio*100:.1f}%（>15% 阈值），
+可能 CT 倍率错 / 拓扑错配。详情 → /alarms/health
+```
+
+EXIT / auto-ack:
+
+```
+【数据质量】{parent_name} 拓扑残差已恢复至 {recovery_ratio*100:.1f}%，自动 ack。
+```
+
+For Python bridges (§3-§5), select on `event` then format `detail` accordingly. Example branch (Feishu, after the existing `event == "alarm.triggered"` block):
+
+```python
+if alarm_type == "TOPOLOGY_NEGATIVE_RESIDUAL":
+    if event == "alarm.triggered":
+        ratio_pct = detail["residual_ratio"] * 100
+        text = f"【数据质量】{detail['parent_name']} 子表合计与父表偏差 {ratio_pct:.1f}%（>15% 阈值），可能 CT 倍率错 / 拓扑错配。详情 → /alarms/health"
+    else:
+        ratio_pct = detail.get("recovery_ratio", 0) * 100
+        text = f"【数据质量】{detail['parent_name']} 拓扑残差已恢复至 {ratio_pct:.1f}%，自动 ack。"
+```
+
+---
+
 ## §8 已知限制与路线图
 
 - **首版只能配 1 个全局 Webhook**：上面的"扇出"是临时方案；v2.x 计划支持多端点 + 按端点分流（见 [alarm-feature-overview.md §5](./alarm-feature-overview.md)）。

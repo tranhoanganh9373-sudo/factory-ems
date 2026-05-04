@@ -1,6 +1,7 @@
 package com.ems.alarm.service.impl;
 
 import com.ems.alarm.entity.Alarm;
+import com.ems.alarm.entity.AlarmType;
 import com.ems.alarm.service.AlarmDispatcher;
 import com.ems.alarm.service.InAppChannel;
 import com.ems.alarm.service.WebhookChannel;
@@ -26,6 +27,10 @@ public class AlarmDispatcherImpl implements AlarmDispatcher {
     @Override
     public void dispatchResolved(Alarm a) {
         inApp.sendResolved(a);
-        // 首版恢复事件不发 webhook
+        // v1.1.5: topology auto-recovery should notify operators via webhook too.
+        // Other alarm types preserve the original "no resolve webhook" behavior.
+        if (a.getAlarmType() == AlarmType.TOPOLOGY_NEGATIVE_RESIDUAL) {
+            webhook.sendResolved(a);
+        }
     }
 }
