@@ -69,7 +69,6 @@ class DashboardServiceImplPvKpiTest {
         var gridOut = meter(2L, MeterRole.GRID_TIE, EnergySource.GRID, FlowDirection.EXPORT);
         var solar   = meter(3L, MeterRole.GENERATE, EnergySource.SOLAR, FlowDirection.IMPORT);
         when(support.resolveMeters(any(), any())).thenReturn(List.of(gridIn, gridOut, solar));
-        when(support.filterToVisibleRoots(any())).thenAnswer(inv -> inv.getArgument(0));
         when(tsq.sumByEnergyType(argThat(refs -> refs != null && refs.size() == 1
                 && refs.iterator().next().meterId() == 1L), any())).thenReturn(Map.of("ELEC", 1000.0));
         when(tsq.sumByEnergyType(argThat(refs -> refs != null && refs.size() == 1
