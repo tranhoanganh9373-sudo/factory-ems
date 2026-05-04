@@ -8,10 +8,12 @@ import { billsApi, type BillDTO, type BillPeriodStatus } from '@/api/bills';
 import { type EnergyTypeCode } from '@/api/cost';
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { submitExport, pollExport, downloadBlob } from '@/api/reportPreset';
+import { useFeatureFlags } from '@/api/features';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import { HELP_BILL_LIST } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
+import { SavingsPanel } from './SavingsPanel';
 
 const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
   OPEN: { tone: 'info', label: '开放' },
@@ -106,6 +108,7 @@ export default function BillsListPage() {
   });
 
   const selectedPeriod = periods.find((p) => p.id === periodId);
+  const { data: features } = useFeatureFlags();
 
   async function handleExport() {
     if (!selectedPeriod) {
@@ -152,6 +155,13 @@ export default function BillsListPage() {
   return (
     <>
       <PageHeader title="账单列表" helpContent={HELP_BILL_LIST} />
+      {features?.pv && orgNodeId != null && selectedPeriod != null && (
+        <SavingsPanel
+          orgNodeId={orgNodeId}
+          from={selectedPeriod.periodStart.slice(0, 10)}
+          to={selectedPeriod.periodEnd.slice(0, 10)}
+        />
+      )}
       <Card
         extra={
           <Button
