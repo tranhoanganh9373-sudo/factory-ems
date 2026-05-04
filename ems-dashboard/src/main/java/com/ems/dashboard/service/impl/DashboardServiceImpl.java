@@ -23,6 +23,7 @@ import com.ems.timeseries.model.Granularity;
 import com.ems.timeseries.model.MeterPoint;
 import com.ems.timeseries.model.TimePoint;
 import com.ems.timeseries.model.TimeRange;
+import com.ems.dashboard.service.SolarSelfConsumptionService;
 import com.ems.timeseries.query.TimeSeriesQueryService;
 import com.ems.timeseries.query.TimeSeriesQueryService.MeterRef;
 import org.springframework.stereotype.Service;
@@ -57,13 +58,15 @@ public class DashboardServiceImpl implements DashboardService {
     private final MeterTopologyRepository topology;
     private final FloorplanService floorplans;
     private final PvFeatureProperties pvProps;
+    private final SolarSelfConsumptionService selfConsumption;
 
     public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
                                 TariffService tariff, EnergyTypeRepository energyTypes,
                                 ProductionEntryService production,
                                 MeterTopologyRepository topology,
                                 FloorplanService floorplans,
-                                PvFeatureProperties pvProps) {
+                                PvFeatureProperties pvProps,
+                                SolarSelfConsumptionService selfConsumption) {
         this.support = support;
         this.tsq = tsq;
         this.tariff = tariff;
@@ -72,6 +75,7 @@ public class DashboardServiceImpl implements DashboardService {
         this.topology = topology;
         this.floorplans = floorplans;
         this.pvProps = pvProps;
+        this.selfConsumption = selfConsumption;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -267,6 +271,15 @@ public class DashboardServiceImpl implements DashboardService {
         });
         out.sort(Comparator.comparing(d -> d.energySource().name()));
         return out;
+    }
+
+    /* ---------------- ③c PV curve (PV-gated) ---------------- */
+
+    @Override
+    public PvCurveDTO pvCurve(RangeQuery query) {
+        if (!pvProps.enabled()) return new PvCurveDTO("kWh", List.of());
+        TimeRange range = RangeResolver.resolve(query);
+        return selfConsumption.curve(query.orgNodeId(), range);
     }
 
     /* ---------------- ④ Meter detail ---------------- */
