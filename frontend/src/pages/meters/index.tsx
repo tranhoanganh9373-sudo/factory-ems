@@ -197,6 +197,9 @@ export default function MetersPage() {
         'enabled',
         'channelName',
         'channelPointKey',
+        'role',
+        'energySource',
+        'flowDirection',
       ],
       data: meters.map((m) => [
         m.code,
@@ -206,6 +209,9 @@ export default function MetersPage() {
         m.enabled ? 'true' : 'false',
         m.channelId != null ? (channelNameById.get(m.channelId) ?? '') : '',
         m.channelPointKey ?? '',
+        m.role ?? '',
+        m.energySource ?? '',
+        m.flowDirection ?? '',
       ]),
     });
     // Excel 打开 UTF-8 CSV 默认按 GBK 解码会乱码，加 BOM 提示编码
