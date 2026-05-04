@@ -63,6 +63,12 @@ public class Bill {
     @Column(name = "unit_intensity", precision = 18, scale = 6)
     private BigDecimal unitIntensity;
 
+    @Column(name = "feed_in_revenue", nullable = false, precision = 20, scale = 4)
+    private BigDecimal feedInRevenue = BigDecimal.ZERO;
+
+    @Column(name = "net_amount", precision = 20, scale = 4)
+    private BigDecimal netAmount;
+
     @Version
     @Column(nullable = false)
     private Long version = 0L;
@@ -99,6 +105,8 @@ public class Bill {
     public BigDecimal getProductionQty() { return productionQty; }
     public BigDecimal getUnitCost() { return unitCost; }
     public BigDecimal getUnitIntensity() { return unitIntensity; }
+    public BigDecimal getFeedInRevenue() { return feedInRevenue; }
+    public BigDecimal getNetAmount() { return netAmount; }
     public Long getVersion() { return version; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
@@ -117,4 +125,6 @@ public class Bill {
     public void setProductionQty(BigDecimal v) { this.productionQty = v; }
     public void setUnitCost(BigDecimal v) { this.unitCost = v; }
     public void setUnitIntensity(BigDecimal v) { this.unitIntensity = v; }
+    public void setFeedInRevenue(BigDecimal v) { this.feedInRevenue = v; }
+    public void setNetAmount(BigDecimal v) { this.netAmount = v; }
 }
