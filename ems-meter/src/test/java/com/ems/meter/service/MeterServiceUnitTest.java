@@ -63,7 +63,7 @@ class MeterServiceUnitTest {
     void create_duplicateCode_throwsConflict() {
         when(meters.existsByCode("M1")).thenReturn(true);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "电表 1", 1L, 10L, true, null, null, null)))
+                "M1", "电表 1", 1L, 10L, true, null, null, null, null, null, null)))
             .isInstanceOf(BusinessException.class);
     }
 
@@ -72,7 +72,7 @@ class MeterServiceUnitTest {
         when(meters.existsByCode(anyString())).thenReturn(false);
         when(energyTypes.findById(99L)).thenReturn(Optional.empty());
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 99L, 10L, true, null, null, null)))
+                "M1", "x", 99L, 10L, true, null, null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -82,7 +82,7 @@ class MeterServiceUnitTest {
         when(energyTypes.findById(1L)).thenReturn(Optional.of(elec()));
         when(orgNodes.existsById(99L)).thenReturn(false);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 1L, 99L, true, null, null, null)))
+                "M1", "x", 1L, 99L, true, null, null, null, null, null, null)))
             .isInstanceOf(NotFoundException.class);
     }
 
@@ -96,7 +96,7 @@ class MeterServiceUnitTest {
             .when(meters).save(captor.capture());
 
         var dto = svc.create(new CreateMeterReq(
-            "M1", "电表 1", 1L, 10L, null, null, null, null));
+            "M1", "电表 1", 1L, 10L, null, null, null, null, null, null, null));
 
         assertThat(dto.id()).isEqualTo(42L);
         assertThat(dto.energyTypeCode()).isEqualTo("ELEC");
@@ -120,7 +120,7 @@ class MeterServiceUnitTest {
             .when(meters).save(captor.capture());
 
         var dto = svc.create(new CreateMeterReq(
-            "M1", "电表 1", 1L, 10L, true, 7L, "v1.power", null));
+            "M1", "电表 1", 1L, 10L, true, 7L, "v1.power", null, null, null, null));
 
         assertThat(captor.getValue().getChannelId()).isEqualTo(7L);
         assertThat(captor.getValue().getChannelPointKey()).isEqualTo("v1.power");
@@ -134,7 +134,7 @@ class MeterServiceUnitTest {
         when(energyTypes.findById(1L)).thenReturn(Optional.of(elec()));
         when(orgNodes.existsById(10L)).thenReturn(true);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 1L, 10L, true, 7L, null, null)))
+                "M1", "x", 1L, 10L, true, 7L, null, null, null, null, null)))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("channelPointKey");
         verify(meters, never()).save(any());
@@ -146,7 +146,7 @@ class MeterServiceUnitTest {
         when(energyTypes.findById(1L)).thenReturn(Optional.of(elec()));
         when(orgNodes.existsById(10L)).thenReturn(true);
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M1", "x", 1L, 10L, true, null, "v1.power", null)))
+                "M1", "x", 1L, 10L, true, null, "v1.power", null, null, null, null)))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("channelPointKey");
         verify(meters, never()).save(any());
@@ -162,7 +162,7 @@ class MeterServiceUnitTest {
             .when(meters).save(captor.capture());
 
         // channelId=null + channelPointKey="  " 应被归一化为 (null, null)，不抛错
-        svc.create(new CreateMeterReq("M1", "x", 1L, 10L, true, null, "  ", null));
+        svc.create(new CreateMeterReq("M1", "x", 1L, 10L, true, null, "  ", null, null, null, null));
 
         assertThat(captor.getValue().getChannelId()).isNull();
         assertThat(captor.getValue().getChannelPointKey()).isNull();
@@ -196,7 +196,7 @@ class MeterServiceUnitTest {
         when(meters.findById(1L)).thenReturn(Optional.of(m));
         when(meters.existsByCode("NEW")).thenReturn(true);
         assertThatThrownBy(() -> svc.update(1L, new UpdateMeterReq(
-                "NEW", "x", 1L, 10L, true, null, null, null)))
+                "NEW", "x", 1L, 10L, true, null, null, null, null, null, null)))
             .isInstanceOf(BusinessException.class);
     }
 
@@ -211,7 +211,7 @@ class MeterServiceUnitTest {
         when(orgNodes.existsById(10L)).thenReturn(true);
         when(topology.findByChildMeterId(1L)).thenReturn(Optional.empty());
 
-        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, null, null, null));
+        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, null, null, null, null, null, null));
 
         assertThat(m.getInfluxMeasurement()).isEqualTo(GLOBAL_MEASUREMENT);
         assertThat(m.getInfluxTagKey()).isEqualTo("meter_code");
@@ -227,7 +227,7 @@ class MeterServiceUnitTest {
         when(orgNodes.existsById(10L)).thenReturn(true);
         when(topology.findByChildMeterId(1L)).thenReturn(Optional.empty());
 
-        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, 7L, "new.key", null));
+        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, 7L, "new.key", null, null, null, null));
 
         assertThat(m.getChannelPointKey()).isEqualTo("new.key");
     }
@@ -242,7 +242,7 @@ class MeterServiceUnitTest {
             .thenReturn(Optional.of(occupant));
 
         assertThatThrownBy(() -> svc.create(new CreateMeterReq(
-                "M2", "x", 1L, 10L, true, 7L, "shared.key", null)))
+                "M2", "x", 1L, 10L, true, 7L, "shared.key", null, null, null, null)))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("shared.key");
         verify(meters, never()).save(any());
@@ -261,7 +261,7 @@ class MeterServiceUnitTest {
             .thenReturn(Optional.of(other));
 
         assertThatThrownBy(() -> svc.update(1L, new UpdateMeterReq(
-                "M1", "x", 1L, 10L, true, 7L, "shared.key", null)))
+                "M1", "x", 1L, 10L, true, 7L, "shared.key", null, null, null, null)))
             .isInstanceOf(BusinessException.class)
             .hasMessageContaining("shared.key");
     }
@@ -278,7 +278,7 @@ class MeterServiceUnitTest {
         when(meters.findByChannelIdAndChannelPointKey(7L, "my.key"))
             .thenReturn(Optional.of(self));
 
-        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, 7L, "my.key", null));
+        svc.update(1L, new UpdateMeterReq("M1", "x", 1L, 10L, true, 7L, "my.key", null, null, null, null));
 
         assertThat(self.getChannelPointKey()).isEqualTo("my.key");
     }
@@ -288,7 +288,7 @@ class MeterServiceUnitTest {
         Meter m = new Meter(); m.setId(1L); m.setCode("M1");
         when(meters.findById(1L)).thenReturn(Optional.of(m));
         assertThatThrownBy(() -> svc.update(1L, new UpdateMeterReq(
-                "M1", "x", 1L, 10L, true, 7L, null, null)))
+                "M1", "x", 1L, 10L, true, 7L, null, null, null, null, null)))
             .isInstanceOf(BusinessException.class);
     }
 
