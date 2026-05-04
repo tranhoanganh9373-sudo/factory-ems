@@ -4,10 +4,26 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { InboxOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { meterApi, type CreateMeterReq, type MeterImportRow } from '@/api/meter';
+import { meterApi, type CreateMeterReq, type MeterImportRow, type MeterRole, type EnergySource, type FlowDirection } from '@/api/meter';
 import { channelApi } from '@/api/channel';
 
 type RowStatus = 'pending' | 'loading' | 'success' | 'skip' | 'fail';
+
+const ROLE_LABEL: Record<MeterRole, string> = {
+  CONSUME: '纯耗电',
+  GENERATE: '光伏发电',
+  GRID_TIE: '并网点',
+};
+const SOURCE_LABEL: Record<EnergySource, string> = {
+  GRID: '电网',
+  SOLAR: '光伏',
+  WIND: '风电',
+  STORAGE: '储能',
+};
+const DIR_LABEL: Record<FlowDirection, string> = {
+  IMPORT: '进口',
+  EXPORT: '出口',
+};
 
 interface ImportRow {
   index: number;
@@ -137,6 +153,9 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
         channelId,
         channelPointKey,
         valueKind: row.body.valueKind ?? 'INTERVAL_DELTA',
+        role: row.body.role ?? 'CONSUME',
+        energySource: row.body.energySource ?? 'GRID',
+        flowDirection: row.body.flowDirection ?? 'IMPORT',
       };
 
       try {
@@ -215,7 +234,7 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
         </p>
         <p className="ant-upload-hint">
           表头：code, name, energyTypeId, orgNodeId（必填）；enabled, channelName,
-          channelPointKey（可选； 若不填 channelPointKey 则默认与 code 相同，向后兼容）
+          channelPointKey, role, energySource, flowDirection（可选；若不填则使用服务端默认值）
         </p>
       </Upload.Dragger>
 
@@ -231,6 +250,27 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
             { title: 'code', dataIndex: 'code', width: 200 },
             { title: '名称', dataIndex: 'name', ellipsis: true },
             { title: '通道', dataIndex: 'channelLabel', width: 140 },
+            {
+              title: '角色',
+              key: 'role',
+              width: 90,
+              render: (_: unknown, r: ImportRow) =>
+                r.body.role ? (ROLE_LABEL[r.body.role] ?? r.body.role) : '—',
+            },
+            {
+              title: '来源',
+              key: 'energySource',
+              width: 70,
+              render: (_: unknown, r: ImportRow) =>
+                r.body.energySource ? (SOURCE_LABEL[r.body.energySource] ?? r.body.energySource) : '—',
+            },
+            {
+              title: '方向',
+              key: 'flowDirection',
+              width: 60,
+              render: (_: unknown, r: ImportRow) =>
+                r.body.flowDirection ? (DIR_LABEL[r.body.flowDirection] ?? r.body.flowDirection) : '—',
+            },
             {
               title: '状态',
               dataIndex: 'status',
