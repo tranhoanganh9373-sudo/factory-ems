@@ -166,6 +166,64 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 ---
 
+### §1.7 批量 CSV 解析（v1.1.0+）
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "channels=@channels.csv" \
+  -F "points=@points.csv" \
+  http://localhost:8888/api/v1/channel/parse-csv
+```
+
+- **路径**：`POST /api/v1/channel/parse-csv`
+- **角色**：ADMIN
+- **Content-Type**：`multipart/form-data`
+- **请求字段**：
+  - `channels`（必填，文件）：通道清单 CSV，表头 `name, protocol` + 协议特定列
+  - `points`（必填，文件）：测点清单 CSV，表头 `channelName, key, address, dataType` + 协议特定列
+- **功能**：解析两份 CSV 并返回 `ChannelDTO[]`，**不立即落库**——前端拿到列表后逐条调 `POST /channel` 创建
+
+→ `200 OK` 返回 `List<ChannelDTO>`：
+
+```json
+[
+  {
+    "id": null,
+    "name": "Line-A-Modbus",
+    "protocol": "MODBUS_TCP",
+    "protocolConfig": {
+      "host": "192.168.10.20",
+      "port": 502,
+      "unitId": 1,
+      "pollInterval": "PT5S",
+      "points": [
+        {"key": "active_power", "address": 40001, "dataType": "F32"}
+      ]
+    },
+    "description": null,
+    "createdAt": null,
+    "updatedAt": null
+  }
+]
+```
+
+> 解析后 `id` 为 null，落库后由后续 `POST /channel` 返回真实 ID。同名通道在创建阶段会被 409 拒绝；前端把这些标"已存在"。
+
+#### 错误响应
+
+| HTTP | 触发场景 | 说明 |
+|------|---------|------|
+| 400 | CSV 表头缺列 / 协议名拼错 / 测点 channelName 找不到对应通道 | `IllegalArgumentException` 经 `GlobalExceptionHandler` 映射；message 含失败行号 |
+| 401 | 未携带 token | — |
+| 403 | 非 ADMIN | — |
+| 413 | 文件超 256KB（全局 `spring.servlet.multipart.max-file-size`） | — |
+
+#### 实现备注
+
+后端入口 `ChannelController.parseCsv()`（`ems-collector/src/main/java/com/ems/collector/channel/ChannelController.java:103-111`）；解析逻辑 `ChannelCsvParser.parse(channelsIn, pointsIn)`。前端 UX 见 [collector-protocols-user-guide.md §3.4](../product/collector-protocols-user-guide.md)。
+
+---
+
 ## §2 Collector 诊断（`/api/v1/collector`）
 
 ADMIN 或 OPERATOR 可访问。

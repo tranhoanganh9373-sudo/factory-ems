@@ -1,6 +1,6 @@
 # 采集中断报警 · 功能概览
 
-> 适用版本：v1.6.0+ ｜ 最近更新：2026-04-29
+> 适用版本：v1.6.0+ ｜ 最近更新：2026-05-04
 
 ---
 
@@ -38,6 +38,8 @@
 - **站内通知**：管理员和运维人员登录后看得到铃铛角标和通知抽屉，系统每 30 秒轮询一次，不需要额外客户端。
 - **Webhook 外发**：报警触发时推送到企业自定义地址，载荷用 HMAC-SHA256（消息签名标准）保证安全，发送失败会自动重试并记录下发流水。
 - **健康总览看板**：一屏展示全场设备的采集健康状态，内置"近 7 天报警最多 Top10 设备"排行，快速定位高频异常源。
+- **真实在线状态判定**（v1.1.0+）：基于 `DiagnosticRingBuffer.lastGoodSampleAt` + 5 分钟新鲜度窗口判断在线/离线，不再依赖 enabled 标志，与表计列表页「采集状态」列同口径。维护模式下走独立分支，避免被误判离线。
+- **表计粒度状态端点**（v1.1.0+）：`GET /api/v1/alarms/meter-status` 返回 `meterId → ONLINE | OFFLINE | MAINTENANCE` 映射，供 `/meters` 列表页联表渲染状态列；与 `/health-summary` 卡共享同一计算逻辑，保证一屏内每个数字对得上。
 
 ---
 
@@ -114,3 +116,9 @@ ems-billing / ems-cost ────间接受益于数据完整性
 - 配置参考：[alarm-config-reference.md](./alarm-config-reference.md)
 - API 参考：[../api/alarm-api.md](../api/alarm-api.md)
 - 运维手册：[../ops/alarm-runbook.md](../ops/alarm-runbook.md)
+
+---
+
+## §8 v1.1.0 变更记录
+
+- **2026-05-03**：新增 `GET /api/v1/alarms/meter-status` 端点（`MeterOnlineState` 枚举：ONLINE / OFFLINE / MAINTENANCE）；`AlarmService.healthSummary()` 重构为复用 `computeMeterOnlineStatuses()` 私有方法，端点与卡片口径强一致。`HealthSummaryDTO` 增加 `maintenanceCount` 字段。修复"6 个仪表中 2 个离线但前端显示 6 个全部在线"的视觉割裂问题。
