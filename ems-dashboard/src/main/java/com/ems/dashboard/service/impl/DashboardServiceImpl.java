@@ -127,18 +127,17 @@ public class DashboardServiceImpl implements DashboardService {
         boolean hasPvOrGridTie = !gridImport.isEmpty() || !gridExport.isEmpty() || !generateMeters.isEmpty();
         if (!hasPvOrGridTie) return legacyKpi(consumeMeters, range);
 
-        List<MeterRecord> consumeRoots = support.filterToVisibleRoots(consumeMeters);
         Map<String, String> unitOf = unitByEnergyType(meters);
 
-        Map<String, Double> cur = computeTotal(consumeRoots, gridImport, gridExport, generateMeters, range);
+        Map<String, Double> cur = computeTotal(gridImport, gridExport, generateMeters, range);
         long len = range.durationSeconds();
-        Map<String, Double> prev = computeTotal(consumeRoots, gridImport, gridExport, generateMeters,
+        Map<String, Double> prev = computeTotal(gridImport, gridExport, generateMeters,
                                                 RangeResolver.shiftBack(range, len));
         TimeRange yoyRange = new TimeRange(
             range.start().atZone(RangeResolver.ZONE).minusYears(1).toInstant(),
             range.end().atZone(RangeResolver.ZONE).minusYears(1).toInstant()
         );
-        Map<String, Double> prevYear = computeTotal(consumeRoots, gridImport, gridExport, generateMeters, yoyRange);
+        Map<String, Double> prevYear = computeTotal(gridImport, gridExport, generateMeters, yoyRange);
 
         List<KpiDTO> out = new ArrayList<>(cur.size());
         cur.forEach((type, v) -> out.add(new KpiDTO(
@@ -150,8 +149,7 @@ public class DashboardServiceImpl implements DashboardService {
         return out;
     }
 
-    private Map<String, Double> computeTotal(List<MeterRecord> consumeRoots,
-                                             List<MeterRecord> gridImport,
+    private Map<String, Double> computeTotal(List<MeterRecord> gridImport,
                                              List<MeterRecord> gridExport,
                                              List<MeterRecord> generateMeters,
                                              TimeRange range) {
