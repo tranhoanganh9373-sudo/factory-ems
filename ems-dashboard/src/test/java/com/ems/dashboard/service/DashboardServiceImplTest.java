@@ -193,7 +193,7 @@ class DashboardServiceImplTest {
             1L, 100.0, 2L, 50.0, 3L, 200.0
         ));
 
-        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 2);
+        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 2, "ALL");
         assertThat(out).hasSize(2);
         assertThat(out.get(0).meterId()).isEqualTo(3L);
         assertThat(out.get(0).total()).isEqualTo(200.0);
@@ -204,7 +204,7 @@ class DashboardServiceImplTest {
     void topN_zeroLimit_defaultsTo10() {
         when(support.resolveMeters(any(), any())).thenReturn(List.of(M1, M2));
         when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 1.0, 2L, 2.0));
-        assertThat(svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 0)).hasSize(2);
+        assertThat(svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 0, "ALL")).hasSize(2);
     }
 
     @Test
@@ -212,7 +212,7 @@ class DashboardServiceImplTest {
         when(support.resolveMeters(any(), any())).thenReturn(List.of(M1, M2));
         when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(2L, 5.0));
         // M1 没有数据 → total = 0，应排在 M2 后面
-        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 10);
+        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 10, "ALL");
         assertThat(out).hasSize(2);
         assertThat(out.get(0).meterId()).isEqualTo(2L);
         assertThat(out.get(1).meterId()).isEqualTo(1L);

@@ -25,8 +25,12 @@ public interface DashboardService {
     /** ④ 测点详情：单测点曲线 + 累计。 */
     MeterDetailDTO meterDetail(Long meterId, RangeQuery query);
 
-    /** ⑤ Top-N：按测点累计排名，topN 默认 10。 */
-    List<TopNItemDTO> topN(RangeQuery query, int topN);
+    /**
+     * ⑤ Top-N：按测点累计排名。
+     * @param topN 排名条数（≤0 视为 10）
+     * @param scope 拓扑筛选：LEAVES (默认，仅叶子表) / ROOTS (仅根表) / ALL (全部)；null/空白按 LEAVES 处理。
+     */
+    List<TopNItemDTO> topN(RangeQuery query, int topN, String scope);
 
     /** ⑥ 尖峰平谷分布：电耗按 tariff 时段类型聚合 + 占比。 */
     TariffDistributionDTO tariffDistribution(RangeQuery query);
@@ -39,4 +43,16 @@ public interface DashboardService {
 
     /** ⑨ 平面图实时：底图 + 测点 + 当期累计 + 热力等级。 */
     FloorplanLiveDTO floorplanLive(Long floorplanId, RangeQuery query);
+
+    /**
+     * ⑩ 用电细分：visible 集合的根表 → 直接子表 + 其他/未分摊。
+     * 残差 = root - Σ direct children (in visible set)；负残差表示数据/配置异常。
+     */
+    EnergyBreakdownDTO energyBreakdown(RangeQuery query);
+
+    /**
+     * ⑪ 拓扑一致性自检：遍历所有父子关系，对比父表读数与子表合计，输出残差 + severity。
+     * 仅返回 visible 范围内、severity != OK 的行。给"系统健康"面板用。
+     */
+    java.util.List<TopologyConsistencyDTO> topologyConsistency(RangeQuery query);
 }

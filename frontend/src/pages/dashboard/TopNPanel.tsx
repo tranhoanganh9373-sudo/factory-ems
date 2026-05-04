@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Select, Skeleton, Table, Typography } from 'antd';
+import { Alert, Select, Skeleton, Space, Table, Typography } from 'antd';
 import { EmptyState } from '@/components/EmptyState';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
@@ -12,6 +12,14 @@ const LIMIT_OPTIONS = [
   { label: 'Top 20', value: 20 },
 ];
 
+const SCOPE_OPTIONS = [
+  { label: '仅叶子表', value: 'LEAVES' as const },
+  { label: '仅根表', value: 'ROOTS' as const },
+  { label: '全部表', value: 'ALL' as const },
+];
+
+type Scope = 'LEAVES' | 'ROOTS' | 'ALL';
+
 interface TopNPanelProps {
   onMeterClick?: (meterId: number) => void;
 }
@@ -20,11 +28,20 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
   const { range, customFrom, customTo, orgNodeId, energyType } = useDashboardFilterStore();
   const isCustomReady = range !== 'CUSTOM' || (!!customFrom && !!customTo);
   const [limit, setLimit] = useState(10);
+  const [scope, setScope] = useState<Scope>('LEAVES');
 
   const { data, isLoading, isError } = useQuery<TopNItemDTO[]>({
-    queryKey: ['dashboard', 'topn', { range, customFrom, customTo, orgNodeId, energyType, limit }],
+    queryKey: [
+      'dashboard',
+      'topn',
+      { range, customFrom, customTo, orgNodeId, energyType, limit, scope },
+    ],
     queryFn: () =>
-      dashboardApi.getTopN({ range, from: customFrom, to: customTo, orgNodeId, energyType }, limit),
+      dashboardApi.getTopN(
+        { range, from: customFrom, to: customTo, orgNodeId, energyType },
+        limit,
+        scope,
+      ),
     enabled: isCustomReady,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
@@ -91,7 +108,20 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
         }}
       >
         <Typography.Text strong>综合排名</Typography.Text>
-        <Select options={LIMIT_OPTIONS} value={limit} onChange={setLimit} style={{ width: 100 }} />
+        <Space size="small">
+          <Select
+            options={SCOPE_OPTIONS}
+            value={scope}
+            onChange={setScope}
+            style={{ width: 110 }}
+          />
+          <Select
+            options={LIMIT_OPTIONS}
+            value={limit}
+            onChange={setLimit}
+            style={{ width: 100 }}
+          />
+        </Space>
       </div>
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 5 }} />

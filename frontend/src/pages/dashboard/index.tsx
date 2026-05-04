@@ -9,6 +9,7 @@ import FilterBar from './FilterBar';
 import KpiPanel from './KpiPanel';
 import RealtimeSeriesPanel from './RealtimeSeriesPanel';
 import EnergyCompositionPanel from './EnergyCompositionPanel';
+import EnergyBreakdownPanel from './EnergyBreakdownPanel';
 import TopNPanel from './TopNPanel';
 import MeterDetailDrawer from './MeterDetailDrawer';
 import TariffDistributionPanel from './TariffDistributionPanel';
@@ -112,6 +113,15 @@ export default function DashboardPage() {
         <Col xs={24} lg={8}>
           <DashboardSection>
             <EnergyCompositionPanel />
+          </DashboardSection>
+        </Col>
+      </Row>
+
+      {/* Row 3a: 用电细分（按测点）— 显式画 其他/未分摊 */}
+      <Row style={{ marginBottom: 16 }}>
+        <Col span={24}>
+          <DashboardSection>
+            <EnergyBreakdownPanel />
           </DashboardSection>
         </Col>
       </Row>

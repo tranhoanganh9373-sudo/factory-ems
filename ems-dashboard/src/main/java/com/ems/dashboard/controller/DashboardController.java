@@ -69,8 +69,9 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) Long orgNodeId,
             @RequestParam(required = false) String energyType,
-            @RequestParam(defaultValue = "10") int limit) {
-        return Result.ok(service.topN(new RangeQuery(range, from, to, orgNodeId, energyType), limit));
+            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(required = false) String scope) {
+        return Result.ok(service.topN(new RangeQuery(range, from, to, orgNodeId, energyType), limit, scope));
     }
 
     /** ⑥ 尖峰平谷分布 */
@@ -113,5 +114,26 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
             @RequestParam(required = false) Long orgNodeId) {
         return Result.ok(service.floorplanLive(id, new RangeQuery(range, from, to, orgNodeId, null)));
+    }
+
+    /** ⑩ 用电细分：根表 → 直接子表 + 其他/未分摊 */
+    @GetMapping("/energy-breakdown")
+    public Result<EnergyBreakdownDTO> energyBreakdown(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId,
+            @RequestParam(required = false, defaultValue = "ELEC") String energyType) {
+        return Result.ok(service.energyBreakdown(new RangeQuery(range, from, to, orgNodeId, energyType)));
+    }
+
+    /** ⑪ 拓扑一致性自检 */
+    @GetMapping("/topology-consistency")
+    public Result<List<TopologyConsistencyDTO>> topologyConsistency(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.topologyConsistency(new RangeQuery(range, from, to, orgNodeId, null)));
     }
 }

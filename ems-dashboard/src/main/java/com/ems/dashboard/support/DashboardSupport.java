@@ -6,14 +6,18 @@ import com.ems.meter.entity.EnergyType;
 import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterRepository;
+import com.ems.meter.service.MeterTopologyService;
 import com.ems.orgtree.service.OrgNodeService;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 看板权限/范围 + 测点解析的统一入口。
@@ -29,13 +33,16 @@ public class DashboardSupport {
     private final OrgNodeService orgNodes;
     private final MeterRepository meters;
     private final EnergyTypeRepository energyTypes;
+    private final MeterTopologyService topology;
 
     public DashboardSupport(PermissionResolver permissions, OrgNodeService orgNodes,
-                            MeterRepository meters, EnergyTypeRepository energyTypes) {
+                            MeterRepository meters, EnergyTypeRepository energyTypes,
+                            MeterTopologyService topology) {
         this.permissions = permissions;
         this.orgNodes = orgNodes;
         this.meters = meters;
         this.energyTypes = energyTypes;
+        this.topology = topology;
     }
 
     /** 解析当前请求的可见测点。energyType 为空则不过滤品类。 */
@@ -121,5 +128,47 @@ public class DashboardSupport {
             m.getEnabled(),
             m.getValueKind()
         );
+    }
+
+    /**
+     * 拓扑根聚合：保留 visible 集合中的"根"——一个表是根 iff
+     * (a) 它在 meter_topology 中没有父表，OR (b) 父表不在 visible 集合内（被 org / energyType 过滤掉了）。
+     *
+     * 用于 KPI / 实时曲线 / 能耗构成 三处的总量计算，避免父表 + 子表读数被同时累加。
+     */
+    public List<MeterRecord> filterToVisibleRoots(Collection<MeterRecord> visible) {
+        if (visible == null || visible.isEmpty()) return List.of();
+        Map<Long, Long> parentByChild = topology.parentMap();
+        Set<Long> visibleIds = visible.stream().map(MeterRecord::meterId).collect(Collectors.toSet());
+        List<MeterRecord> out = new ArrayList<>();
+        for (MeterRecord m : visible) {
+            Long parent = parentByChild.get(m.meterId());
+            if (parent == null || !visibleIds.contains(parent)) {
+                out.add(m);
+            }
+        }
+        return out;
+    }
+
+    /**
+     * 叶子聚合：visible 集合中没有任何子表也在 visible 集合内的表。用于 TopN 默认排名。
+     * 不返回根、也不返回中间层；纯叶子。
+     */
+    public List<MeterRecord> filterToVisibleLeaves(Collection<MeterRecord> visible) {
+        if (visible == null || visible.isEmpty()) return List.of();
+        Map<Long, Long> parentByChild = topology.parentMap();
+        Set<Long> visibleIds = visible.stream().map(MeterRecord::meterId).collect(Collectors.toSet());
+        // parents within visible set
+        Set<Long> parentsInVisible = new HashSet<>();
+        for (Map.Entry<Long, Long> e : parentByChild.entrySet()) {
+            if (visibleIds.contains(e.getKey()) && visibleIds.contains(e.getValue())) {
+                parentsInVisible.add(e.getValue());
+            }
+        }
+        List<MeterRecord> out = new ArrayList<>();
+        for (MeterRecord m : visible) {
+            if (!parentsInVisible.contains(m.meterId())) out.add(m);
+        }
+        return out;
     }
 }
