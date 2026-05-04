@@ -1,4 +1,4 @@
-# 采集中断告警（Acquisition Interruption Alarm）— 设计规格
+# 采集中断报警（Acquisition Interruption Alarm）— 设计规格
 
 - **作者**：factory-ems team
 - **日期**：2026-04-29
@@ -63,7 +63,7 @@
 
 1. `@Scheduled` 每 60s 触发 `AlarmDetector.scan()`
 2. 对每个启用设备解析阈值 → 检查静默超时 + 连续失败
-3. 命中且无活动告警 → 写入 `alarms`，调用 `AlarmDispatcher`
+3. 命中且无活动报警 → 写入 `alarms`，调用 `AlarmDispatcher`
 4. Dispatcher 同步写 `alarm_inbox`，异步触发 webhook（带 HMAC 签名 + 重试）
 5. 下一轮检测发现条件不再满足 → 自动 RESOLVED，站内补一条"已恢复"
 
@@ -73,7 +73,7 @@
 
 ### 2.1 新增表
 
-#### `alarms` — 告警事件主表
+#### `alarms` — 报警事件主表
 
 ```sql
 CREATE TABLE alarms (
@@ -205,13 +205,13 @@ public void scan() { ... }
 ### 3.3 状态机
 
 ```
-[无告警] —(命中)—> ACTIVE —(用户确认)—> ACKED
+[无报警] —(命中)—> ACTIVE —(用户确认)—> ACKED
                      |                       |
                      +——(数据恢复+过抑制窗)—> RESOLVED (AUTO)
 ```
 
 - **触发去重**：同 `(device_id, alarm_type)` 处于 ACTIVE/ACKED 不再创建新行，仅更新 `detail`
-- **抑制窗口**：从 RESOLVED 恢复后 5 分钟内不再触发同类告警（防抖）
+- **抑制窗口**：从 RESOLVED 恢复后 5 分钟内不再触发同类报警（防抖）
 - **自动恢复**：每轮反查 ACTIVE/ACKED 行，若条件不满足且距 `triggered_at > 抑制窗口` → RESOLVED + `AUTO`
 - **维护模式**：`maintenance_mode=true` 整段跳过
 
@@ -312,7 +312,7 @@ public interface WebhookAdapter {
 
 ### 4.4 关键解耦
 
-**Webhook 失败不影响告警状态。** `alarms.status` 仅由检测逻辑驱动；下发结果仅在 `webhook_delivery_log` 留痕。
+**Webhook 失败不影响报警状态。** `alarms.status` 仅由检测逻辑驱动；下发结果仅在 `webhook_delivery_log` 留痕。
 
 ---
 
@@ -320,7 +320,7 @@ public interface WebhookAdapter {
 
 所有路径前缀 `/api/v1`。沿用现有 JWT + 统一响应封装 + 1-indexed 分页。
 
-### 5.1 告警
+### 5.1 报警
 
 | Method | Path | 权限 | 说明 |
 |--------|------|------|------|
@@ -353,7 +353,7 @@ public interface WebhookAdapter {
 | GET | `/webhook-deliveries` | ADMIN |
 | POST | `/webhook-deliveries/{id}/retry` | ADMIN |
 
-> 重放仅重发原 payload，不刷新当前告警状态。
+> 重放仅重发原 payload，不刷新当前报警状态。
 
 ### 5.4 响应示例
 
@@ -393,7 +393,7 @@ public interface WebhookAdapter {
 | `components/AlarmBell.tsx` | 全局 | 顶栏铃铛 + 角标 |
 | `components/AlarmCenterDrawer.tsx` | 全局 | 通知中心抽屉 |
 | `pages/alarms/health.tsx` | `/alarms/health` | 健康总览（指标卡 + Top10 + 24h 折线） |
-| `pages/alarms/history.tsx` | `/alarms/history` | 告警历史，全字段筛选 |
+| `pages/alarms/history.tsx` | `/alarms/history` | 报警历史，全字段筛选 |
 | `pages/alarms/rules.tsx` | `/alarms/rules` | 默认值 + 设备覆盖（含维护开关） |
 | `pages/alarms/webhook.tsx` | `/alarms/webhook` | webhook 配置 + 测试 + 下发日志 |
 
@@ -403,8 +403,8 @@ public interface WebhookAdapter {
 
 | 文件 | 改动 |
 |------|------|
-| `pages/meter/list.tsx` | 增加状态列：在线 / 离线 / 告警 / 维护（Tag 颜色） |
-| `pages/meter/detail.tsx` | 顶部状态徽章 + 最近 5 条告警时间线 |
+| `pages/meter/list.tsx` | 增加状态列：在线 / 离线 / 报警 / 维护（Tag 颜色） |
+| `pages/meter/detail.tsx` | 顶部状态徽章 + 最近 5 条报警时间线 |
 | `pages/dashboard/index.tsx` | 新增"采集健康"卡片 |
 | `layouts/AppLayout.tsx` | 顶栏 `<AlarmBell />` + 菜单分组 |
 
@@ -426,7 +426,7 @@ const STATUS_COLOR = {
 ### 6.5 取舍
 
 - **30s 轮询**代替 WebSocket / SSE（架构无 WebSocket 基建）
-- **不做单告警弹窗**，铃铛 + 抽屉足够
+- **不做单报警弹窗**，铃铛 + 抽屉足够
 - 健康页（现状） vs 历史页（明细）拆分
 
 ---
@@ -489,7 +489,7 @@ const STATUS_COLOR = {
 1. 关 collector → 等 10min → 铃铛 +1，列表出现
 2. 配 webhook → 触发 → 接收方拿到带签名 payload
 3. 设备恢复 → 自动 RESOLVED + "已恢复"通知
-4. 手动维护模式 → 告警停发
+4. 手动维护模式 → 报警停发
 
 ### 7.3 性能基线
 - 1000 设备 / 1 分钟一轮：单轮 < 5s（基线）
@@ -531,7 +531,7 @@ const STATUS_COLOR = {
 - 邮件 / 短信 / IM 直连（首版仅 webhook，IM 通过 webhook 桥接）
 - 多 webhook 端点
 - 严重程度分级
-- 告警 SLA / 升级
+- 报警 SLA / 升级
 - 用户级订阅过滤
 - WebSocket / SSE 实时推送
 - 多实例分布式锁（ShedLock）
@@ -565,7 +565,7 @@ const STATUS_COLOR = {
 
 ## 11. 用户角色权限矩阵
 
-> 沿用 `ems-auth` 既有角色：`ADMIN`、`OPERATOR`、`VIEWER`、`FINANCE`。VIEWER/FINANCE 与告警无关，仅 ADMIN/OPERATOR 涉入。
+> 沿用 `ems-auth` 既有角色：`ADMIN`、`OPERATOR`、`VIEWER`、`FINANCE`。VIEWER/FINANCE 与报警无关，仅 ADMIN/OPERATOR 涉入。
 
 ### 11.1 端点权限
 
@@ -589,14 +589,14 @@ const STATUS_COLOR = {
 
 ### 11.2 站内通知接收人
 
-每条 ACTIVE / RESOLVED 告警写一行 `alarm_inbox` 给：
+每条 ACTIVE / RESOLVED 报警写一行 `alarm_inbox` 给：
 - `role IN ('ADMIN','OPERATOR') AND enabled=true` 的所有用户
 - VIEWER / FINANCE 不接收，前端铃铛对其隐藏（`@PreAuthorize` 覆盖）
 
 ### 11.3 设计取舍
 
-- **OPERATOR 能查看不能写**：值班场景下避免误确认；如需修改阈值或确认告警，找 ADMIN
-- **首版无"告警值班角色"**：商业化阶段如客户要求，再加 `ALARM_RESPONDER` 细分角色
+- **OPERATOR 能查看不能写**：值班场景下避免误确认；如需修改阈值或确认报警，找 ADMIN
+- **首版无"报警值班角色"**：商业化阶段如客户要求，再加 `ALARM_RESPONDER` 细分角色
 - **审计**：所有写操作（ack / resolve / override / webhook）通过 `@Audited` 写 `audit_logs`
 
 ---
@@ -607,10 +607,10 @@ const STATUS_COLOR = {
 
 | 参数 | 类型 | 默认 | 范围 | 含义 | 调优建议 |
 |------|------|------|------|------|---------|
-| `default-silent-timeout-seconds` | int | `600` | ≥ 1 | 全局静默超时阈值（秒）。设备无新数据超过此时长触发告警 | 高频采集（≤ 5s）：调到 60-120s；低频（≥ 60s）：调到 1800-3600s。一般为采集周期的 5-10 倍 |
-| `default-consecutive-fail-count` | int | `3` | ≥ 1 | 全局连续失败次数阈值。collector 连错此次数触发告警 | 网络稳定环境调 2-3；高干扰环境调 5-10 避免误报 |
+| `default-silent-timeout-seconds` | int | `600` | ≥ 1 | 全局静默超时阈值（秒）。设备无新数据超过此时长触发报警 | 高频采集（≤ 5s）：调到 60-120s；低频（≥ 60s）：调到 1800-3600s。一般为采集周期的 5-10 倍 |
+| `default-consecutive-fail-count` | int | `3` | ≥ 1 | 全局连续失败次数阈值。collector 连错此次数触发报警 | 网络稳定环境调 2-3；高干扰环境调 5-10 避免误报 |
 | `poll-interval-seconds` | int | `60` | ≥ 10 | 检测引擎扫描周期（秒）。每隔此时长扫一次所有设备 | < 100 设备：可调到 30；> 1000 设备：建议 120-180 减小 DB 压力 |
-| `suppression-window-seconds` | int | `300` | ≥ 0 | 抑制窗口（秒）。RESOLVED 后此时长内不再触发同类告警；ACTIVE 触发后此时长内不允许 AUTO 恢复 | 抖动设备调到 600-1800；稳定设备可调到 60-120 |
+| `suppression-window-seconds` | int | `300` | ≥ 0 | 抑制窗口（秒）。RESOLVED 后此时长内不再触发同类报警；ACTIVE 触发后此时长内不允许 AUTO 恢复 | 抖动设备调到 600-1800；稳定设备可调到 60-120 |
 | `webhook-retry-max` | int | `3` | ≥ 0 | Webhook 失败重试最大次数 | 接收方 SLA 高可调到 1-2；接收方不稳定可调到 5 |
 | `webhook-retry-backoff-seconds` | List<int> | `[10, 60, 300]` | 长度 ≥ retry-max，每项 ≥ 1 | 重试退避秒数数组。第 N 次重试等待此数组第 N-1 项秒数 | 长度必须 ≥ retry-max；常见 `[5,30,120]` 快重试或 `[60,600,3600]` 长退避 |
 | `webhook-timeout-default-ms` | int | `5000` | 1000-30000 | Webhook 默认超时（毫秒），`webhook_config.timeout_ms` 未设置时使用 | 内网接收方调 1000-2000；外网调 5000-10000 |
@@ -635,8 +635,8 @@ const STATUS_COLOR = {
 **场景 A：高可靠工控（电力/水务）**
 ```yaml
 ems.alarm:
-  default-silent-timeout-seconds: 120        # 2 分钟无数据即告警
-  default-consecutive-fail-count: 2          # 2 次失败立即告警
+  default-silent-timeout-seconds: 120        # 2 分钟无数据即报警
+  default-consecutive-fail-count: 2          # 2 次失败立即报警
   poll-interval-seconds: 30
   suppression-window-seconds: 60             # 短抑制窗，快速响应
   webhook-retry-max: 5
@@ -674,12 +674,12 @@ ems.alarm:
 | 字段 | 类型 | 必填 | 含义 | 示例值 |
 |------|------|:---:|------|--------|
 | `event` | string | ✅ | 事件类型枚举：`alarm.triggered` / `alarm.resolved` / `alarm.test` | `alarm.triggered` |
-| `alarm_id` | int | ✅ | 告警唯一 ID，可用于关联同一告警的不同事件 | `12345` |
+| `alarm_id` | int | ✅ | 报警唯一 ID，可用于关联同一报警的不同事件 | `12345` |
 | `device_id` | int | ✅ | 设备数据库 ID（= `meter.id`） | `88` |
 | `device_type` | string | ✅ | 设备类型枚举：`METER` / `COLLECTOR`（首版仅 METER） | `METER` |
 | `device_code` | string | ✅ | 设备编码（人类可读，如 `M-A01-001`） | `M-A01-001` |
 | `device_name` | string | ✅ | 设备名称（中文/工序描述） | `一号车间总表` |
-| `alarm_type` | string | ✅ | 告警类型：`SILENT_TIMEOUT` / `CONSECUTIVE_FAIL` | `SILENT_TIMEOUT` |
+| `alarm_type` | string | ✅ | 报警类型：`SILENT_TIMEOUT` / `CONSECUTIVE_FAIL` | `SILENT_TIMEOUT` |
 | `severity` | string | ✅ | 严重程度（首版仅 `WARNING`） | `WARNING` |
 | `triggered_at` | string | ✅ | ISO8601 触发时间（含时区） | `2026-04-29T08:15:30+08:00` |
 | `last_seen_at` | string | 否 | ISO8601 设备最后一次有数据时间。SILENT_TIMEOUT 必带；CONSECUTIVE_FAIL 可能为空 | `2026-04-29T08:00:12+08:00` |
@@ -710,7 +710,7 @@ ems.alarm:
 {
   "msgtype": "markdown",
   "markdown": {
-    "title": "[采集告警] {{device_code}}",
+    "title": "[采集报警] {{device_code}}",
     "text": "### ⚠️ 设备数据中断\n\n- **设备**：{{device_code}} {{device_name}}\n- **类型**：{{alarm_type}}\n- **触发**：{{triggered_at}}\n- **最后数据**：{{last_seen_at}}\n\n[查看详情](https://ems.example.com/alarms/history?id={{alarm_id}})"
   }
 }
@@ -755,9 +755,9 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 
 ```
                            ┌────────────────┐
-                           │   (无告警)     │
+                           │   (无报警)     │
                            └────────┬───────┘
-                                    │ 检测命中（且无活动告警）
+                                    │ 检测命中（且无活动报警）
                                     ▼
                           ┌──────────────────┐
                           │     ACTIVE       │
@@ -790,9 +790,9 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 
 | 状态 | UI 显示 | 含义 | 用户能做什么 | 后端行为 |
 |------|---------|------|-------------|---------|
-| **ACTIVE** | 🔴 红色 Tag「告警」/ 铃铛角标 +1 | 告警刚触发，未被任何用户处理 | ADMIN: 确认 / 手动恢复；OPERATOR: 仅查看 | 触发即写 webhook + 站内推送 |
+| **ACTIVE** | 🔴 红色 Tag「报警」/ 铃铛角标 +1 | 报警刚触发，未被任何用户处理 | ADMIN: 确认 / 手动恢复；OPERATOR: 仅查看 | 触发即写 webhook + 站内推送 |
 | **ACKED** | 🟡 黄色 Tag「已确认」/ 铃铛角标不再 +1 | 已被运维认领，正在处理 | ADMIN: 手动恢复；OPERATOR: 仅查看 | 等待自动恢复 |
-| **RESOLVED** | 🟢 绿色 Tag「已恢复」/ 仅在历史页可见 | 终态，告警已结束 | 仅查看（无操作） | 5min 抑制窗口结束后才允许同类型告警再次触发 |
+| **RESOLVED** | 🟢 绿色 Tag「已恢复」/ 仅在历史页可见 | 终态，报警已结束 | 仅查看（无操作） | 5min 抑制窗口结束后才允许同类型报警再次触发 |
 
 ### 14.3 各页面对状态的展示
 
@@ -800,9 +800,9 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 |------|-------------|------|
 | 全局铃铛角标 | `count(ACTIVE)` | — |
 | 通知中心抽屉 | 最新 20 条 ACTIVE | `triggered_at DESC` |
-| 健康总览 → "告警中" 卡 | `count(ACTIVE) + count(ACKED)` | — |
-| 告警历史页 | 全部状态（用筛选切） | `triggered_at DESC` |
-| 设备详情 → 告警时间线 | 该设备最近 5 条全状态 | `triggered_at DESC` |
+| 健康总览 → "报警中" 卡 | `count(ACTIVE) + count(ACKED)` | — |
+| 报警历史页 | 全部状态（用筛选切） | `triggered_at DESC` |
+| 设备详情 → 报警时间线 | 该设备最近 5 条全状态 | `triggered_at DESC` |
 
 ### 14.4 边界场景说明
 
@@ -810,10 +810,10 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 |------|---------|
 | 同设备同类型重复触发（已 ACTIVE/ACKED） | 不再创建新行，仅更新 `detail` JSONB |
 | 触发后立即恢复（< 5min） | 不会自动恢复（抑制窗口生效），等满 5min |
-| RESOLVED 后立即又中断（< 5min） | 不会触发新告警（抑制窗口生效），等满 5min |
+| RESOLVED 后立即又中断（< 5min） | 不会触发新报警（抑制窗口生效），等满 5min |
 | 设备从未上报（`last_seen IS NULL`） | 不触发 SILENT_TIMEOUT；连续失败仍可触发 |
-| `maintenance_mode=true` | 完全跳过该设备（不触发 / 不自动恢复 / 现存告警保持原状） |
-| collector 重启 | 内存 `consecutiveErrors` 清零，CONSECUTIVE_FAIL 类型告警可能延迟 N 个周期才再次触发；SILENT_TIMEOUT 不受影响 |
+| `maintenance_mode=true` | 完全跳过该设备（不触发 / 不自动恢复 / 现存报警保持原状） |
+| collector 重启 | 内存 `consecutiveErrors` 清零，CONSECUTIVE_FAIL 类型报警可能延迟 N 个周期才再次触发；SILENT_TIMEOUT 不受影响 |
 
 ---
 
@@ -823,9 +823,9 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 
 | 异常类 | HTTP | 触发场景 | 后端 message | 前端 Toast 文案 |
 |-------|------|---------|-------------|----------------|
-| `AlarmNotFoundException` | 404 | `/alarms/{id}` 路径中 id 不存在 | `Alarm not found: {id}` | `告警不存在或已被删除` |
-| `AlarmStateException` (ack from non-ACTIVE) | 409 | 对 ACKED/RESOLVED 告警调 ack | `Cannot ack alarm in status RESOLVED` | `该告警已确认或已恢复，无需重复操作` |
-| `AlarmStateException` (resolve from RESOLVED) | 409 | 对已 RESOLVED 告警再 resolve | `Already resolved` | `该告警已恢复` |
+| `AlarmNotFoundException` | 404 | `/alarms/{id}` 路径中 id 不存在 | `Alarm not found: {id}` | `报警不存在或已被删除` |
+| `AlarmStateException` (ack from non-ACTIVE) | 409 | 对 ACKED/RESOLVED 报警调 ack | `Cannot ack alarm in status RESOLVED` | `该报警已确认或已恢复，无需重复操作` |
+| `AlarmStateException` (resolve from RESOLVED) | 409 | 对已 RESOLVED 报警再 resolve | `Already resolved` | `该报警已恢复` |
 | `WebhookConfigInvalidException` (scheme) | 400 | URL 不是 http/https | `url scheme must be http or https` | `Webhook URL 必须以 http:// 或 https:// 开头` |
 | `WebhookConfigInvalidException` (timeout) | 400 | timeout < 1000 或 > 30000 | `timeoutMs must be in [1000, 30000]` | `超时时间必须在 1-30 秒之间` |
 | `NotFoundException` (override deviceId) | 404 | 查询不存在的 override | `AlarmRuleOverride not found: {id}` | `该设备未配置个性化阈值（沿用全局默认）` |
@@ -878,7 +878,7 @@ EMS → POST /your-adapter/dingtalk → 适配后 → 钉钉 webhook
 | 100–1000 设备 | 4 核 | 8 GB | 50 GB | 内网；webhook 出口若需外网另算 |
 | 1000–5000 设备 | 8 核 | 16 GB（Postgres 单独 4 GB） | 200 GB | 同上；建议独立 Postgres 实例 |
 
-> **存储估算依据**：每台设备每年最多触发 ~50 次告警 + 200 条派发日志；JSONB detail ~200 字节；inbox 按 5 个 admin/operator × 50 触发 × 365 天 ≈ 90k 行/年。
+> **存储估算依据**：每台设备每年最多触发 ~50 次报警 + 200 条派发日志；JSONB detail ~200 字节；inbox 按 5 个 admin/operator × 50 触发 × 365 天 ≈ 90k 行/年。
 
 ### 16.3 端口与网络
 
@@ -932,23 +932,23 @@ curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/alarms/healt
 4. 访问 系统健康 → 阈值规则：
    - 默认值适用大多数场景，可不动
    - 对特殊设备（如重要工序总表）可单独 PUT override 调短 timeout
-5. （可选）模拟一次告警验证：在 collector.yml 临时改一个 device 的 host 为不可达地址 → 重启 → 等 silent-timeout 秒数 → 看到铃铛角标 +1 + 进入告警历史。验证完恢复配置即可。
+5. （可选）模拟一次报警验证：在 collector.yml 临时改一个 device 的 host 为不可达地址 → 重启 → 等 silent-timeout 秒数 → 看到铃铛角标 +1 + 进入报警历史。验证完恢复配置即可。
 
 ### 16.7 备份与恢复
 
 5 张新表纳入既有 Postgres 备份（沿用 `runbook-2.0.md` 的 pg_dump 流程）：
-- 关键表：`alarms`（告警历史）、`alarm_rules_override`（覆盖配置）、`webhook_config`（webhook 接入配置含 secret）
+- 关键表：`alarms`（报警历史）、`alarm_rules_override`（覆盖配置）、`webhook_config`（webhook 接入配置含 secret）
 - 可丢失：`webhook_delivery_log`（流水，重启后旧 alarm 不会重新派发；丢失只影响重放历史）、`alarm_inbox`（站内通知，丢失只影响未读列表）
 - **secret 敏感**：`webhook_config.secret` 是 HMAC 秘钥，备份文件按敏感数据处理（参考 `runbook-2.0.md` 加密备份段）
 
 ### 16.8 监控接入（Prometheus / Grafana）
 
 沿用既有 Micrometer 自动指标：
-- `http_server_requests_seconds_count{uri="/api/v1/alarms*"}` — 告警 API 请求数
+- `http_server_requests_seconds_count{uri="/api/v1/alarms*"}` — 报警 API 请求数
 - `jvm_memory_used_bytes`、`process_cpu_usage` — 通用 JVM 指标
 
 新增（可选，后续迭代加）：
-- `ems_alarm_active_total`（gauge）— 当前活动告警数
+- `ems_alarm_active_total`（gauge）— 当前活动报警数
 - `ems_alarm_webhook_delivery_total{status="success|failed"}`（counter）— webhook 派发成功/失败计数
 - `ems_alarm_scan_duration_seconds`（histogram）— 单次 scan 耗时
 

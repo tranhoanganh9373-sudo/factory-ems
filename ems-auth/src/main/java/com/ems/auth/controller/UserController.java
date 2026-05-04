@@ -6,13 +6,18 @@ import com.ems.auth.service.UserService;
 import com.ems.core.dto.PageDTO;
 import com.ems.core.dto.Result;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/users")
+@Validated
 public class UserController {
 
     private final UserService users;
@@ -20,9 +25,10 @@ public class UserController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public Result<PageDTO<UserDTO>> list(@RequestParam(defaultValue = "1") int page,
-                                         @RequestParam(defaultValue = "20") int size,
-                                         @RequestParam(required = false) String keyword) {
+    public Result<PageDTO<UserDTO>> list(
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size,
+            @RequestParam(required = false) @Size(max = 100) String keyword) {
         return Result.ok(users.list(page, size, keyword));
     }
 

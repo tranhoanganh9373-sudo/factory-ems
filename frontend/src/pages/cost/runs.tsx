@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs';
 import { costApi, type CostRunDTO, type RunStatus } from '@/api/cost';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_COST_RUNS } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
 const BATCH_STATE: Record<RunStatus, { tone: StatusTone; label: string }> = {
@@ -74,6 +75,7 @@ export default function CostRunsPage() {
     <>
       <PageHeader
         title="分摊批次"
+        helpContent={HELP_COST_RUNS}
         extra={
           <Button type="primary" onClick={() => setCreateOpen(true)}>
             新建批次

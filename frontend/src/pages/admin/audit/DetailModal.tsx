@@ -1,5 +1,6 @@
 import { Modal, Descriptions, Typography } from 'antd';
 import { AuditLogDTO } from '@/api/audit';
+import { formatDateTime } from '@/utils/format';
 
 export function DetailModal({ log, onClose }: { log: AuditLogDTO | null; onClose: () => void }) {
   if (!log) return null;
@@ -12,7 +13,11 @@ export function DetailModal({ log, onClose }: { log: AuditLogDTO | null; onClose
   return (
     <Modal open={!!log} onCancel={onClose} footer={null} title="审计详情" width={800}>
       <Descriptions column={1} bordered size="small">
-        <Descriptions.Item label="时间">{log.occurredAt}</Descriptions.Item>
+        <Descriptions.Item label="时间">
+          <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+            {formatDateTime(log.occurredAt)}
+          </span>
+        </Descriptions.Item>
         <Descriptions.Item label="操作者">
           {log.actorUsername} (id={log.actorUserId})
         </Descriptions.Item>

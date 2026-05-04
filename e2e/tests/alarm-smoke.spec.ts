@@ -14,7 +14,7 @@ test('alarm smoke: health + history + rules + webhook (admin)', async ({ page })
   // 1) 健康总览页
   await page.goto('/alarms/health');
   await expect(page.getByText(/在线设备/)).toBeVisible();
-  await expect(page.getByText(/告警中/)).toBeVisible();
+  await expect(page.getByText(/报警中/)).toBeVisible();
 
   // 2) Webhook 配置 + 测试（指向不可达端口期望失败/非2xx，不强求文案）
   await page.goto('/alarms/webhook');

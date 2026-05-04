@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
-import { Alert, Empty, Skeleton, Typography } from 'antd';
+import { Alert, Skeleton, Typography } from 'antd';
+import { EmptyState } from '@/components/EmptyState';
 import { useQuery } from '@tanstack/react-query';
 import * as echarts from 'echarts/core';
 import { PieChart } from 'echarts/charts';
@@ -47,37 +48,47 @@ export default function EnergyCompositionPanel() {
     queryFn: () =>
       dashboardApi.getEnergyComposition({ range, from: customFrom, to: customTo, orgNodeId }),
     enabled: isCustomReady,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
 
   const elRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
 
+  // 懒初始化 + DOM 漂移检测：
+  //  ① data 未到时组件返回 Skeleton，div 不在 DOM；必须等 data 到、div 进 DOM 后再 init。
+  //  ② 切换过滤器时 queryKey 变 → 又走一次 Skeleton → div 被卸载、再 mount 出新节点；
+  //     若复用旧 chart 实例（仍绑在已脱离的 DOM 节点上），setOption 不会显示。
+  //  通过 getDom() 检查 chart 绑的节点是否还是当前 elRef，不一致就 dispose 重建。
   useEffect(() => {
     if (!elRef.current) return;
-    const chart = echarts.init(elRef.current);
-    chartRef.current = chart;
-    const onResize = () => chart.resize();
-    window.addEventListener('resize', onResize);
-    return () => {
-      window.removeEventListener('resize', onResize);
-      chart.dispose();
+    if (chartRef.current && chartRef.current.getDom() !== elRef.current) {
+      chartRef.current.dispose();
       chartRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (chartRef.current && data) {
+    }
+    if (!chartRef.current) {
+      chartRef.current = echarts.init(elRef.current);
+    }
+    if (data) {
       chartRef.current.setOption(buildOption(data), { notMerge: true });
     }
   }, [data]);
+
+  useEffect(() => {
+    const onResize = () => chartRef.current?.resize();
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      chartRef.current?.dispose();
+      chartRef.current = null;
+    };
+  }, []);
 
   if (!isCustomReady)
     return <Alert type="info" message="自定义区间：请选择开始和结束时间" showIcon />;
   if (isLoading) return <Skeleton active paragraph={{ rows: 5 }} />;
   if (isError) return <Alert type="error" message="能耗构成加载失败" showIcon />;
-  if (!data?.length) return <Empty description="暂无能耗构成数据" />;
+  if (!data?.length) return <EmptyState kind="no-pie" description="暂无能耗构成数据" compact />;
 
   return (
     <div>

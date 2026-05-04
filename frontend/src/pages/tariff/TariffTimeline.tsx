@@ -14,8 +14,9 @@ const COLORS: Record<string, string> = {
   VALLEY: '#52c41a',
 };
 
+const MIN_LABEL_WIDTH_PCT = 6;
+
 function timeToMinutes(t: string): number {
-  // "HH:mm" or "HH:mm:ss"
   const [h, m] = t.split(':').map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
 }
@@ -24,6 +25,7 @@ interface Segment {
   startMin: number;
   endMin: number;
   period: TariffPeriodDTO;
+  isPrimary: boolean;
 }
 
 function explode(periods: TariffPeriodDTO[]): Segment[] {
@@ -32,29 +34,34 @@ function explode(periods: TariffPeriodDTO[]): Segment[] {
     const s = timeToMinutes(p.timeStart);
     const e = timeToMinutes(p.timeEnd);
     if (e > s) {
-      out.push({ startMin: s, endMin: e, period: p });
+      out.push({ startMin: s, endMin: e, period: p, isPrimary: true });
     } else if (e < s) {
-      // cross-midnight: split into [s..1440] + [0..e]
-      out.push({ startMin: s, endMin: 1440, period: p });
-      if (e > 0) out.push({ startMin: 0, endMin: e, period: p });
+      const main = { startMin: s, endMin: 1440, period: p, isPrimary: true };
+      const wrap = { startMin: 0, endMin: e, period: p, isPrimary: false };
+      if (e > 1440 - s) {
+        main.isPrimary = false;
+        wrap.isPrimary = true;
+      }
+      out.push(main);
+      if (e > 0) out.push(wrap);
     } else {
-      // 24h coverage: e == s
-      out.push({ startMin: 0, endMin: 1440, period: p });
+      out.push({ startMin: 0, endMin: 1440, period: p, isPrimary: true });
     }
   }
   return out;
 }
 
-/** 24h timeline visualization for tariff period coverage. */
 export default function TariffTimeline({ periods, height = 32 }: Props) {
   const segs = explode(periods);
   return (
     <div>
       <div
+        role="img"
+        aria-label="24 小时电价时段覆盖图"
         style={{
           position: 'relative',
           height,
-          background: '#f0f0f0',
+          background: 'var(--ems-color-muted, #f0f0f0)',
           borderRadius: 4,
           overflow: 'hidden',
         }}
@@ -63,10 +70,12 @@ export default function TariffTimeline({ periods, height = 32 }: Props) {
           const left = (s.startMin / 1440) * 100;
           const width = ((s.endMin - s.startMin) / 1440) * 100;
           const color = COLORS[s.period.periodType] ?? '#888';
+          const label = translate(TARIFF_PERIOD_LABEL, s.period.periodType);
+          const showLabel = s.isPrimary && width >= MIN_LABEL_WIDTH_PCT;
           return (
             <Tooltip
               key={i}
-              title={`${translate(TARIFF_PERIOD_LABEL, s.period.periodType)} ${s.period.timeStart} → ${s.period.timeEnd} | ¥${s.period.pricePerUnit}`}
+              title={`${label} ${s.period.timeStart} → ${s.period.timeEnd} | ¥${s.period.pricePerUnit}`}
             >
               <div
                 style={{
@@ -76,16 +85,29 @@ export default function TariffTimeline({ periods, height = 32 }: Props) {
                   top: 0,
                   bottom: 0,
                   background: color,
-                  opacity: 0.85,
-                  color: 'white',
-                  fontSize: 11,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRight: '1px solid white',
+                  opacity: 0.92,
+                  boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.6)',
+                  overflow: 'hidden',
                 }}
               >
-                {width > 5 ? translate(TARIFF_PERIOD_LABEL, s.period.periodType) : ''}
+                {showLabel && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      color: '#fff',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      whiteSpace: 'nowrap',
+                      textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {label}
+                  </span>
+                )}
               </div>
             </Tooltip>
           );
@@ -96,8 +118,9 @@ export default function TariffTimeline({ periods, height = 32 }: Props) {
           display: 'flex',
           justifyContent: 'space-between',
           fontSize: 11,
-          color: '#888',
-          marginTop: 2,
+          color: 'var(--ems-color-text-tertiary, #6B7785)',
+          marginTop: 4,
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         <span>00:00</span>

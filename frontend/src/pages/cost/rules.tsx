@@ -20,6 +20,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_COST_RULES } from '@/components/pageHelp';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   costApi,
@@ -206,6 +207,7 @@ export default function CostRulesPage() {
     <>
       <PageHeader
         title="分摊规则"
+        helpContent={HELP_COST_RULES}
         extra={
           <Button type="primary" onClick={openCreate}>
             新建规则
@@ -232,7 +234,11 @@ export default function CostRulesPage() {
               title: '主表',
               dataIndex: 'sourceMeterId',
               width: 160,
-              render: (id: number) => meterById.get(id)?.code ?? `#${id}`,
+              render: (id: number) => {
+                const m = meterById.get(id);
+                if (!m) return `#${id}`;
+                return m.name || m.code;
+              },
             },
             {
               title: '目标 org 数',
@@ -354,7 +360,7 @@ export default function CostRulesPage() {
                 optionFilterProp="label"
                 options={meters.map((m) => ({
                   value: m.id,
-                  label: `${m.code} · ${m.name} (${m.energyTypeCode})`,
+                  label: `${m.name || m.code} · ${m.code} (${m.energyTypeCode})`,
                 }))}
                 placeholder="选择主表"
               />

@@ -1,5 +1,6 @@
 package com.ems.dashboard.service;
 
+import com.ems.core.constant.ValueKind;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
@@ -42,9 +43,9 @@ class DashboardServiceImplTest {
     FloorplanService floorplans;
     DashboardServiceImpl svc;
 
-    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
-    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true);
-    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true);
+    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
 
     @BeforeEach
     void setup() {
@@ -192,7 +193,7 @@ class DashboardServiceImplTest {
             1L, 100.0, 2L, 50.0, 3L, 200.0
         ));
 
-        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 2);
+        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 2, "ALL");
         assertThat(out).hasSize(2);
         assertThat(out.get(0).meterId()).isEqualTo(3L);
         assertThat(out.get(0).total()).isEqualTo(200.0);
@@ -203,7 +204,7 @@ class DashboardServiceImplTest {
     void topN_zeroLimit_defaultsTo10() {
         when(support.resolveMeters(any(), any())).thenReturn(List.of(M1, M2));
         when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(1L, 1.0, 2L, 2.0));
-        assertThat(svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 0)).hasSize(2);
+        assertThat(svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 0, "ALL")).hasSize(2);
     }
 
     @Test
@@ -211,7 +212,7 @@ class DashboardServiceImplTest {
         when(support.resolveMeters(any(), any())).thenReturn(List.of(M1, M2));
         when(tsq.sumByMeter(anyCollection(), any())).thenReturn(Map.of(2L, 5.0));
         // M1 没有数据 → total = 0，应排在 M2 后面
-        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 10);
+        var out = svc.topN(new RangeQuery(RangeType.TODAY, null, null, null, null), 10, "ALL");
         assertThat(out).hasSize(2);
         assertThat(out.get(0).meterId()).isEqualTo(2L);
         assertThat(out.get(1).meterId()).isEqualTo(1L);
@@ -354,6 +355,21 @@ class DashboardServiceImplTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
                 svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null)))
                 .isInstanceOf(com.ems.core.exception.ForbiddenException.class);
+    }
+
+    @Test
+    void floorplanLive_orgFilterExcludesAll_returnsEmpty() {
+        // 用户主动选了 orgNodeId（例如"焊接车间"），但底图测点都不在该子树下：
+        // 不应抛 403——这是过滤器与底图交集为空，不是权限问题。
+        FloorplanPointDTO p = new FloorplanPointDTO(102L, 999L, BigDecimal.ZERO, BigDecimal.ZERO, "X");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, p));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1));
+
+        var out = svc.floorplanLive(7L,
+                new RangeQuery(RangeType.TODAY, null, null, 42L, null));
+
+        assertThat(out.floorplan().id()).isEqualTo(7L);
+        assertThat(out.points()).isEmpty();
     }
 
     @Test

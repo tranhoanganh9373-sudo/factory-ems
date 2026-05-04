@@ -181,8 +181,8 @@ ems-app/      → 全部聚合 + 4 Flyway 迁移
 ## 9. 部署 / 备份
 
 - 4 张新表（`bill_period`, `bill`, `bill_line`, 加 `cost_allocation_*` for cost）纳入既有 PG 备份，无需单独流程。
-- 异步导出文件落地 `${ems.report.export.base-dir}` (默认 `./ems_uploads/exports`)，定期清理 30 分钟前 token 文件即可。
-- `cost_allocation_*` 容量：50 rules × 200 orgs × 12 月 ≈ 12 万行/年；`bill*`：200 orgs × 5 energy × 12 月 = 1.2 万行/年。无索引调优需求。
+- 异步导出文件落地 `${ems.report.export.base-dir}` (默认 `./ems_uploads/exports`)，定期清理 30 分钟前的 token 文件即可。
+- `cost_allocation_*` 容量：50 rules × 200 orgs × 12 月 ≈ 12 万行/年；`bill*`：200 orgs × 5 energy × 12 月 = 1.2 万行/年。无需索引调优。
 
 ---
 

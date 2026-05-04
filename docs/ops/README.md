@@ -21,8 +21,8 @@
 
 ## Verification Reports
 
-历史文件命名不一致（`-plan-X.Y` 前缀位置、是否带 plan 后缀），下面给出权威映射。
-**新增报告请用规范：** `verification-{YYYY-MM-DD}-{scope}.md`，其中 `scope` 为
+历史文件命名不一致（`-plan-X.Y` 前缀位置、是否带 plan 后缀），下面给出对照表。
+**新增报告统一用：** `verification-{YYYY-MM-DD}-{scope}.md`，其中 `scope` 为
 `planX.Y` 或简短主题（如 `deploy-pack`、`mockdata-phaseH`）。
 
 | 文件 | 覆盖 Plan / 主题 | 日期 |
@@ -37,7 +37,7 @@
 | [verification-2026-04-28-plan1.5.2.md](./verification-2026-04-28-plan1.5.2.md) | Plan 1.5.2 — RTU + 热重载 + 持久 buffer | 2026-04-28 |
 | [verification-2026-04-28-plan1.5.3.md](./verification-2026-04-28-plan1.5.3.md) | Plan 1.5.3 — 上线收尾 (v1.5.0) | 2026-04-28 |
 | [verification-2026-04-28-deploy-pack.md](./verification-2026-04-28-deploy-pack.md) | 装机交付包验收（无硬件等待期） | 2026-04-28 |
-| [verification-2026-04-29-alarm.md](./verification-2026-04-29-alarm.md) | 采集中断告警 ems-alarm | 2026-04-29 |
+| [verification-2026-04-29-alarm.md](./verification-2026-04-29-alarm.md) | 采集中断报警 ems-alarm | 2026-04-29 |
 | [verification-2026-04-29-observability.md](./verification-2026-04-29-observability.md) | 可观测性栈 observability（17 metrics + 16 alerts + 7 dashboards） | 2026-04-29 |
 
 > Plan 2.1（成本后端）的验收并入 [verification-2026-04-26-plan2.2.md](./verification-2026-04-26-plan2.2.md)（计费依赖成本，连同验收）。
@@ -57,9 +57,9 @@
 - [dry-run-procedure.md](./dry-run-procedure.md) — Dry-run 流程
 - [onboarding-checklist.md](./onboarding-checklist.md) — 上线 checklist
 - [perf-2026-04-25.md](./perf-2026-04-25.md) — 性能基线
-- [alarm-runbook.md](./alarm-runbook.md) — 采集中断告警运维
+- [alarm-runbook.md](./alarm-runbook.md) — 采集中断报警运维
 - [observability-deployment.md](./observability-deployment.md) — 可观测性栈部署（Phase C ✅）
-- [observability-runbook.md](./observability-runbook.md) — 可观测性栈运维 / 16 告警处置（Phase F ✅）
+- [observability-runbook.md](./observability-runbook.md) — 可观测性栈运维 / 16 报警处置（Phase F ✅）
 - [server-hardening.md](./server-hardening.md) — 服务器加固清单（PCI-DSS / 等保 2.0 合规进阶）
 - [follow-up-2026-04-29-pre-existing-issues.md](./follow-up-2026-04-29-pre-existing-issues.md) — v1.7.0-obs review 中发现的 6 条 pre-existing 问题（CRITICAL ×1 / IMPORTANT ×3 / MINOR ×2）独立 follow-up
 
@@ -79,9 +79,9 @@
 | `observability-feature-overview.md` | 已完成（Phase G） | 销售/客户视角的功能概览 + 与 ems-alarm 协同 |
 | `observability-config-reference.md` | 已完成（Phase A） | obs 栈配置 / 启停 / 升级 / 资源预算 / FAQ |
 | `observability-metrics-dictionary.md` | 已完成（Phase B） | 17 个业务指标字典 + cardinality + PromQL |
-| `observability-slo-rules.md` | 已完成（Phase D） | 4 SLO + 16 告警 + 客户视角 |
+| `observability-slo-rules.md` | 已完成（Phase D） | 4 SLO + 16 报警 + 客户视角 |
 | `observability-dashboards-guide.md` | 已完成（Phase E） | 7 dashboard + 下钻路径 + 模板变量 |
-| `observability-user-guide.md` | 已完成（Phase G） | 客户运维 Grafana 操作 + SLO 解读 + 告警响应 |
+| `observability-user-guide.md` | 已完成（Phase G） | 客户运维 Grafana 操作 + SLO 解读 + 报警响应 |
 
 ### API 规约（[docs/api/](../api/README.md)）
 
@@ -96,5 +96,5 @@
 |------|------|
 | `specs/2026-04-29-acquisition-alarm-design.md` | 完整设计规格（含 §11-§16 用户/配置/对接/状态机/错误码/部署六章） |
 | `plans/2026-04-29-acquisition-alarm-plan.md` | 实施计划（A1-H3 共 ~34 任务，每 Phase 末附文档落实任务） |
-| `specs/2026-04-29-observability-stack-design.md` | 可观测性栈设计规格（17 metrics + 4 SLO + 16 告警 + 7 dashboards） |
+| `specs/2026-04-29-observability-stack-design.md` | 可观测性栈设计规格（17 metrics + 4 SLO + 16 报警 + 7 dashboards） |
 | `plans/2026-04-29-observability-stack-plan.md` | 可观测性栈实施计划（A1-G5 共 ~36 任务） |

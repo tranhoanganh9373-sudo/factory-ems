@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { Card, Tree, Button, Space, Typography, Popconfirm, message } from 'antd';
+import { Card, Tree, Button, Space, Typography, Tooltip, Tag, Popconfirm, message } from 'antd';
+
+const NODE_TYPE_COLOR: Record<string, string> = {
+  PLANT: 'blue',
+  WORKSHOP: 'cyan',
+  LINE: 'green',
+  EQUIPMENT: 'default',
+};
+
+function shortenCode(code: string, max = 16): string {
+  if (code.length <= max) return code;
+  return `${code.slice(0, max - 3)}…`;
+}
 import { PlusOutlined, EditOutlined, DeleteOutlined, SwapOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
@@ -9,6 +21,7 @@ import { MoveNodeModal } from './MoveNodeModal';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ORGTREE } from '@/components/pageHelp';
 
 interface DisplayNode {
   title: React.ReactNode;
@@ -31,6 +44,17 @@ export default function OrgTreePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
 
+  // 找选中节点在树中的父节点 nodeType，传给 EditNodeModal 做软约束。
+  const findParentNodeType = (nodes: OrgNodeDTO[], targetId: number): string | null => {
+    for (const n of nodes) {
+      if (n.children.some((c) => c.id === targetId)) return n.nodeType;
+      const inSub = findParentNodeType(n.children, targetId);
+      if (inSub != null) return inSub;
+    }
+    return null;
+  };
+  const selectedParentNodeType = selected != null ? findParentNodeType(tree, selected.id) : null;
+
   const del = useMutation({
     mutationFn: (id: number) => orgTreeApi.delete(id),
     onSuccess: () => {
@@ -41,16 +65,32 @@ export default function OrgTreePage() {
   });
 
   const toTreeData = (nodes: OrgNodeDTO[]): DisplayNode[] =>
-    nodes.map((n) => ({
-      key: String(n.id),
-      title: `${n.name} (${n.code}) [${n.nodeType}]`,
-      children: toTreeData(n.children),
-      raw: n,
-    }));
+    nodes.map((n) => {
+      const codeShort = shortenCode(n.code);
+      const tagColor = NODE_TYPE_COLOR[n.nodeType] ?? 'default';
+      return {
+        key: String(n.id),
+        title: (
+          <Space size={6}>
+            <span>{n.name}</span>
+            <Tooltip title={n.code}>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {codeShort}
+              </Typography.Text>
+            </Tooltip>
+            <Tag color={tagColor} style={{ margin: 0, fontSize: 11, lineHeight: '18px' }}>
+              {n.nodeType}
+            </Tag>
+          </Space>
+        ),
+        children: toTreeData(n.children),
+        raw: n,
+      };
+    });
 
   return (
     <>
-      <PageHeader title="组织树" />
+      <PageHeader title="组织树" helpContent={HELP_ORGTREE} />
       <Card
         extra={
           isAdmin && (
@@ -97,7 +137,12 @@ export default function OrgTreePage() {
           </Typography.Paragraph>
         )}
         <CreateNodeModal open={createOpen} parent={selected} onClose={() => setCreateOpen(false)} />
-        <EditNodeModal open={editOpen} node={selected} onClose={() => setEditOpen(false)} />
+        <EditNodeModal
+          open={editOpen}
+          node={selected}
+          parentNodeType={selectedParentNodeType}
+          onClose={() => setEditOpen(false)}
+        />
         <MoveNodeModal
           open={moveOpen}
           node={selected}

@@ -45,7 +45,7 @@ interface MeterDetailDrawerProps {
 }
 
 function computeStatusInfo(statuses: AlarmStatus[]): { color: string; label: string } {
-  if (statuses.includes('ACTIVE')) return { color: 'error', label: '告警中' };
+  if (statuses.includes('ACTIVE')) return { color: 'error', label: '报警中' };
   if (statuses.includes('ACKED')) return { color: 'warning', label: '已确认' };
   return { color: 'success', label: '正常' };
 }
@@ -57,7 +57,7 @@ function alarmTypeLabel(alarmType: string): string {
 }
 
 function alarmStatusLabel(status: AlarmStatus): string {
-  if (status === 'ACTIVE') return '告警中';
+  if (status === 'ACTIVE') return '报警中';
   if (status === 'ACKED') return '已确认';
   return '已恢复';
 }
@@ -137,9 +137,9 @@ export default function MeterDetailDrawer({ meterId, onClose }: MeterDetailDrawe
             <Empty description="暂无时序数据" />
           )}
           <div style={{ marginTop: 24 }}>
-            <Typography.Title level={5}>最近告警</Typography.Title>
+            <Typography.Title level={5}>最近报警</Typography.Title>
             {alarms.length === 0 ? (
-              <Empty description="暂无告警" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+              <Empty description="暂无报警" image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
               <Timeline
                 items={alarms.map((alarm) => ({

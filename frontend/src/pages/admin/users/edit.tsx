@@ -1,7 +1,8 @@
-import { Card, Form, Input, Switch, Select, Button, message, Spin } from 'antd';
+import { Card, Form, Input, Switch, Select, Button, message, Skeleton } from 'antd';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_USER_EDIT } from '@/components/pageHelp';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi } from '@/api/user';
 import { roleApi } from '@/api/role';
@@ -41,12 +42,12 @@ export default function UserEditPage() {
     },
   });
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
   if (!user) return null;
 
   return (
     <>
-      <PageHeader title="编辑用户" />
+      <PageHeader title="编辑用户" helpContent={HELP_USER_EDIT} />
       <Card extra={<Button onClick={() => nav(-1)}>返回</Button>}>
         <Form form={form} layout="vertical" style={{ maxWidth: 480 }}>
           <Form.Item label="用户名">

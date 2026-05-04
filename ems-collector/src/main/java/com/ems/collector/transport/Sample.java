@@ -22,4 +22,17 @@ public record Sample(
     Object value,
     Quality quality,
     Map<String, String> tags
-) {}
+) {
+    /**
+     * tag key — 标识 BAD 样本的失败类别。让 {@code ChannelService} 在做 cycle 聚合时区分：
+     * 传输层失败（IO/超时/socket reset）影响 channel.connState；
+     * 单点解码失败（字节长度不匹配、unsupported dataType 等）只影响该点 Quality，不污染整通道。
+     */
+    public static final String TAG_ERROR_KIND = "errorKind";
+
+    /** 传输层级 IO 失败（ModbusIoException、socket reset、超时）— 计入 cycle failure。 */
+    public static final String ERROR_KIND_IO = "io";
+
+    /** 单点解码失败（字节长度、dataType 校验等）— 仅影响该点 quality，不计 cycle failure。 */
+    public static final String ERROR_KIND_DECODE = "decode";
+}

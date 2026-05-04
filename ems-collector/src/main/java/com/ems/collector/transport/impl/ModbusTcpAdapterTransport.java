@@ -123,9 +123,12 @@ public final class ModbusTcpAdapterTransport implements Transport {
             } catch (Exception e) {
                 String msg = e.getMessage() == null ? e.toString() : e.getMessage();
                 log.warn("Modbus read failed for channel={} point={}: {}", channelId, p.key(), msg);
+                boolean isIo = e instanceof ModbusIoException;
                 sink.accept(new Sample(channelId, p.key(), Instant.now(),
-                        null, Quality.BAD, Map.of("error", msg)));
-                if (e instanceof ModbusIoException) {
+                        null, Quality.BAD, Map.of(
+                            "error", msg,
+                            Sample.TAG_ERROR_KIND, isIo ? Sample.ERROR_KIND_IO : Sample.ERROR_KIND_DECODE)));
+                if (isIo) {
                     ioFailureCount++;
                 }
             }
@@ -140,7 +143,8 @@ public final class ModbusTcpAdapterTransport implements Transport {
 
     /**
      * 重连分支：sleep backoff → 关闭旧 master → new master → open()。
-     * 成功 → reset attempts、log INFO、{@link ChannelStateRegistry#recordSuccess}、return true（继续 polling）。
+     * 成功 → reset attempts、log INFO、return true（继续 polling）。"采集成功"由 sample sink 上报，
+     * TCP 握手成功并不等于"采集成功"——握手后若 register 全部读失败仍应算 channel 不健康。
      * 失败 → 增加 attempts、log WARN、{@link ChannelStateRegistry#recordFailure}、return false（退出本周期）。
      */
     private boolean ensureReopened(Long channelId) {
@@ -170,9 +174,6 @@ public final class ModbusTcpAdapterTransport implements Transport {
             reconnectAttempts = 0;
             log.info("Modbus TCP reopened channel={} after {} attempt(s) in {}ms",
                     channelId, prevAttempts + 1, elapsed);
-            if (registry != null) {
-                registry.recordSuccess(channelId, elapsed);
-            }
             return true;
         } catch (Exception e) {
             int attempt = ++reconnectAttempts;

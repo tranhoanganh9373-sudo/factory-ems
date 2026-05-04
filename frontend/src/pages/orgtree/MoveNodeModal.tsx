@@ -2,6 +2,7 @@ import { Modal, TreeSelect, Alert, message } from 'antd';
 import { useState, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
+import { canAcceptChild } from './nodeTypeRules';
 
 export function MoveNodeModal({
   open,
@@ -57,7 +58,9 @@ export function MoveNodeModal({
     nodes.map((n) => ({
       title: n.name,
       value: n.id,
-      disabled: excludedIds.has(n.id),
+      // 既要排除自身/子树（避免环），也要按软约束剔除不能接收当前节点的父类型
+      disabled:
+        excludedIds.has(n.id) || (node != null && !canAcceptChild(n.nodeType, node.nodeType)),
       children: toSelectData(n.children),
     }));
 

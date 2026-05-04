@@ -1,6 +1,6 @@
 # Factory EMS · Plan 1.5.3 · 上线收尾（无硬件可交付项 + 现场 SOP）
 
-**Goal:** 在 Plan 1.5.2 v1.5.2 之上加 (1) TCP 连接池 (2) 状态告警接入 audit_logs (3) 部署/调试 runbook，
+**Goal:** 在 Plan 1.5.2 v1.5.2 之上加 (1) TCP 连接池 (2) 状态报警接入 audit_logs (3) 部署/调试 runbook，
 打 tag `v1.5.0` 标志子项目 1.5 正式发布。**真实物理仪表对接 demo + TLS** 写为
 可选 + SOP，等用户有硬件时按文档补 verification 即可。
 

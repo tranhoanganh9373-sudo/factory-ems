@@ -7,6 +7,7 @@ public record HealthSummaryDTO(
         long offlineCount,
         long alarmCount,
         long maintenanceCount,
+        long totalCount,
         List<TopOffender> topOffenders
 ) {
     public record TopOffender(Long deviceId, String deviceCode, long activeAlarmCount) {}

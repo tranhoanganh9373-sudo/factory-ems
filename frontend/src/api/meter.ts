@@ -1,5 +1,18 @@
 import { apiClient } from './client';
 
+export type ValueKind = 'INTERVAL_DELTA' | 'CUMULATIVE_ENERGY' | 'INSTANT_POWER';
+
+export interface MeterImportRow {
+  code: string;
+  name: string;
+  energyTypeId: number;
+  orgNodeId: number;
+  enabled: boolean | null;
+  channelName: string | null;
+  channelPointKey: string | null;
+  valueKind: ValueKind | null;
+}
+
 export interface EnergyTypeDTO {
   id: number;
   code: string;
@@ -21,7 +34,9 @@ export interface MeterDTO {
   influxTagValue: string;
   enabled: boolean;
   channelId: number | null;
+  channelPointKey: string | null;
   parentMeterId: number | null;
+  valueKind: ValueKind;
   createdAt: string;
   updatedAt: string;
 }
@@ -31,33 +46,31 @@ export interface CreateMeterReq {
   name: string;
   energyTypeId: number;
   orgNodeId: number;
-  influxMeasurement: string;
-  influxTagKey: string;
-  influxTagValue: string;
   enabled: boolean;
   channelId?: number | null;
+  channelPointKey?: string | null;
+  valueKind?: ValueKind | null;
 }
 
 export interface UpdateMeterReq {
+  code: string;
   name: string;
   energyTypeId: number;
   orgNodeId: number;
-  influxMeasurement: string;
-  influxTagKey: string;
-  influxTagValue: string;
   enabled: boolean;
   channelId?: number | null;
+  channelPointKey?: string | null;
+  valueKind?: ValueKind | null;
 }
 
 export interface BindParentMeterReq {
   parentMeterId: number;
 }
 
+// 后端 /meter-topology 只回边的两端 id（不含 code）；要 code 时用 meters 列表按 id 查。
 export interface MeterTopologyEdgeDTO {
   childMeterId: number;
-  childMeterCode: string;
   parentMeterId: number;
-  parentMeterCode: string;
 }
 
 export interface ListMetersParams {
@@ -87,4 +100,13 @@ export const meterApi = {
     apiClient
       .get<EnergyTypeDTO[]>('/energy-types')
       .then((r) => r.data as unknown as EnergyTypeDTO[]),
+  parseCsv: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return apiClient
+      .post<MeterImportRow[]>('/meters/parse-csv', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data as unknown as MeterImportRow[]);
+  },
 };

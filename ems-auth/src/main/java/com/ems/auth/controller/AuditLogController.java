@@ -5,8 +5,11 @@ import com.ems.audit.repository.AuditLogRepository;
 import com.ems.auth.dto.AuditLogDTO;
 import com.ems.core.dto.PageDTO;
 import com.ems.core.dto.Result;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -14,6 +17,7 @@ import java.time.OffsetDateTime;
 @RestController
 @RequestMapping("/api/v1/audit-logs")
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class AuditLogController {
 
     private final AuditLogRepository repo;
@@ -26,8 +30,8 @@ public class AuditLogController {
             @RequestParam(required = false) String action,
             @RequestParam(required = false) OffsetDateTime from,
             @RequestParam(required = false) OffsetDateTime to,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
         // 防御：page 1-based；任何 ≤ 0 当 1 处理（旧客户端笔误也照样能拿到第一页）。
         // size 限 1..200 避免极端值打挂数据库。
         int safePage = Math.max(1, page);

@@ -75,4 +75,14 @@ public class MeterTopologyServiceImpl implements MeterTopologyService {
             .map(t -> new MeterTopologyEdgeDTO(t.getChildMeterId(), t.getParentMeterId()))
             .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, Long> parentMap() {
+        Map<Long, Long> out = new HashMap<>();
+        for (MeterTopology t : topology.findAll()) {
+            out.put(t.getChildMeterId(), t.getParentMeterId());
+        }
+        return out;
+    }
 }

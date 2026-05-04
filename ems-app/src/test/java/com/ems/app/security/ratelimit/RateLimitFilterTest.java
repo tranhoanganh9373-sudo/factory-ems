@@ -100,9 +100,46 @@ class RateLimitFilterTest {
         for (int i = 0; i < 100; i++) {
             assertThat(sendGet(filter, IP, "/actuator/health").getStatus()).isNotEqualTo(429);
             assertThat(sendGet(filter, IP, "/login").getStatus()).isNotEqualTo(429);
-            assertThat(sendPost(filter, IP, "/api/v1/auth/login").getStatus()).isNotEqualTo(429);
+            // /api/v1/auth/* is exempt EXCEPT /api/v1/auth/login (covered by login bucket).
+            assertThat(sendPost(filter, IP, "/api/v1/auth/refresh").getStatus()).isNotEqualTo(429);
             assertThat(sendGet(filter, IP, "/error").getStatus()).isNotEqualTo(429);
         }
+    }
+
+    @Test
+    void loginPath_isRateLimitedEvenThoughAuthPrefixIsExempt() throws ServletException, IOException {
+        // RealityCheck 2026-05-02: 30 successive POSTs to /api/v1/auth/login were all 200
+        // because the entire /api/v1/auth prefix was exempt. The login bucket must take
+        // precedence over the exempt list and enforce the configured per-minute cap.
+        RateLimitProperties props = props(p -> {
+            p.setLoginPerMinute(5);
+            p.setBurstMultiplier(1);
+        });
+        RateLimitFilter filter = new RateLimitFilter(props);
+
+        for (int i = 0; i < 5; i++) {
+            assertThat(sendPost(filter, IP, "/api/v1/auth/login").getStatus()).isNotEqualTo(429);
+        }
+        MockHttpServletResponse blocked = sendPost(filter, IP, "/api/v1/auth/login");
+        assertThat(blocked.getStatus()).isEqualTo(429);
+        assertThat(blocked.getHeader("Retry-After")).isNotNull();
+    }
+
+    @Test
+    void loginBucket_isSeparateFromWriteBucket() throws ServletException, IOException {
+        // Saturating the login bucket must NOT block other writes from the same IP.
+        RateLimitProperties props = props(p -> {
+            p.setLoginPerMinute(2);
+            p.setWritePerMinute(20);
+            p.setBurstMultiplier(1);
+        });
+        RateLimitFilter filter = new RateLimitFilter(props);
+
+        sendPost(filter, IP, "/api/v1/auth/login");
+        sendPost(filter, IP, "/api/v1/auth/login");
+        assertThat(sendPost(filter, IP, "/api/v1/auth/login").getStatus()).isEqualTo(429);
+
+        assertThat(sendPost(filter, IP, "/api/v1/things").getStatus()).isNotEqualTo(429);
     }
 
     @Test

@@ -5444,7 +5444,7 @@ git commit -m "test(auth): PermissionResolver subtree / node-only / admin bypass
 **Files:**
 - Create: `ems-app/src/main/java/com/ems/app/init/AdminInitializer.java`
 
-- [x] **Step 1: 启动时检查 admin 是否存在；不存在则告警**
+- [x] **Step 1: 启动时检查 admin 是否存在；不存在则报警**
 
 ```java
 package com.ems.app.init;

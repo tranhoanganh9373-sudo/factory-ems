@@ -1,9 +1,9 @@
 # Factory EMS
 
-> **工厂能源管理一体化平台** — 私有部署、按业务语义运转、内置电价 / 分摊 / 告警 / 报表。
+> **工厂能源管理一体化平台** — 私有部署、按业务语义运转、内置电价 / 分摊 / 报警 / 报表。
 > 适用版本：v1.7.0+ ｜ 最近更新：2026-05-01
 
-把现场仪表 / PLC / 网关的数据采集起来，做成跨车间的统一视图、自动报表、内部分摊账单和断线告警，无需自建监控基础设施、无需拼装多套开源工具。
+把现场仪表 / PLC / 网关的数据采集起来，做成跨车间的统一视图、自动报表、内部分摊账单和断线报警，无需自建监控基础设施、无需拼装多套开源工具。
 
 ---
 
@@ -40,7 +40,7 @@
 - **复杂电价**：分时 / 阶梯 / 容量电价规则化沉淀
 - **成本分摊引擎**：按面积 / 人头 / 产量，规则化、可试算、留审计
 - **报表与平面图**：日 / 月 / 年 / 班次报表 + CAD 底图实时态
-- **采集中断告警 + Webhook**：HMAC 签名，外推钉钉 / 企微 / ITSM
+- **采集中断报警 + Webhook**：HMAC 签名，外推钉钉 / 企微 / ITSM
 - **可观测性栈**：17 指标 + 4 SLO + 7 Grafana 看板
 - **细粒度 RBAC**：4 角色 + 节点级权限隔离 + 全程审计
 
@@ -124,14 +124,14 @@ curl http://localhost:8888/actuator/health/liveness
   [账单](./docs/product/billing-feature-overview.md) ｜
   [认证审计](./docs/product/auth-audit-feature-overview.md) ｜
   [平台底座](./docs/product/platform-internals-overview.md) ｜
-  [告警](./docs/product/alarm-feature-overview.md) ｜
+  [报警](./docs/product/alarm-feature-overview.md) ｜
   [可观测性](./docs/product/observability-feature-overview.md) ｜
   [采集协议](./docs/product/collector-protocols-user-guide.md)
 
 ### 运维文档（面向实施 / 运维）
 - [部署手册](./docs/ops/deployment.md)
 - [开发环境搭建](./docs/ops/dev-setup.md)
-- [告警 Runbook](./docs/ops/alarm-runbook.md) ｜ [可观测性 Runbook](./docs/ops/observability-runbook.md) ｜ [账单 Runbook](./docs/ops/billing-runbook.md)
+- [报警 Runbook](./docs/ops/alarm-runbook.md) ｜ [可观测性 Runbook](./docs/ops/observability-runbook.md) ｜ [账单 Runbook](./docs/ops/billing-runbook.md)
 - [Onboarding Checklist](./docs/ops/onboarding-checklist.md)
 
 ### 现场上线 SOP（"装-通-看-警-钱-报-效" 全闭环）
@@ -143,7 +143,7 @@ curl http://localhost:8888/actuator/health/liveness
 4. **仪表导入**：`scripts/csv-to-meters.py` + `scripts/import-meters.sh` — 自动解析 channelName→channelId 后批量注册 Meter（或前端 `/meters` 页"批量导入"按钮，v2 新增）
 5. **看板上线**：[dashboard-commissioning-sop.md](./docs/install/dashboard-commissioning-sop.md) — org-tree、平面图、KPI 配齐
 6. **5 分钟演示**：[dashboard-demo-quickstart.md](./docs/install/dashboard-demo-quickstart.md) + `scripts/demo-up.sh` — 客户参观 / 销售 demo 用
-7. **告警上线**：[alarm-commissioning-sop.md](./docs/install/alarm-commissioning-sop.md) — 断线告警 + Webhook 推钉钉/企微
+7. **报警上线**：[alarm-commissioning-sop.md](./docs/install/alarm-commissioning-sop.md) — 断线报警 + Webhook 推钉钉/企微
 8. **账单上线**：[billing-commissioning-sop.md](./docs/install/billing-commissioning-sop.md) — 工业分时电价 + 内部分摊 + 账单 LOCK
 9. **月报自动化**：[report-automation-sop.md](./docs/install/report-automation-sop.md) + `scripts/monthly-report-mail.sh` — cron 每月 1 号自动 PDF + 邮件
 10. **生产能效**：[production-energy-sop.md](./docs/install/production-energy-sop.md) — 录产量 → 单位产品能耗 → 改造前后对比
@@ -152,7 +152,7 @@ curl http://localhost:8888/actuator/health/liveness
 
 ### API 文档（面向集成开发）
 - [API 索引](./docs/api/README.md)
-- [告警 API](./docs/api/alarm-api.md) ｜ [采集 API](./docs/api/collector-api.md) ｜ [可观测性 API](./docs/api/observability-metrics-api.md)
+- [报警 API](./docs/api/alarm-api.md) ｜ [采集 API](./docs/api/collector-api.md) ｜ [可观测性 API](./docs/api/observability-metrics-api.md)
 
 ### 设计文档（面向贡献者）
 - 设计规约：[`docs/superpowers/specs/`](./docs/superpowers/specs/)
@@ -180,11 +180,11 @@ curl http://localhost:8888/actuator/health/liveness
 |---|---|---|
 | 地基 MVP | 认证 / 组织树 / 仪表 / 审计 / 时序 / 报表 / 电价 / 班次 / 平面图 | ✅ v1.1 ~ v1.3 |
 | 采集层 | OPC UA / Modbus / MQTT + 缓冲续传 | ✅ v1.5 |
-| 告警 | 采集中断告警 + Webhook | ✅ v1.6 |
+| 报警 | 采集中断报警 + Webhook | ✅ v1.6 |
 | 可观测性栈 | 17 指标 + 4 SLO + 7 看板 | ✅ v1.7.0-obs |
 | 成本分摊 | 规则引擎 + 异步运行 + 审计 | ✅ v2.0 |
 | 账单 | 期次管理 + 关账解锁 | ✅ v2.1 |
-| 告警增强 / 协议扩展 | 覆盖更多场景 | ✅ v2.2 / v2.3 |
+| 报警增强 / 协议扩展 | 覆盖更多场景 | ✅ v2.2 / v2.3 |
 
 详见 [`docs/product/product-overview.md` §8 路线图](./docs/product/product-overview.md)。
 

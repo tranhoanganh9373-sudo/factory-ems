@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 监听 OPC UA 证书事件，创建 / 解除 {@link AlarmType#OPC_UA_CERT_PENDING} 告警。
+ * 监听 OPC UA 证书事件，创建 / 解除 {@link AlarmType#OPC_UA_CERT_PENDING} 报警。
  *
  * <p>幂等：同一 channel 同时只有一条 ACTIVE/ACKED 的 OPC_UA_CERT_PENDING。
  */

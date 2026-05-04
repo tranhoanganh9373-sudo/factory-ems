@@ -78,7 +78,7 @@ POST   /api/v1/reports/export                                          preset=CO
 
 1. `2026-03` 已有 SUCCESS 的 `cost_allocation_run`，且其 `period_start <= 2026-03-01` 且 `period_end >= 2026-04-01`（**完全覆盖** 整月）。
    - 没有？先在 `/cost/runs` 触发一次 `submitRun(2026-03-01, 2026-04-01, ruleIds=null)`，等 SUCCESS。
-2. 整月的 `production_entry`（产量数据）已录入 — 没有也行，只是 `unit_cost` 会是 NULL（前端显示 "—"）。
+2. 整月的 `production_entry`（产量数据）已录入 — 没有也行，`unit_cost` 会是 NULL（前端显示 "—"）。
 
 ### 3.2 关账期
 
@@ -226,7 +226,7 @@ WHERE period_start <= TIMESTAMPTZ '2026-03-01 00:00:00+08'
   AND status = 'SUCCESS';
 ```
 
-如果空 → 先在 `/cost/runs` 触发一次（注意 period 必须从 03-01 到 04-01 整月）。
+空集 → 先在 `/cost/runs` 触发一次（period 必须从 03-01 到 04-01 整月）。
 
 ### 9.2 close 报 IllegalStateException ... LOCKED
 
@@ -257,4 +257,4 @@ WHERE period_start <= TIMESTAMPTZ '2026-03-01 00:00:00+08'
 | 看板 cost-distribution | 1000 line / org-group | ≤ 1 s | 手测 |
 | COST_MONTHLY 月报 | 200 行 × 5 列 | ≤ 5 s | 手测（异步） |
 
-如违反预算：先看 SQL（多半是 N+1 查 `org_node` name，可加 viewable cache）；其次看是否每个 (org, energy) 单独 INSERT，可改 batch。
+超预算时：先看 SQL（多半是 N+1 查 `org_node` name，可加 viewable cache）；其次看是不是每个 (org, energy) 单独 INSERT，可改 batch。

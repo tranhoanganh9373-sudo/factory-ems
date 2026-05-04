@@ -15,7 +15,7 @@ interface ImportRow {
   pointCount: number;
   status: RowStatus;
   message?: string;
-  body: Partial<ChannelDTO>;
+  body: ChannelDTO;
 }
 
 interface Props {
@@ -31,24 +31,7 @@ const STATUS_TAG: Record<RowStatus, { color: string; label: string }> = {
   fail: { color: 'error', label: '失败' },
 };
 
-function parseChannelsFile(text: string): Partial<ChannelDTO>[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error('文件不是合法 JSON');
-  }
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('JSON 顶层必须是对象');
-  }
-  const channels = (parsed as { channels?: unknown }).channels;
-  if (!Array.isArray(channels) || channels.length === 0) {
-    throw new Error('JSON 缺少非空 .channels[] 数组');
-  }
-  return channels as Partial<ChannelDTO>[];
-}
-
-function pointCountOf(c: Partial<ChannelDTO>): number {
+function pointCountOf(c: ChannelDTO): number {
   const cfg = c.protocolConfig as { points?: unknown[] } | undefined;
   return Array.isArray(cfg?.points) ? cfg.points.length : 0;
 }
@@ -58,35 +41,54 @@ export function BatchImportModal({ open, onClose }: Props) {
   const qc = useQueryClient();
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [running, setRunning] = useState(false);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
+  const [channelsFile, setChannelsFile] = useState<File | null>(null);
+  const [pointsFile, setPointsFile] = useState<File | null>(null);
 
   const reset = () => {
     setRows([]);
-    setFileName(null);
+    setChannelsFile(null);
+    setPointsFile(null);
   };
 
-  const handleFile = async (file: UploadFile) => {
-    const obj = file as unknown as File;
+  const pickChannels = (file: UploadFile) => {
+    setChannelsFile(file as unknown as File);
+    setRows([]);
+    return false;
+  };
+
+  const pickPoints = (file: UploadFile) => {
+    setPointsFile(file as unknown as File);
+    setRows([]);
+    return false;
+  };
+
+  const parseFiles = async () => {
+    if (!channelsFile || !pointsFile) return;
+    setParsing(true);
     try {
-      const text = await obj.text();
-      const channels = parseChannelsFile(text);
+      const channels = await channelApi.parseCsv(channelsFile, pointsFile);
+      if (channels.length === 0) {
+        throw new Error('CSV 中未找到任何有效通道');
+      }
       setRows(
         channels.map((c, i) => ({
           index: i,
-          name: c.name ?? `(未命名 #${i + 1})`,
-          protocol: c.protocol ?? '?',
+          name: c.name,
+          protocol: c.protocol,
           pointCount: pointCountOf(c),
           status: 'pending',
           body: c,
-        })),
+        }))
       );
-      setFileName(obj.name);
-      message.success(`已读取 ${channels.length} 条通道`);
+      message.success(`已解析 ${channels.length} 条通道`);
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '读取失败');
-      reset();
+      const ax = e as AxiosError<{ message?: string }>;
+      const backendMsg = ax.response?.data?.message;
+      message.error(backendMsg ?? (e instanceof Error ? e.message : '解析失败'));
+    } finally {
+      setParsing(false);
     }
-    return false; // 阻止 antd 自动上传
   };
 
   const updateRow = (index: number, patch: Partial<ImportRow>) =>
@@ -102,6 +104,7 @@ export function BatchImportModal({ open, onClose }: Props) {
       if (row.status === 'success' || row.status === 'skip') continue;
       updateRow(row.index, { status: 'loading', message: undefined });
       try {
+        // body 是后端 parse 完整 ChannelDTO（id 占位）；create 时 backend 忽略 id/createdAt/updatedAt
         await channelApi.create(row.body);
         updateRow(row.index, { status: 'success' });
         ok += 1;
@@ -126,14 +129,15 @@ export function BatchImportModal({ open, onClose }: Props) {
 
   const allDone =
     rows.length > 0 && rows.every((r) => r.status === 'success' || r.status === 'skip');
+  const canParse = channelsFile != null && pointsFile != null && !parsing && !running;
 
   return (
     <Modal
       title="批量导入通道"
       open={open}
-      width={760}
+      width={780}
       onCancel={() => {
-        if (running) return;
+        if (running || parsing) return;
         reset();
         onClose();
       }}
@@ -144,12 +148,15 @@ export function BatchImportModal({ open, onClose }: Props) {
               reset();
               onClose();
             }}
-            disabled={running}
+            disabled={running || parsing}
           >
             关闭
           </Button>
-          <Button onClick={reset} disabled={running || rows.length === 0}>
+          <Button onClick={reset} disabled={running || parsing}>
             清空
+          </Button>
+          <Button onClick={parseFiles} disabled={!canParse} loading={parsing}>
+            解析 CSV
           </Button>
           <Button
             type="primary"
@@ -162,24 +169,37 @@ export function BatchImportModal({ open, onClose }: Props) {
         </Space>
       }
     >
-      <Upload.Dragger
-        accept=".json,application/json"
-        multiple={false}
-        showUploadList={false}
-        beforeUpload={handleFile}
-        disabled={running}
-      >
-        <p className="ant-upload-drag-icon">
-          <InboxOutlined />
-        </p>
-        <p className="ant-upload-text">
-          {fileName ? `已选择：${fileName}` : '点击或拖入 channels JSON 文件'}
-        </p>
-        <p className="ant-upload-hint">
-          schema 见 docs/install/channel-config-import.json；CSV 请先用
-          scripts/csv-to-channels.py 转成 JSON
-        </p>
-      </Upload.Dragger>
+      <Space style={{ width: '100%' }} direction="vertical" size="middle">
+        <Upload
+          accept=".csv,text/csv,application/vnd.ms-excel"
+          multiple={false}
+          maxCount={1}
+          showUploadList={false}
+          beforeUpload={pickChannels}
+          disabled={parsing || running}
+        >
+          <Button icon={<InboxOutlined />}>
+            {channelsFile ? `channels.csv：${channelsFile.name}` : '选择 channels.csv'}
+          </Button>
+        </Upload>
+        <Upload
+          accept=".csv,text/csv,application/vnd.ms-excel"
+          multiple={false}
+          maxCount={1}
+          showUploadList={false}
+          beforeUpload={pickPoints}
+          disabled={parsing || running}
+        >
+          <Button icon={<InboxOutlined />}>
+            {pointsFile ? `points.csv：${pointsFile.name}` : '选择 points.csv'}
+          </Button>
+        </Upload>
+        <div style={{ color: 'var(--ems-color-text-tertiary)', fontSize: 12 }}>
+          channels.csv 必填表头：name, protocol；按协议另填
+          host/port/serialPort/endpointUrl/brokerUrl/pollInterval 等列。 points.csv
+          必填表头：channelName, key；按协议填 address/nodeId/topic/virtualMode 等列。
+        </div>
+      </Space>
 
       {rows.length > 0 && (
         <Table<ImportRow>

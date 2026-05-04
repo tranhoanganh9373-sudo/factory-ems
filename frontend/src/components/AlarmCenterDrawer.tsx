@@ -39,14 +39,14 @@ export function AlarmCenterDrawer({ open, onClose }: Props) {
 
   return (
     <Drawer
-      title={`告警中心（${items.length}）`}
+      title={`报警中心（${items.length}）`}
       open={open}
       onClose={onClose}
       width={440}
       placement="right"
     >
       {!isLoading && items.length === 0 ? (
-        <Empty description="当前无活动告警" />
+        <Empty description="当前无活动报警" />
       ) : (
         <List
           loading={isLoading}
@@ -82,7 +82,7 @@ export function AlarmCenterDrawer({ open, onClose }: Props) {
               <List.Item.Meta
                 title={
                   <Space>
-                    <Tag color="error">告警</Tag>
+                    <Tag color="error">报警</Tag>
                     <span>{a.deviceCode}</span>
                     <span style={{ color: '#888' }}>{a.deviceName}</span>
                   </Space>

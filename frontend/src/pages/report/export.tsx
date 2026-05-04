@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, App, Button, Card, DatePicker, Form, Radio, Select, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_REPORT_EXPORT } from '@/components/pageHelp';
 import type { Dayjs } from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -117,7 +118,7 @@ export default function ExportReportPage() {
 
   return (
     <>
-      <PageHeader title="异步导出" />
+      <PageHeader title="异步导出" helpContent={HELP_REPORT_EXPORT} />
       <Card>
         <Alert
           type="info"

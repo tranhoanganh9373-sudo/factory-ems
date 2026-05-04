@@ -1,10 +1,11 @@
-import { Card, Descriptions, Table, Tag, Empty, Spin } from 'antd';
+import { Card, Descriptions, Table, Tag, Empty, Skeleton } from 'antd';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { billsApi, type BillLineDTO } from '@/api/bills';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_BILL_DETAIL } from '@/components/pageHelp';
 import { ENERGY_TYPE_LABEL, translate } from '@/utils/i18n-dict';
 
 function fmt(v: string | null): string {
@@ -30,12 +31,12 @@ export default function BillDetailPage() {
     enabled: !Number.isNaN(billId),
   });
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 6 }} />;
   if (!bill) return <Empty description="账单不存在" />;
 
   return (
     <>
-      <PageHeader title="账单详情" />
+      <PageHeader title="账单详情" helpContent={HELP_BILL_DETAIL} />
       <Card
         title={
           <span>

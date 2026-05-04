@@ -2,7 +2,7 @@
 
 > 适用版本：v1.7.0+ ｜ 受众：第三方集成 / BI / 自定义 alerting ｜ 最近更新：2026-04-29
 
-本文档面向自建 Prometheus 抓取器、BI 看板、第三方告警系统的集成方，描述 factory-ems 暴露的 metrics 端点协议、17 个业务指标速查表、抓取建议与可直接 copy-paste 的集成示例脚本。**客户运维侧请改读 [observability-user-guide.md](../product/observability-user-guide.md)；工程团队部署侧请改读 [observability-deployment.md](../ops/observability-deployment.md)。**
+本文档面向自建 Prometheus 抓取器、BI 看板、第三方报警系统的集成方，描述 factory-ems 暴露的 metrics 端点协议、17 个业务指标速查表、抓取建议与可直接 copy-paste 的集成示例脚本。**客户运维侧请改读 [observability-user-guide.md](../product/observability-user-guide.md)；工程团队部署侧请改读 [observability-deployment.md](../ops/observability-deployment.md)。**
 
 ---
 
@@ -219,14 +219,14 @@ spring:
 `adapter`：`modbus-tcp` / `modbus-rtu`
 `reason`：`timeout` / `crc` / `format` / `disconnected` / `other`
 
-### §3.2 ems-alarm 告警模块（5 个）
+### §3.2 ems-alarm 报警模块（5 个）
 
 | 指标名 | 类型 | 单位 | 描述 | Labels | 典型 PromQL |
 |---|---|---|---|---|---|
 | `ems_alarm_detector_duration_seconds` | histogram | seconds | 一轮检测扫描耗时 | — | `histogram_quantile(0.95, rate(ems_alarm_detector_duration_seconds_bucket[10m]))` |
-| `ems_alarm_active_count` | gauge | count | 当前 ACTIVE+ACKED 告警数 | `type` | `sum by (type) (ems_alarm_active_count)` |
-| `ems_alarm_created_total` | counter | count | 累计触发告警数 | `type` | `rate(ems_alarm_created_total[1h])` |
-| `ems_alarm_resolved_total` | counter | count | 累计恢复告警数 | `reason` | `rate(ems_alarm_resolved_total{reason="auto"}[1h])` |
+| `ems_alarm_active_count` | gauge | count | 当前 ACTIVE+ACKED 报警数 | `type` | `sum by (type) (ems_alarm_active_count)` |
+| `ems_alarm_created_total` | counter | count | 累计触发报警数 | `type` | `rate(ems_alarm_created_total[1h])` |
+| `ems_alarm_resolved_total` | counter | count | 累计恢复报警数 | `reason` | `rate(ems_alarm_resolved_total{reason="auto"}[1h])` |
 | `ems_alarm_webhook_delivery_duration_seconds` | histogram | seconds | webhook 单次调用耗时 | `outcome`, `attempt` | `sum(rate(ems_alarm_webhook_delivery_duration_seconds_count{outcome="failure"}[5m])) / sum(rate(ems_alarm_webhook_delivery_duration_seconds_count[5m]))` |
 
 `type`：`silent_timeout` / `consecutive_fail`
@@ -277,7 +277,7 @@ spring:
 | 间隔 | 评价 | 适用场景 |
 |---|---|---|
 | < 5s | **不推荐** | 应用 GC 影响 + 抓取开销过大；端点 ~80 KB 网络 IO 累积 |
-| 5–7s | 谨慎 | 仅在极低延迟告警场景下使用 |
+| 5–7s | 谨慎 | 仅在极低延迟报警场景下使用 |
 | **15s** | **推荐**（默认） | factory-ems 自带 `prometheus.yml` 默认值；与 spec §11.3 一致 |
 | 7–30s | 推荐范围 | 兼顾分辨率与开销 |
 | 30–60s | 可接受 | BI 看板、低频报表 |
@@ -306,11 +306,11 @@ spring:
 
 ### §5.1 一次抓取 + grep 关键指标 + 简单 alert（bash）
 
-适用：cron 每分钟跑一次，超阈值发送告警。
+适用：cron 每分钟跑一次，超阈值发送报警。
 
 ```bash
 #!/usr/bin/env bash
-# check-meter-lag.sh — 数据新鲜度阈值告警
+# check-meter-lag.sh — 数据新鲜度阈值报警
 set -euo pipefail
 
 ENDPOINT="${ENDPOINT:-http://factory-ems:8080/actuator/prometheus}"
@@ -490,6 +490,6 @@ curl -sS -X POST "$INCIDENT_WEBHOOK" \
 ## 相关文档
 
 - [Metrics 字典完整版](../product/observability-metrics-dictionary.md) — 17 个业务指标的完整描述 + cardinality + 操作场景
-- [SLO 与告警](../product/observability-slo-rules.md) — 4 SLO + 16 告警的客户视角解读
+- [SLO 与报警](../product/observability-slo-rules.md) — 4 SLO + 16 报警的客户视角解读
 - [可观测性栈功能概览](../product/observability-feature-overview.md) — 销售视角
 - [部署文档](../ops/observability-deployment.md) — 工程团队部署指引

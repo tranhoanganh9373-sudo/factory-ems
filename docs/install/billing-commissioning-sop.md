@@ -1,6 +1,6 @@
 # 电价 + 分摊 + 账单上线 SOP（把电量变成钱）
 
-> **场景**：采集 + 看板 + 告警都已上线后，把电量真正变成"钱"——录入工业分时电价、配（可选的）成本分摊规则、出月度账单。
+> **场景**：采集 + 看板 + 报警都已上线后，把电量真正变成"钱"——录入工业分时电价、配（可选的）成本分摊规则、出月度账单。
 >
 > **前置**：
 > - `/dashboard` 能看见 50 块表的实时数据
@@ -34,11 +34,11 @@ ems-meter ──读数──> ems-timeseries (InfluxDB)
 
 | 场景 | 是否需要 cost 规则 | 走哪条路 |
 |---|---|---|
-| **50 块表都独立计量**（每回路一块表） | **不需要** | Path A: tariff → 直接月度账单按表聚合 |
+| 50 块表都独立计量（每回路一块表） | 不需要 | Path A: tariff → 直接月度账单按表聚合 |
 | 有公共照明 / 走廊 / 无表区域 | 需要 1-2 条 RESIDUAL | Path B: tariff → cost → 账单 |
 | 多租户共享某条总进线 | 需要 PROPORTIONAL（按面积/人数） | Path B |
 
-> **本 SOP 优先走 Path A**（最简上线），Path B 在 §3 给最小示例。
+> 本 SOP 优先走 Path A（最简上线），Path B 在 §3 给最小示例。
 
 ---
 
@@ -87,7 +87,7 @@ curl -s -X POST "$BASE/api/v1/tariff/plans" \
 ```
 
 ⚠️ 注意：
-- 时段必须**全天 24h 覆盖、无空隙、无重叠**，否则 resolve 时段会拿不到价格
+- 时段必须全天 24h 覆盖、无空隙、无重叠，否则 resolve 时段会拿不到价格
 - VALLEY 跨零点的话拆成 22:00-24:00 + 00:00-06:00 两条；上例为简化用了一条 22-06
 - `effectiveTo: null` 表示"永久生效，直到下一个方案接替"
 
@@ -104,7 +104,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 
 ## 2. 步骤 ②：（Path A）创建账期，让月结跑起来
 
-如果 50 块表都独立计量，**跳过 cost 规则**，直接进账期管理。
+如果 50 块表都独立计量，跳过 cost 规则，直接进账期管理。
 
 ### 2.1 建 5 月账期
 
@@ -155,7 +155,7 @@ curl -s -X PUT "$BASE/api/v1/bills/periods/$PERIOD_ID/lock" \
   -d '{"note": "总监签字"}'
 ```
 
-⚠️ `OPEN → CLOSED → LOCKED` **不可回退**。LOCKED 后想改只能加调账行（不直接覆盖）。`/api/v1/bills/periods/{id}/unlock` 在极端情况可解锁，但全程进审计。
+⚠️ `OPEN → CLOSED → LOCKED` 不可回退。LOCKED 后想改只能加调账行，不能直接覆盖。`/api/v1/bills/periods/{id}/unlock` 在极端情况可解锁，但全程进审计。
 
 ---
 
@@ -200,7 +200,7 @@ curl -s -X POST "$BASE/api/v1/cost/rules/$RULE_ID/dry-run" \
 # 看 .data.lines[]：每个节点的 kWh + 金额
 ```
 
-判断合理性：1F 公共占总耗的 **3-8%** 算正常；超过 15% 说明**回路漏装表**或**电表读数有问题**。
+判断合理性：1F 公共占总耗的 3-8% 算正常；超过 15% 说明回路漏装表，或者电表读数有问题。
 
 ### 3.3 正式跑（run）
 
@@ -236,13 +236,13 @@ curl -s -H "Authorization: Bearer $TOKEN" \
   "$BASE/api/v1/dashboard/cost-distribution?periodId=1" | jq
 ```
 
-`/dashboard` 的「成本分布饼」组件就是从这个端点出。账期 LOCKED 后这饼图就不会再变了——5 月历史回看不会跳。
+`/dashboard` 的「成本分布饼」组件就是从这个端点出。账期 LOCKED 后这饼图就不会再变了，5 月历史回看不会跳。
 
 ### 4.2 验收清单
 
 - [ ] 工业分时电价已录、`/api/v1/tariff/resolve` 不同时间点取价正确
-- [ ] **Path A**：5 月账期已建（OPEN）
-- [ ] **Path B（如适用）**：cost rule 已建、dry-run 结果合理（公共消耗占比 3-8%）、正式 run 状态 SUCCESS
+- [ ] Path A：5 月账期已建（OPEN）
+- [ ] Path B（如适用）：cost rule 已建、dry-run 结果合理（公共消耗占比 3-8%）、正式 run 状态 SUCCESS
 - [ ] `/api/v1/bills/periods/2026-05` 返回账期 + 多份账单（按能源类型）+ 多行 lines
 - [ ] 各楼层 5 月电费总和 ≈ 总用电量 × 加权平均电价（误差 <1%）
 - [ ] 账期已 CLOSED → LOCKED；尝试改 lines 应报错
@@ -302,6 +302,6 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 月报自动化 SOP：[report-automation-sop.md](./report-automation-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)

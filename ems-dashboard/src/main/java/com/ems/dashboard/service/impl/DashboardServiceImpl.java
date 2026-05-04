@@ -75,7 +75,9 @@ public class DashboardServiceImpl implements DashboardService {
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
         if (meters.isEmpty()) return List.of();
 
-        List<MeterRef> refs = toRefs(meters);
+        // 拓扑根聚合：只把"可见集合的根"参与求和，避免父表 + 子表的双重计算
+        List<MeterRecord> roots = support.filterToVisibleRoots(meters);
+        List<MeterRef> refs = toRefs(roots);
         Map<String, String> unitOf = unitByEnergyType(meters);
 
         Map<String, Double> cur = tsq.sumByEnergyType(refs, range);
@@ -104,13 +106,16 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<SeriesDTO> realtimeSeries(RangeQuery query) {
-        // 强制小时分桶；range 默认 LAST_24H 由 controller 传入
+        // 短 range（TODAY/LAST_24H/YESTERDAY）用 MINUTE，曲线随时间真正前移；
+        // THIS_MONTH 与 CUSTOM 统一 HOUR，避免 1 个月 × 1440 分钟桶把前端打爆。
         TimeRange range = RangeResolver.resolve(query);
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
         if (meters.isEmpty()) return List.of();
 
-        List<MeterRef> refs = toRefs(meters);
-        List<MeterPoint> pts = tsq.queryByMeter(refs, range, Granularity.HOUR);
+        // 拓扑根聚合：实时曲线只画根表的轨迹，避免重叠
+        List<MeterRecord> roots = support.filterToVisibleRoots(meters);
+        List<MeterRef> refs = toRefs(roots);
+        List<MeterPoint> pts = tsq.queryByMeter(refs, range, pickRealtimeGranularity(query.range()));
 
         Map<Long, String> typeByMeter = new HashMap<>();
         Map<String, String> unitByType = unitByEnergyType(meters);
@@ -146,8 +151,10 @@ public class DashboardServiceImpl implements DashboardService {
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), null);
         if (meters.isEmpty()) return List.of();
 
+        // 拓扑根聚合：能耗构成的"总量"分母也走根表口径
+        List<MeterRecord> roots = support.filterToVisibleRoots(meters);
         Map<String, String> unitOf = unitByEnergyType(meters);
-        Map<String, Double> totals = tsq.sumByEnergyType(toRefs(meters), range);
+        Map<String, Double> totals = tsq.sumByEnergyType(toRefs(roots), range);
         double sum = totals.values().stream().mapToDouble(Double::doubleValue).sum();
 
         List<CompositionDTO> out = new ArrayList<>(totals.size());
@@ -166,7 +173,7 @@ public class DashboardServiceImpl implements DashboardService {
         TimeRange range = RangeResolver.resolve(query);
         MeterRecord m = support.resolveOneMeter(meterId);
 
-        MeterRef ref = new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode());
+        MeterRef ref = new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind());
         List<MeterPoint> series = tsq.queryByMeter(List.of(ref), range, Granularity.HOUR);
         Map<Long, Double> totalsMap = tsq.sumByMeter(List.of(ref), range);
         double total = totalsMap.getOrDefault(m.meterId(), 0.0);
@@ -185,16 +192,25 @@ public class DashboardServiceImpl implements DashboardService {
     /* ---------------- ⑤ Top-N ---------------- */
 
     @Override
-    public List<TopNItemDTO> topN(RangeQuery query, int topN) {
+    public List<TopNItemDTO> topN(RangeQuery query, int topN, String scope) {
         if (topN <= 0) topN = 10;
         TimeRange range = RangeResolver.resolve(query);
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
         if (meters.isEmpty()) return List.of();
 
-        Map<Long, Double> sums = tsq.sumByMeter(toRefs(meters), range);
+        // 默认仅叶子，避免父表 + 子表混排（4.20 的子表 vs 0.80 的父表无意义比较）
+        String s = (scope == null || scope.isBlank()) ? "LEAVES" : scope.trim().toUpperCase();
+        List<MeterRecord> ranked = switch (s) {
+            case "ALL" -> meters;
+            case "ROOTS" -> support.filterToVisibleRoots(meters);
+            default -> support.filterToVisibleLeaves(meters);
+        };
+        if (ranked.isEmpty()) return List.of();
 
-        List<TopNItemDTO> all = new ArrayList<>(meters.size());
-        for (MeterRecord m : meters) {
+        Map<Long, Double> sums = tsq.sumByMeter(toRefs(ranked), range);
+
+        List<TopNItemDTO> all = new ArrayList<>(ranked.size());
+        for (MeterRecord m : ranked) {
             double v = sums.getOrDefault(m.meterId(), 0.0);
             all.add(new TopNItemDTO(m.meterId(), m.code(), m.name(),
                 m.energyTypeCode(), m.unit(), m.orgNodeId(), v));
@@ -333,7 +349,8 @@ public class DashboardServiceImpl implements DashboardService {
         List<SankeyDTO.Node> nodes = new ArrayList<>(involved.size());
         for (Long id : involved) {
             MeterRecord m = byId.get(id);
-            String label = m.code() + (m.name() != null ? " " + m.name() : "");
+            // 用户视图优先显示名称；缺失时回落到编码。
+            String label = m.name() != null && !m.name().isBlank() ? m.name() : m.code();
             nodes.add(new SankeyDTO.Node(String.valueOf(id), label, m.energyTypeCode(), m.unit()));
         }
         nodes.sort(Comparator.comparing(SankeyDTO.Node::id));
@@ -368,8 +385,10 @@ public class DashboardServiceImpl implements DashboardService {
         List<FloorplanPointDTO> visiblePts = fp.points().stream()
                 .filter(p -> byId.containsKey(p.meterId()))
                 .toList();
-        if (fp.points().size() > 0 && visiblePts.isEmpty()) {
-            // 整图都不可见 — 视作越权
+        // 仅在"未指定 orgNodeId"时把"全图不可见"判为越权——带过滤器时 visiblePts 为空
+        // 也可能是用户主动选的组织节点与底图测点没交集（admin 也会命中），不应抛 403。
+        // 带过滤器走空响应分支：前端只渲染底图、不显示 markers。
+        if (query.orgNodeId() == null && fp.points().size() > 0 && visiblePts.isEmpty()) {
             throw new ForbiddenException("无权访问该平面图上的任意测点");
         }
 
@@ -394,6 +413,174 @@ public class DashboardServiceImpl implements DashboardService {
         return new FloorplanLiveDTO(fp.floorplan(), out);
     }
 
+    /* ---------------- ⑩ Energy breakdown (按测点细分 + 其他/未分摊) ---------------- */
+
+    @Override
+    public EnergyBreakdownDTO energyBreakdown(RangeQuery query) {
+        TimeRange range = RangeResolver.resolve(query);
+        // 单一能源类型才能对比根表与子表（不同类型不可加减）
+        String et = query.energyType();
+        if (et == null || et.isBlank()) et = "ELEC";
+
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), et);
+        if (meters.isEmpty()) {
+            return new EnergyBreakdownDTO(et, null, 0.0, List.of());
+        }
+
+        List<MeterRecord> roots = support.filterToVisibleRoots(meters);
+        Set<Long> rootIds = roots.stream().map(MeterRecord::meterId).collect(java.util.stream.Collectors.toSet());
+        Set<Long> visibleIds = meters.stream().map(MeterRecord::meterId).collect(java.util.stream.Collectors.toSet());
+        Map<Long, MeterRecord> byId = new HashMap<>();
+        for (MeterRecord m : meters) byId.put(m.meterId(), m);
+
+        // 直接子表 = visible 集合中 parent_meter_id ∈ rootIds 的表
+        List<MeterTopology> edges = topology.findAll();
+        List<Long> directChildIds = new ArrayList<>();
+        for (MeterTopology e : edges) {
+            if (rootIds.contains(e.getParentMeterId()) && visibleIds.contains(e.getChildMeterId())) {
+                directChildIds.add(e.getChildMeterId());
+            }
+        }
+
+        // 一次性把 roots + direct children 都查 sumByMeter
+        List<MeterRef> refs = new ArrayList<>(roots.size() + directChildIds.size());
+        refs.addAll(toRefs(roots));
+        for (Long cid : directChildIds) {
+            MeterRecord m = byId.get(cid);
+            if (m != null) refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
+        }
+        Map<Long, Double> sums = tsq.sumByMeter(refs, range);
+
+        double rootTotal = 0.0;
+        for (MeterRecord r : roots) rootTotal += sums.getOrDefault(r.meterId(), 0.0);
+
+        double covered = 0.0;
+        List<EnergyBreakdownDTO.Item> items = new ArrayList<>();
+        for (Long cid : directChildIds) {
+            MeterRecord m = byId.get(cid);
+            if (m == null) continue;
+            double v = sums.getOrDefault(cid, 0.0);
+            covered += v;
+            Double share = rootTotal > 0 ? v / rootTotal : null;
+            items.add(new EnergyBreakdownDTO.Item(
+                m.meterId(), m.code(), m.name(), v, share, false
+            ));
+        }
+        items.sort(Comparator.comparingDouble((EnergyBreakdownDTO.Item it) -> it.value() == null ? 0.0 : it.value()).reversed());
+
+        // 残差 = rootTotal - covered；可能为负（数据/配置异常，前端用警示色）
+        double residual = rootTotal - covered;
+        Double residualShare = rootTotal > 0 ? residual / rootTotal : null;
+        items.add(new EnergyBreakdownDTO.Item(
+            null, null, "其他/未分摊", residual, residualShare, true
+        ));
+
+        String unit = roots.isEmpty() ? null : roots.get(0).unit();
+        return new EnergyBreakdownDTO(et, unit, rootTotal, items);
+    }
+
+    /* ---------------- ⑪ Topology consistency ---------------- */
+
+    private static final double TOPO_OK_THRESHOLD = 0.05;     // ±5%
+    private static final double TOPO_WARN_THRESHOLD = 0.15;   // ±15%
+
+    @Override
+    public List<TopologyConsistencyDTO> topologyConsistency(RangeQuery query) {
+        TimeRange range = RangeResolver.resolve(query);
+        // 不限定能源类型；逐个父子对在同一 energyType 内对比
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), null);
+        if (meters.isEmpty()) return List.of();
+
+        Map<Long, MeterRecord> byId = new HashMap<>();
+        for (MeterRecord m : meters) byId.put(m.meterId(), m);
+        Set<Long> visibleIds = byId.keySet();
+
+        // parent → list of (visible) children
+        Map<Long, List<Long>> childrenByParent = new HashMap<>();
+        for (MeterTopology e : topology.findAll()) {
+            if (visibleIds.contains(e.getParentMeterId()) && visibleIds.contains(e.getChildMeterId())) {
+                childrenByParent.computeIfAbsent(e.getParentMeterId(), k -> new ArrayList<>())
+                    .add(e.getChildMeterId());
+            }
+        }
+        if (childrenByParent.isEmpty()) return List.of();
+
+        // 一次性查所有相关 meter 的累计
+        Set<Long> involved = new HashSet<>(childrenByParent.keySet());
+        for (List<Long> ch : childrenByParent.values()) involved.addAll(ch);
+        List<MeterRef> refs = new ArrayList<>(involved.size());
+        for (Long id : involved) {
+            MeterRecord m = byId.get(id);
+            if (m != null) refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
+        }
+        Map<Long, Double> sums = tsq.sumByMeter(refs, range);
+
+        List<TopologyConsistencyDTO> out = new ArrayList<>();
+        for (Map.Entry<Long, List<Long>> entry : childrenByParent.entrySet()) {
+            Long parentId = entry.getKey();
+            MeterRecord parent = byId.get(parentId);
+            if (parent == null) continue;
+            double parentReading = sums.getOrDefault(parentId, 0.0);
+            double childrenSum = 0.0;
+            int childCount = 0;
+            for (Long cid : entry.getValue()) {
+                MeterRecord c = byId.get(cid);
+                if (c == null) continue;
+                // 不同 energyType 的子表跳过（混 ELEC + WATER 没意义）
+                if (!java.util.Objects.equals(parent.energyTypeCode(), c.energyTypeCode())) continue;
+                childrenSum += sums.getOrDefault(cid, 0.0);
+                childCount++;
+            }
+            if (childCount == 0) continue;
+
+            double residual = parentReading - childrenSum;
+            Double ratio = parentReading > 0 ? residual / parentReading : null;
+            String severity = classifySeverity(ratio);
+            if ("OK".equals(severity)) continue;  // 仅暴露异常行
+
+            out.add(new TopologyConsistencyDTO(
+                parentId, parent.code(), parent.name(),
+                parent.energyTypeCode(), parent.unit(),
+                parentReading, childrenSum, childCount,
+                residual, ratio, severity
+            ));
+        }
+        // ALARM > WARN_NEGATIVE > WARN > INFO，再按 |ratio| 降序
+        out.sort(Comparator.<TopologyConsistencyDTO>comparingInt(t -> severityRank(t.severity()))
+            .thenComparing((a, b) -> {
+                double ra = a.residualRatio() == null ? 0.0 : Math.abs(a.residualRatio());
+                double rb = b.residualRatio() == null ? 0.0 : Math.abs(b.residualRatio());
+                return Double.compare(rb, ra);
+            }));
+        return out;
+    }
+
+    private static String classifySeverity(Double ratio) {
+        if (ratio == null) return "OK";
+        double abs = Math.abs(ratio);
+        if (abs <= TOPO_OK_THRESHOLD) return "OK";
+        if (ratio > 0) return ratio > TOPO_WARN_THRESHOLD ? "WARN" : "INFO";
+        return ratio < -TOPO_WARN_THRESHOLD ? "ALARM" : "WARN_NEGATIVE";
+    }
+
+    private static int severityRank(String s) {
+        return switch (s) {
+            case "ALARM" -> 0;
+            case "WARN_NEGATIVE" -> 1;
+            case "WARN" -> 2;
+            case "INFO" -> 3;
+            default -> 9;
+        };
+    }
+
+    private static Granularity pickRealtimeGranularity(RangeType r) {
+        if (r == null) return Granularity.HOUR;
+        return switch (r) {
+            case TODAY, LAST_24H, YESTERDAY -> Granularity.MINUTE;
+            case THIS_MONTH, CUSTOM -> Granularity.HOUR;
+        };
+    }
+
     private static String heatLevel(double v, double max) {
         if (max <= 0) return "NONE";
         double r = v / max;
@@ -408,7 +595,7 @@ public class DashboardServiceImpl implements DashboardService {
         for (FloorplanPointDTO p : pts) {
             MeterRecord m = byId.get(p.meterId());
             if (m != null) {
-                refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()));
+                refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
             }
         }
         return refs;
@@ -419,7 +606,7 @@ public class DashboardServiceImpl implements DashboardService {
     private List<MeterRef> toRefs(List<MeterRecord> meters) {
         List<MeterRef> refs = new ArrayList<>(meters.size());
         for (MeterRecord m : meters) {
-            refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()));
+            refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
         }
         return refs;
     }

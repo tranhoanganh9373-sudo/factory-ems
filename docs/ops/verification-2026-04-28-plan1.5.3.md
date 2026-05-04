@@ -11,7 +11,7 @@
 
 子项目 1.5 v0.3.0 / v1.5.0 — 上线收尾。在 v1.5.2 之上加：
 - TCP 连接池（共 host:port 多 unit-id 复用）
-- 状态告警接入 audit_logs
+- 状态报警接入 audit_logs
 - 现场实施 SOP / 部署 checklist / 调试工具
 
 真实物理仪表 demo + TLS 写为可选 SOP，等用户有硬件按 runbook §11.3 补 verification 即可。
@@ -57,7 +57,7 @@ $ cd frontend && pnpm typecheck && pnpm build  # 前端无变化但确认仍 bui
 |---|---|---|
 | 1.5.1 | v1.5.1-plan1.5.1 | Modbus TCP MVP（YAML / 调度 / 解码 / 状态机 / Influx sink / status REST / health / metrics / 前端） |
 | 1.5.2 | v1.5.2-plan1.5.2 | RTU + 共串口锁 + SQLite 持久化 buffer + 配置热加载 + 前端 reload 按钮 |
-| 1.5.3 | **v1.5.0** | 连接池 + 状态告警 audit + 现场实施 SOP / 部署 checklist / TLS optional |
+| 1.5.3 | **v1.5.0** | 连接池 + 状态报警 audit + 现场实施 SOP / 部署 checklist / TLS optional |
 
 **Test 总数：145。后端 mvn install + 前端 pnpm build 全绿。**
 

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { certApi, type PendingCertificate } from '@/api/collector';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_CERT_APPROVAL } from '@/components/pageHelp';
 
 export default function CertApprovalPage() {
   useDocumentTitle('系统管理 - 证书审批');
@@ -136,7 +137,7 @@ export default function CertApprovalPage() {
 
   return (
     <div style={{ padding: 24 }}>
-      <PageHeader title="证书审批" />
+      <PageHeader title="证书审批" helpContent={HELP_CERT_APPROVAL} />
       <Typography.Paragraph type="secondary">
         OPC UA 服务器证书首次连接时若未在信任列表中，会被记录为 pending。在此批准后 channel
         自动重连成功；拒绝则证书移到 rejected 目录，channel 持续无法连接。

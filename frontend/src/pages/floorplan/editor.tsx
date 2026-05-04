@@ -6,8 +6,8 @@ import {
   Input,
   Popconfirm,
   Select,
+  Skeleton,
   Space,
-  Spin,
   Table,
   Tag,
   Typography,
@@ -26,6 +26,7 @@ import {
 import { meterApi, type MeterDTO } from '@/api/meter';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_FLOORPLAN_EDITOR } from '@/components/pageHelp';
 import { useThemeStore } from '@/stores/themeStore';
 import { floorplanTokens } from '@/utils/floorplanTokens';
 
@@ -132,7 +133,8 @@ export default function FloorplanEditorPage() {
         meterId: pickMeter,
         xRatio,
         yRatio,
-        label: meter ? meter.code : null,
+        // 缺省用 name 做用户可读的显示；想自定义可在右侧表格里改
+        label: meter ? meter.name : null,
       },
     ]);
     setPickMeter(undefined);
@@ -155,12 +157,12 @@ export default function FloorplanEditorPage() {
     );
   }
 
-  if (isLoading) return <Spin />;
+  if (isLoading) return <Skeleton active paragraph={{ rows: 8 }} />;
   if (!data) return null;
 
   return (
     <>
-      <PageHeader title="编辑设备分布图" />
+      <PageHeader title="编辑设备分布图" helpContent={HELP_FLOORPLAN_EDITOR} />
       <Card
         title={
           <Space>
@@ -234,7 +236,11 @@ export default function FloorplanEditorPage() {
                       <Text
                         x={12}
                         y={-6}
-                        text={p.label ?? meter?.code ?? `M${p.meterId}`}
+                        text={
+                          p.label && p.label !== meter?.code
+                            ? p.label
+                            : meter?.name ?? meter?.code ?? `M${p.meterId}`
+                        }
                         fontSize={12}
                         fill={tokens.labelText}
                         shadowColor="black"

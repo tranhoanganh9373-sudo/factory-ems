@@ -75,3 +75,10 @@ ems:
     webhook-retry-max: 3
     webhook-retry-backoff-seconds: [10, 60, 300]
     webhook-timeout-default-ms: 5000
+    topology:
+      enabled: false             # gray-launch: enable per-environment after deploy
+      cron: "0 5 * * * *"        # every hour at minute 5
+      ttl-cron: "0 15 3 * * *"   # every day at 03:15
+      history-retention-days: 7
+      enter-threshold: -0.15
+      exit-threshold: -0.10

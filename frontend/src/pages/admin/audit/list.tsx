@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Card, Table, Space, Input, Select, DatePicker, Button, Tag } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_AUDIT_LOG } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { auditApi, AuditLogDTO, AuditQuery } from '@/api/audit';
 import { DetailModal } from './DetailModal';
+import { showTotal } from '@/utils/format';
 import { translate, AUDIT_ACTION_LABEL, RESOURCE_TYPE_LABEL } from '@/utils/i18n-dict';
 
 const { RangePicker } = DatePicker;
@@ -33,7 +35,7 @@ export default function AuditListPage() {
 
   return (
     <>
-      <PageHeader title="审计日志" />
+      <PageHeader title="审计日志" helpContent={HELP_AUDIT_LOG} />
       <Card>
         <Space style={{ marginBottom: 16 }} wrap>
           <Select
@@ -84,6 +86,7 @@ export default function AuditListPage() {
             pageSize: q.size,
             total: data?.total ?? 0,
             onChange: (p, s) => setQ({ ...q, page: p, size: s }),
+            showTotal,
           }}
           columns={[
             {

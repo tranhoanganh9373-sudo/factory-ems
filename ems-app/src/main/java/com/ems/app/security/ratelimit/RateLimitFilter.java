@@ -43,25 +43,36 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final RateLimitProperties props;
     private final ConcurrentMap<String, Bucket> readBuckets;
     private final ConcurrentMap<String, Bucket> writeBuckets;
+    private final ConcurrentMap<String, Bucket> loginBuckets;
 
     public RateLimitFilter(RateLimitProperties props) {
         this.props = props;
         this.readBuckets = boundedMap();
         this.writeBuckets = boundedMap();
+        this.loginBuckets = boundedMap();
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
-        if (!props.isEnabled() || isExempt(request.getRequestURI())) {
+        if (!props.isEnabled()) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        String uri = request.getRequestURI();
+        // Login is checked BEFORE the exempt list so /api/v1/auth/login is throttled
+        // even though /api/v1/auth/* is exempt for refresh / password-change.
+        boolean isLogin = isLoginPath(uri);
+        if (!isLogin && isExempt(uri)) {
             chain.doFilter(request, response);
             return;
         }
 
         boolean isRead = isReadMethod(request.getMethod());
         String key = resolveClientIp(request);
-        Bucket bucket = bucketFor(isRead, key);
+        Bucket bucket = bucketFor(isLogin, isRead, key);
 
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
@@ -93,6 +104,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return false;
     }
 
+    private boolean isLoginPath(String uri) {
+        if (uri == null) {
+            return false;
+        }
+        for (String prefix : props.getLoginPathPrefixes()) {
+            if (uri.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isReadMethod(String method) {
         return "GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method);
     }
@@ -110,13 +133,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
         return request.getRemoteAddr();
     }
 
-    private Bucket bucketFor(boolean isRead, String key) {
-        ConcurrentMap<String, Bucket> map = isRead ? readBuckets : writeBuckets;
-        return map.computeIfAbsent(key, k -> newBucket(isRead));
+    private Bucket bucketFor(boolean isLogin, boolean isRead, String key) {
+        ConcurrentMap<String, Bucket> map = isLogin ? loginBuckets
+                : (isRead ? readBuckets : writeBuckets);
+        return map.computeIfAbsent(key, k -> newBucket(isLogin, isRead));
     }
 
-    private Bucket newBucket(boolean isRead) {
-        int perMinute = isRead ? props.getReadPerMinute() : props.getWritePerMinute();
+    private Bucket newBucket(boolean isLogin, boolean isRead) {
+        int perMinute = isLogin ? props.getLoginPerMinute()
+                : (isRead ? props.getReadPerMinute() : props.getWritePerMinute());
         long capacity = (long) props.getBurstMultiplier() * perMinute;
         Bandwidth bandwidth = Bandwidth.builder()
                 .capacity(capacity)

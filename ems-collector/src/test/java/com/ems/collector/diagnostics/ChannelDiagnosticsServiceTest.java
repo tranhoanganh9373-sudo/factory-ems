@@ -7,7 +7,7 @@ import com.ems.collector.protocol.VirtualConfig;
 import com.ems.collector.protocol.VirtualMode;
 import com.ems.collector.protocol.VirtualPoint;
 import com.ems.collector.runtime.ChannelStateRegistry;
-import com.ems.collector.sink.LoggingSampleWriter;
+import com.ems.collector.sink.DiagnosticRingBuffer;
 import com.ems.collector.transport.Quality;
 import com.ems.collector.transport.Sample;
 import com.ems.collector.transport.TestResult;
@@ -42,7 +42,7 @@ class ChannelDiagnosticsServiceTest {
     private ChannelStateRegistry registry;
     private RecordingChannelService channelService;
     private ChannelRepository repo;
-    private LoggingSampleWriter sampleWriter;
+    private DiagnosticRingBuffer ring;
     private ChannelDiagnosticsService svc;
 
     private static Channel channel(Long id) {
@@ -62,8 +62,8 @@ class ChannelDiagnosticsServiceTest {
         registry = new ChannelStateRegistry(clock, event -> {});
         channelService = new RecordingChannelService();
         repo = mock(ChannelRepository.class);
-        sampleWriter = new LoggingSampleWriter();
-        svc = new ChannelDiagnosticsService(registry, channelService, repo, Optional.of(sampleWriter));
+        ring = new DiagnosticRingBuffer();
+        svc = new ChannelDiagnosticsService(registry, channelService, repo, ring);
     }
 
     @Test
@@ -121,11 +121,9 @@ class ChannelDiagnosticsServiceTest {
     }
 
     @Test
-    @DisplayName("getRecentSamples 无 LoggingSampleWriter bean 时返回空列表（生产环境）")
-    void getRecentSamples_noWriter_returnsEmpty() {
-        var prodSvc = new ChannelDiagnosticsService(registry, channelService, repo, Optional.empty());
-
-        var result = prodSvc.getRecentSamples(1L, 20);
+    @DisplayName("getRecentSamples 不存在 channel 返回空列表")
+    void getRecentSamples_unknownChannel_returnsEmpty() {
+        var result = svc.getRecentSamples(999L, 20);
 
         assertThat(result).isEmpty();
     }
@@ -135,8 +133,8 @@ class ChannelDiagnosticsServiceTest {
     void getRecentSamples_mapsAndOrdersNewestFirst() {
         var t1 = Instant.parse("2026-04-30T10:00:00Z");
         var t2 = Instant.parse("2026-04-30T10:00:01Z");
-        sampleWriter.write(new Sample(1L, "p1", t1, 1.5, Quality.GOOD, Map.of("topic", "a")));
-        sampleWriter.write(new Sample(1L, "p2", t2, 2.5, Quality.UNCERTAIN, Map.of("topic", "b")));
+        ring.record(new Sample(1L, "p1", t1, 1.5, Quality.GOOD, Map.of("topic", "a")));
+        ring.record(new Sample(1L, "p2", t2, 2.5, Quality.UNCERTAIN, Map.of("topic", "b")));
 
         var result = svc.getRecentSamples(1L, 20);
 
@@ -154,7 +152,7 @@ class ChannelDiagnosticsServiceTest {
     @DisplayName("getRecentSamples limit<=0 → 默认 20")
     void getRecentSamples_nonPositiveLimit_clampsTo20() {
         for (int i = 0; i < 30; i++) {
-            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+            ring.record(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
                 (double) i, Quality.GOOD, Map.of()));
         }
 
@@ -167,7 +165,7 @@ class ChannelDiagnosticsServiceTest {
     @DisplayName("getRecentSamples limit>100 → 截断到 100")
     void getRecentSamples_limitOver100_clampsTo100() {
         for (int i = 0; i < 100; i++) {
-            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+            ring.record(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
                 (double) i, Quality.GOOD, Map.of()));
         }
 
@@ -180,7 +178,7 @@ class ChannelDiagnosticsServiceTest {
     @DisplayName("getRecentSamples 尊重显式 limit")
     void getRecentSamples_explicitLimit_respected() {
         for (int i = 0; i < 10; i++) {
-            sampleWriter.write(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
+            ring.record(new Sample(1L, "p" + i, Instant.parse("2026-04-30T10:00:00Z"),
                 (double) i, Quality.GOOD, Map.of()));
         }
 

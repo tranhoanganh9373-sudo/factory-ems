@@ -2,7 +2,7 @@
 
 > **定位**：factory-ems on-prem 部署的统一观测平面（metrics + logs + traces + alerting），与产品栈生命周期完全独立，独立 docker-compose 管理。
 
-**价值**：为工程值班、客户管理、数据分析提供 "看得见的线上系统" — JVM / HTTP / DB / 业务模块的 metrics + 结构化日志 + 分布式追踪 + 多通道告警，让故障诊断从 SSH 黑箱变成图表实时观测。
+**价值**：为工程值班、客户管理、数据分析提供 "看得见的线上系统" — JVM / HTTP / DB / 业务模块的 metrics + 结构化日志 + 分布式追踪 + 多通道报警，让故障诊断从 SSH 黑箱变成图表实时观测。
 
 ---
 
@@ -24,7 +24,7 @@ ops/observability/
 │
 ├── prometheus/                           # Prometheus 配置
 │   ├── prometheus.yml                    # 抓取 + 规则 inclusion（C2 任务）
-│   └── rules/                            # SLO + 告警规则
+│   └── rules/                            # SLO + 报警规则
 │
 ├── alertmanager/                         # Alertmanager 配置（C4 任务）
 ├── loki/                                 # Loki 日志存储（C3 任务）
@@ -62,7 +62,7 @@ cp .env.obs.example .env.obs
 OBS_GRAFANA_ADMIN_PASSWORD=YourStrongPassword
 ```
 
-可选（留空则相应告警通道被禁用）：
+可选（留空则相应报警通道被禁用）：
 ```env
 OBS_SMTP_HOST=smtp.example.com:587
 OBS_DINGTALK_WEBHOOK=https://oapi.dingtalk.com/robot/send?...
@@ -94,9 +94,9 @@ docker network create ems-net 2>/dev/null || true
 | 概念 / 4 SLO / dashboard 说明 | `docs/product/observability-feature-overview.md` | 销售 / 客户 | G |
 | 配置参考 / env vars / 启停 | `docs/product/observability-config-reference.md` | 实施工程师 | A ✅ |
 | 17 个指标 + Spring Boot metrics | `docs/product/observability-metrics-dictionary.md` | 数据 / 集成工程师 | B ✅ |
-| 4 SLO + 16 条告警规则 | `docs/product/observability-slo-rules.md` | 客户管理 / 运维 | D ⏳ |
+| 4 SLO + 16 条报警规则 | `docs/product/observability-slo-rules.md` | 客户管理 / 运维 | D ⏳ |
 | 7 个 dashboard 布局 / 下钻流程 | `docs/product/observability-dashboards-guide.md` | 客户 / 工程值班 | E ⏳ |
-| 用户手册：看 dashboard / 处理告警 | `docs/product/observability-user-guide.md` | 客户运维 | G ⏳ |
+| 用户手册：看 dashboard / 处理报警 | `docs/product/observability-user-guide.md` | 客户运维 | G ⏳ |
 | 部署指南：硬件 / 安装 / 排查 | `docs/ops/observability-deployment.md` | 装机工程师 | C ⏳ |
 | 故障排查 / 备份 / 升级 runbook | `docs/ops/observability-runbook.md` | 运维 | F ⏳ |
 
@@ -108,7 +108,7 @@ docker network create ems-net 2>/dev/null || true
 
 | 目录 | 期望内容 | Phase |
 |---|---|---|
-| `prometheus/rules/` | 8 个 SLO + 告警规则 | D |
+| `prometheus/rules/` | 8 个 SLO + 报警规则 | D |
 | `alertmanager/alertmanager.yml` | Alert 路由配置 | C4 |
 | `loki/loki-config.yml` | Loki 配置 | C3 |
 | `promtail/promtail-config.yml` | promtail 采集配置 | C3 |

@@ -16,7 +16,7 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | `SIGN` | 否 | 是 | 是 | 是 |
 | `SIGN_AND_ENCRYPT` | 是 | 是 | 是 | 是 |
 
-`NONE` 模式下整条链路是**明文 + 无身份认证**；只能用于物理隔离的 OT 网络。生产环境应优先选 `SIGN_AND_ENCRYPT`。
+`NONE` 模式下整条链路是**明文 + 无身份认证**，只能用于物理隔离的 OT 网络。生产环境优先选 `SIGN_AND_ENCRYPT`。
 
 ---
 
@@ -31,10 +31,10 @@ OPC UA 客户端 / 服务端通过 X.509 证书互相验证。`SecurityMode` 决
 | `OpcUaCertificateStore` 接入 transport 启动流程 | ✅ 已接入；`OpcUaTransport.buildCertificateValidator` 校验服务端证书 |
 | 服务端证书审批 REST API | ✅ 已实装：`GET /api/v1/collector/cert-pending` / `POST /api/v1/collector/{channelId}/trust-cert` / `DELETE /api/v1/collector/cert-pending/{thumbprint}` |
 | 前端证书审批页 | ✅ `/admin/cert-approval`（ADMIN-only） |
-| `OPC_UA_CERT_PENDING` 告警自动联动 | ✅ pending 时创建 ACTIVE 告警，approve 时自动 RESOLVE |
+| `OPC_UA_CERT_PENDING` 报警自动联动 | ✅ pending 时创建 ACTIVE 报警，approve 时自动 RESOLVE |
 | `.pfx` 客户端证书 multipart 上传 | ✅ `POST /api/v1/secrets/opcua/cert`（ADMIN）— 后端解析 PKCS#12 → 落盘成 PEM (encrypted PKCS#8) — 见 §5.2 |
 
-> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维通过 §3 信任目录约定 + §4 审批 SOP 工作；客户端 `.pfx` 直接走 §5.2 的 multipart 上传端点即可。
+> **结论**：v1.1 三种 `SecurityMode` 全可用。日常运维走 §3 信任目录约定 + §4 审批 SOP；客户端 `.pfx` 走 §5.2 的 multipart 上传端点。
 
 ---
 
@@ -59,7 +59,7 @@ ${ems.secrets.dir}                       # 默认 ${user.home}/.ems/secrets
 - **文件格式**：DER 编码 X.509（**非 PEM**，无 base64 包裹）
 - **`trusted/` 文件名**：`<displayName>-<thumbprint>.der`，其中 `<thumbprint>` 是证书 DER 字节的 **SHA-256 十六进制**（小写 64 字符）
 - **`pending/` / `rejected/` 文件名**：`<thumbprint>.der`（不带 displayName 前缀）
-- **权限**：代码会用 POSIX 把 `pending/` `.der` 与 `.json` 设为 `rw-------`（600）；`trusted/` 目录建议手工设 `700`（运维责任，下文 §6 给出命令）
+- **权限**：代码用 POSIX 把 `pending/` `.der` 与 `.json` 设为 `rw-------`（600）；`trusted/` 目录手工设 `700`（运维责任，下文 §6 给出命令）
 
 > `OpcUaCertificateStore` 暴露的能力（v1.1 transport 实际调用）：
 > - `isTrusted(X509Certificate)` —— 按 thumbprint 查 `trusted/`
@@ -91,7 +91,7 @@ ls -la ~/.ems/secrets/opcua/certs/pending/
 
 1. 把客户端 PEM 证书与私钥放入 secret 路径（详见 §6）
 2. 在 `/collector` 创建 channel 时填 `证书引用` 与 `证书密码引用`（如需要）
-3. 启用通道；首次连接服务端时若服务端证书未在 `trusted/`，transport 抛 `TransportException` + 同步触发 `OPC_UA_CERT_PENDING` 告警
+3. 启用通道；首次连接服务端时若服务端证书未在 `trusted/`，transport 抛 `TransportException` + 同步触发 `OPC_UA_CERT_PENDING` 报警
 4. 按 §5 完成审批后通道自动重连
 
 ---
@@ -104,10 +104,10 @@ ls -la ~/.ems/secrets/opcua/certs/pending/
 2. transport `start()` 调用 Milo `connect`，服务端返回其 X.509 证书
 3. `OpcUaTransport.buildCertificateValidator` 调用 `OpcUaCertificateStore.isTrusted(serverCert)`
 4. 不在 trusted 目录 → 调 `addPending(cert, channelId, endpointUrl)` 把 `.der` + `.json` 写到 `pending/`，发布 `ChannelCertificatePendingEvent`，抛 `TransportException` 拒绝连接
-5. `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 告警（同 channel 同时只有一条 ACTIVE）
+5. `CertificatePendingListener` 同步创建 `OPC_UA_CERT_PENDING` 报警（同 channel 同时只有一条 ACTIVE）
 6. 管理员打开 `/admin/cert-approval`（ADMIN-only） → 列出待审批证书，每 10 秒自动刷新
 7. 点 **「批准」** → 前端调 `POST /api/v1/collector/{channelId}/trust-cert { thumbprint }`
-8. 后端 `approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，发布 `ChannelCertificateApprovedEvent`，自动 RESOLVE 告警
+8. 后端 `approve(thumbprint)` 把 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，发布 `ChannelCertificateApprovedEvent`，自动 RESOLVE 报警
 9. 下次 transport 重连周期到达即恢复 `CONNECTED`
 
 也可通过命令行直接审批：
@@ -173,7 +173,7 @@ ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRe
 
 ## 6. 手工补救（绕开审批端点 / 直接管理目录）
 
-通常用 §5 的 REST 流就够了。下列手工流程仅在审批 UI 不可用、或需要批量预置证书时使用。
+通常 §5 的 REST 流就够了。下列手工流程仅在审批 UI 不可用、或需要批量预置证书时使用。
 
 ### 6.1 把服务端证书加入信任列表
 
@@ -211,7 +211,7 @@ chmod 700 ~/.ems/secrets/opcua/certs/trusted/
 chmod 600 ~/.ems/secrets/opcua/certs/trusted/*.der
 ```
 
-容器部署：把 `~/.ems` 挂卷的 owner 设置为运行 collector 的 uid（如 `app:app`），并禁止 world 读。
+容器部署：把 `~/.ems` 挂卷的 owner 改成运行 collector 的 uid（如 `app:app`），禁止 world 读。
 
 ---
 
@@ -219,7 +219,7 @@ chmod 600 ~/.ems/secrets/opcua/certs/trusted/*.der
 
 | 现象 | 排查 |
 |---|---|
-| channel 一直 `ERROR`，错误是 `Untrusted server certificate` | 服务端证书已落入 `pending/` 并触发 `OPC_UA_CERT_PENDING` 告警，按 §5.1 在 `/admin/cert-approval` 审批 |
+| channel 一直 `ERROR`，错误是 `Untrusted server certificate` | 服务端证书已落入 `pending/` 并触发 `OPC_UA_CERT_PENDING` 报警，按 §5.1 在 `/admin/cert-approval` 审批 |
 | 把证书放入 trusted 目录后仍然 ERROR | 检查文件名是否含 thumbprint 后缀（`*-<sha256>.der`）；权限是否 600；指纹大小写是否小写 hex |
 | `OpcUaCertificateStore.init()` 失败 | 检查 `${ems.secrets.dir}` 目录可写；常见原因是容器 uid 不匹配 |
 | 启动后 trusted 目录是空的但 transport CONNECTED | 当前是 `NONE` 模式，不需要证书。若想强制证书校验请把通道改成 `SIGN` 或 `SIGN_AND_ENCRYPT` |

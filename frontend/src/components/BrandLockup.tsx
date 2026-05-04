@@ -10,20 +10,23 @@ const COMPANY = '松羽科技集团';
 export function BrandLockup({ variant }: Props) {
   if (variant === 'header') {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <span
           style={{
             background: '#FFFFFF',
-            padding: '4px 16px',
+            padding: '0 10px',
             borderRadius: 9999,
             display: 'inline-flex',
             alignItems: 'center',
-            height: 64,
+            height: 36,
+            boxShadow: '0 0 0 1px rgba(255,255,255,0.08)',
           }}
         >
-          <img src={logo} alt={COMPANY} style={{ height: 56, display: 'block' }} />
+          <img src={logo} alt={COMPANY} style={{ height: 36, display: 'block' }} />
         </span>
-        <span style={{ color: '#FFFFFF', fontSize: 18, fontWeight: 500 }}>{SYSTEM}</span>
+        <span style={{ color: '#FFFFFF', fontSize: 16, fontWeight: 500, letterSpacing: 0.2 }}>
+          {SYSTEM}
+        </span>
       </div>
     );
   }

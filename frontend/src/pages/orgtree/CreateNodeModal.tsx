@@ -1,8 +1,7 @@
-import { Modal, Form, Input, Select, InputNumber, message } from 'antd';
+import { Alert, Modal, Form, Input, Select, InputNumber, message } from 'antd';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
-
-const NODE_TYPES = ['PLANT', 'WORKSHOP', 'LINE', 'DEVICE', 'GROUP', 'OTHER'];
+import { allowedChildTypes, isTerminal } from './nodeTypeRules';
 
 export function CreateNodeModal({
   open,
@@ -25,6 +24,9 @@ export function CreateNodeModal({
     },
   });
 
+  const parentBlocked = isTerminal(parent?.nodeType);
+  const typeOptions = allowedChildTypes(parent?.nodeType ?? null);
+
   return (
     <Modal
       title={`新建节点${parent ? ' (父: ' + parent.name + ')' : ' (根节点)'}`}
@@ -39,9 +41,18 @@ export function CreateNodeModal({
         )
       }
       confirmLoading={mut.isPending}
+      okButtonProps={{ disabled: parentBlocked }}
       destroyOnClose
     >
-      <Form form={form} layout="vertical">
+      {parentBlocked && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message={`"${parent?.name}" 是 OTHER 类型（终结叶子），不允许再添加子节点`}
+        />
+      )}
+      <Form form={form} layout="vertical" disabled={parentBlocked}>
         <Form.Item name="name" label="名称" rules={[{ required: true, max: 128 }]}>
           <Input />
         </Form.Item>
@@ -55,8 +66,15 @@ export function CreateNodeModal({
         >
           <Input />
         </Form.Item>
-        <Form.Item name="nodeType" label="节点类型" rules={[{ required: true }]}>
-          <Select options={NODE_TYPES.map((t) => ({ label: t, value: t }))} />
+        <Form.Item
+          name="nodeType"
+          label="节点类型"
+          rules={[{ required: true }]}
+          tooltip={
+            parent ? `父节点是 ${parent.nodeType}，仅允许同级或更细粒度的类型` : '根节点可任选类型'
+          }
+        >
+          <Select options={typeOptions.map((t) => ({ label: t, value: t }))} />
         </Form.Item>
         <Form.Item name="sortOrder" label="排序" initialValue={0}>
           <InputNumber min={0} />

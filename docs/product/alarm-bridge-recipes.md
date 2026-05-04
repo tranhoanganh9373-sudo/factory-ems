@@ -1,4 +1,4 @@
-# 告警桥接配方（飞书 / 邮件 / 短信）
+# 报警桥接配方（飞书 / 邮件 / 短信）
 
 > **适用版本**：v1.0.0-ga（首版）｜ 最近更新：2026-05-01
 > **受众**：客户开发对接 / 现场实施工程师
@@ -8,9 +8,9 @@
 
 ## §1 为什么需要桥接
 
-ems-alarm 首版**只支持一种推送形式**：HTTP POST 一段 generic-json 到一个全局 Webhook 地址。
-钉钉、企业微信的桥接代码已在 [alarm-webhook-integration.md §6.1 / §6.2](./alarm-webhook-integration.md) 给齐。
-本文补足另外三类常见渠道：
+ems-alarm 首版只支持一种推送形式：HTTP POST 一段 generic-json 到一个全局 Webhook 地址。
+钉钉、企业微信的桥接代码已经在 [alarm-webhook-integration.md §6.1 / §6.2](./alarm-webhook-integration.md) 给齐。
+本文补另外三类常见渠道：
 
 | 渠道 | 桥接方式 | 现成 Python 模板 |
 |---|---|---|
@@ -18,13 +18,13 @@ ems-alarm 首版**只支持一种推送形式**：HTTP POST 一段 generic-json 
 | **邮件 / SMTP** | EMS → 中转服务 → SMTP 服务器 | §4 |
 | **短信** | EMS → 中转服务 → 阿里云 / 腾讯云 / Twilio SMS API | §5 |
 
-> 个人微信 / 微信公众号不开放 webhook 推送给非认证企业服务号，因此**不在本文方案内**——客户企业号可走"自建后端 → 调腾讯模板消息 API"，与§5 短信桥接同形态。
+> 个人微信和微信公众号不开放 webhook 推送给非认证企业服务号，所以本文不涉及。客户企业号可走"自建后端 → 调腾讯模板消息 API"，形态与 §5 短信桥接相同。
 
 ---
 
 ## §2 桥接服务的通用结构
 
-每个桥接服务都干同一件事：
+每个桥接服务做的事情都一样：
 
 ```
 EMS Webhook ──HTTP POST──> 桥接服务（Python / Node / Go）
@@ -34,10 +34,10 @@ EMS Webhook ──HTTP POST──> 桥接服务（Python / Node / Go）
                               ├─ 3. 格式转换（generic-json → 目标平台 JSON / 文本）
                               ├─ 4. 调目标平台 API
                               └─ 5. 返回 200（即使下游失败也建议 200，避免 EMS 重试堆积；
-                                            真正失败用本地告警，不指望 EMS 重发）
+                                            真正失败用本地报警，不指望 EMS 重发）
 ```
 
-**部署形态**：FaaS（阿里云函数计算 / 腾讯云 SCF / AWS Lambda）或一台 1C1G 小虚机跑 Flask + nginx 即可。
+**部署形态**：FaaS（阿里云函数计算、腾讯云 SCF、AWS Lambda），或一台 1C1G 小虚机跑 Flask + nginx 即可。
 
 **通用工具函数**（每个示例都用到）：
 
@@ -82,8 +82,8 @@ def common_preflight():
 ### §3.1 准备工作
 
 1. 飞书群 → 设置 → 群机器人 → 添加机器人 → 自定义机器人。
-2. 安全设置选 **签名校验**（推荐）或仅 IP 白名单。
-3. 拷贝 webhook URL（形如 `https://open.feishu.cn/open-apis/bot/v2/hook/<bot-id>`）+ 签名密钥。
+2. 安全设置选签名校验（推荐）或仅 IP 白名单。
+3. 拷贝 webhook URL（形如 `https://open.feishu.cn/open-apis/bot/v2/hook/<bot-id>`）和签名密钥。
 
 ### §3.2 中转服务（Python / Flask）
 
@@ -104,7 +104,7 @@ def feishu_sign(secret: str, ts: int) -> str:
 
 
 def to_feishu_card(p: dict) -> dict:
-    title = "🔴 设备失联告警" if p["alarm_type"] == "SILENT_TIMEOUT" else "🔴 采集连续失败"
+    title = "🔴 设备失联报警" if p["alarm_type"] == "SILENT_TIMEOUT" else "🔴 采集连续失败"
     last_seen = p.get("last_seen_at") or "—"
     detail = p.get("detail") or {}
     return {
@@ -122,7 +122,7 @@ def to_feishu_card(p: dict) -> dict:
                     {"is_short": True, "text": {"tag": "lark_md",
                         "content": f"**最后上报**\n{last_seen}"}},
                     {"is_short": True, "text": {"tag": "lark_md",
-                        "content": f"**告警 ID**\n{p['alarm_id']}"}},
+                        "content": f"**报警 ID**\n{p['alarm_id']}"}},
                     {"is_short": False, "text": {"tag": "lark_md",
                         "content": f"**阈值快照**\n```\n{json.dumps(detail, ensure_ascii=False, indent=2)}\n```"}},
                 ]
@@ -162,7 +162,7 @@ export FEISHU_SIGN_SECRET="<飞书机器人签名密钥>"
 gunicorn -w 2 -b 0.0.0.0:8080 app:app
 ```
 
-EMS UI（`/alarm/webhook`）填写：URL = `https://your-bridge.example.com/ems/feishu`，Secret = `EMS_WEBHOOK_SECRET` 同值，点"测试发送"应能立即收到飞书卡片。
+EMS UI（`/alarm/webhook`）填：URL = `https://your-bridge.example.com/ems/feishu`，Secret = `EMS_WEBHOOK_SECRET` 同值，点"测试发送"应该能立即收到飞书卡片。
 
 ### §3.4 curl 自检
 
@@ -182,9 +182,9 @@ curl -X POST http://localhost:8080/ems/feishu \
 
 ### §4.1 适用场景
 
-- 现场没装 IM / 远程客户没有钉钉群，但有邮箱。
-- 24/7 oncall 列表轮换收件，邮箱比 IM 更稳定。
-- 取证 / 留档（合规审计），邮件天然不可篡改。
+- 现场没装 IM、远程客户没有钉钉群，但有邮箱。
+- 24/7 oncall 列表轮换收件，邮箱比 IM 稳定。
+- 取证、留档（合规审计），邮件天然不可篡改。
 
 ### §4.2 中转服务（Python / Flask + smtplib）
 
@@ -200,15 +200,15 @@ SMTP_HOST = os.environ["SMTP_HOST"]               # smtp.example.com
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "465"))
 SMTP_USER = os.environ["SMTP_USER"]               # alarm@example.com
 SMTP_PASS = os.environ["SMTP_PASS"]
-MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "EMS 告警机器人")
+MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "EMS 报警机器人")
 MAIL_TO = [x.strip() for x in os.environ["MAIL_TO"].split(",")]  # 多人逗号分隔
 
 
 def to_email(p: dict) -> tuple[str, str]:
-    subject = f"[EMS 告警] {p['device_name']} 失联（{p['device_code']}）"
+    subject = f"[EMS 报警] {p['device_name']} 失联（{p['device_code']}）"
     body = f"""
-告警类型：{p['alarm_type']}
-告警 ID：{p['alarm_id']}
+报警类型：{p['alarm_type']}
+报警 ID：{p['alarm_id']}
 设备：{p['device_name']}（编码 {p['device_code']}，ID {p['device_id']}）
 触发时间：{p['triggered_at']}
 最后上报：{p.get('last_seen_at') or '—'}
@@ -263,9 +263,9 @@ gunicorn -w 1 -b 0.0.0.0:8081 app:app
 
 ### §4.4 防垃圾邮件实践
 
-- 用**专用发件邮箱**（如 `alarm@your-company.com`），不要拿员工个人邮箱。
-- 发件域名配 **SPF + DKIM + DMARC**，否则 Gmail / Outlook 大概率进垃圾箱。
-- 高频告警合并：同一 device 30 分钟内多次触发只发一封（在桥接服务里加 30min TTL 去重）。
+- 用专用发件邮箱（如 `alarm@your-company.com`），不要拿员工个人邮箱。
+- 发件域名配 SPF + DKIM + DMARC，否则 Gmail / Outlook 大概率进垃圾箱。
+- 高频报警合并：同一 device 30 分钟内多次触发只发一封（在桥接服务里加 30min TTL 去重）。
 
 ---
 
@@ -274,8 +274,8 @@ gunicorn -w 1 -b 0.0.0.0:8081 app:app
 ### §5.1 适用场景
 
 - 关键设备失联（如冷库、医院供电），oncall 没盯 IM 也要立刻知道。
-- 海外现场用 Twilio；国内用阿里云 / 腾讯云 SMS。
-- **单价 0.04–0.12 元 / 条**，建议**严重程度阈值过滤**+**夜间专用通道**。
+- 海外现场用 Twilio；国内用阿里云或腾讯云 SMS。
+- 单价 0.04–0.12 元 / 条，建议加严重程度阈值过滤和夜间专用通道。
 
 ### §5.2 中转服务（Python / Flask + 阿里云 SDK 示例）
 
@@ -297,7 +297,7 @@ client = AcsClient(AK, SK, "cn-hangzhou")
 
 
 def to_sms_params(p: dict) -> dict:
-    """模板示例：'EMS 告警：${device}失联，触发时间${time}，请尽快处理'"""
+    """模板示例：'EMS 报警：${device}失联，触发时间${time}，请尽快处理'"""
     return {
         "device": f"{p['device_name']}({p['device_code']})"[:30],  # 阿里云模板变量限长
         "time": p["triggered_at"][11:19],  # 只截 HH:MM:SS
@@ -347,17 +347,17 @@ gunicorn -w 1 -b 0.0.0.0:8082 app:app
 
 ### §5.4 模板申请要点（阿里云 / 腾讯云）
 
-- **签名 SignName**：必须用企业实名（个人开发者只能用 `阿里云短信测试`）。审核 1-2 小时。
-- **模板 TemplateCode**：变量数 ≤ 5 个、单变量 ≤ 30 字符、整条 ≤ 70 字符。审核 1-2 小时。
-- **模板示例**：`【松羽科技】EMS告警：${device}失联，时间${time}，请处理。回TD退订` —— 必须含"回 TD 退订"等运营商合规要求。
-- **腾讯云 SMS** API 不同但形态相同（`SmsClient.SendSms`），代码替换即可。
-- **海外用 Twilio**：`twilio.rest.Client(SID, TOKEN).messages.create(to, from_, body)`，无需模板审核但单条 ≈ 0.5 元。
+- 签名 SignName：必须用企业实名（个人开发者只能用 `阿里云短信测试`）。审核 1-2 小时。
+- 模板 TemplateCode：变量数 ≤ 5 个、单变量 ≤ 30 字符、整条 ≤ 70 字符。审核 1-2 小时。
+- 模板示例：`【松羽科技】EMS报警：${device}失联，时间${time}，请处理。回TD退订` —— 必须含"回 TD 退订"等运营商合规要求。
+- 腾讯云 SMS API 不同但形态相同（`SmsClient.SendSms`），代码替换即可。
+- 海外用 Twilio：`twilio.rest.Client(SID, TOKEN).messages.create(to, from_, body)`，不用模板审核但单条 ≈ 0.5 元。
 
 ### §5.5 成本与频控
 
-- 一条告警发 2 个号码 = 2 条计费。每月 100 次告警 × 2 = 200 条 ≈ 30 元。
-- 强烈建议在桥接服务里加**严重度过滤**（首版 severity 都是 WARNING，后续 v1.7 会出分级）和**夜间静默窗口**（如 23:00-7:00 仅 P0）。
-- 加**全天上限**（如同一号码每日 ≤ 20 条），避免循环告警时短信费爆。
+- 一条报警发 2 个号码 = 2 条计费。每月 100 次报警 × 2 = 200 条 ≈ 30 元。
+- 在桥接服务里加严重度过滤（首版 severity 都是 WARNING，后续 v1.7 会出分级）和夜间静默窗口（如 23:00-7:00 只发 P0）。
+- 加全天上限（如同一号码每日 ≤ 20 条），防止循环报警把短信费打爆。
 
 ---
 
@@ -365,12 +365,12 @@ gunicorn -w 1 -b 0.0.0.0:8082 app:app
 
 | 主题 | 要点 |
 |---|---|
-| **重试** | EMS 默认 3 次重试（指数退避，详见 [alarm-webhook-integration.md §7](./alarm-webhook-integration.md)）。桥接服务**返回 200 即视为成功**，下游真失败请在桥接侧自行落本地日志 + 单独告警，**不要返回 5xx 让 EMS 反复重发**——重发只会复制下游账单（短信费 / 邮件配额）。 |
-| **幂等** | EMS 重试可能让同一 `(alarm_id, event)` 多次到达。§2 的 `is_duplicate` 是内存版仅供单实例 demo；多实例 / 重启不丢请用 `Redis SETNX key 1 EX 86400`。 |
+| **重试** | EMS 默认 3 次重试（指数退避，详见 [alarm-webhook-integration.md §7](./alarm-webhook-integration.md)）。桥接服务返回 200 就算成功，下游真失败请在桥接侧落本地日志 + 单独报警，不要返回 5xx 让 EMS 反复重发——重发只会复制下游账单（短信费、邮件配额）。 |
+| **幂等** | EMS 重试可能让同一 `(alarm_id, event)` 多次到达。§2 的 `is_duplicate` 是内存版只供单实例 demo；多实例或重启不丢请用 `Redis SETNX key 1 EX 86400`。 |
 | **限流** | 飞书机器人单 webhook 默认 100 次/分；阿里云 SMS 单签名 1000 次/天默认配额。配桥接时务必看官方文档配额，避免一次故障刷爆。 |
-| **观测** | 桥接服务自身要暴露 `/healthz`，并把"已转发 / 已去重 / 下游失败"分别打 metric（Prometheus counter），接到 ems-observability 同一 Grafana。 |
-| **凭据** | 所有 token / Secret 走环境变量或机密管理（K8s Secret / Vault），**绝不写进代码或镜像**。 |
-| **HTTPS** | EMS → 桥接强烈推荐 HTTPS。桥接 → 飞书 / SMTP / SMS API 均默认 HTTPS。 |
+| **观测** | 桥接服务自身要暴露 `/healthz`，把"已转发 / 已去重 / 下游失败"分别打 metric（Prometheus counter），接到 ems-observability 同一 Grafana。 |
+| **凭据** | 所有 token / Secret 走环境变量或机密管理（K8s Secret、Vault），不要写进代码或镜像。 |
+| **HTTPS** | EMS → 桥接推荐 HTTPS。桥接 → 飞书 / SMTP / SMS API 都默认 HTTPS。 |
 
 ---
 
@@ -421,23 +421,68 @@ services:
     restart: unless-stopped
 ```
 
-EMS 端在 `/alarm/webhook` **只能配一个 URL**（首版限制），所以三种渠道二选一或外面套一层"扇出"——例：在 nginx / API 网关上把 `/ems/all` 复制到 `/ems/feishu` + `/ems/email` + `/ems/sms`。或客户开发自建一个总桥接，一次收到 EMS 推送后并发往三处。
+EMS 端在 `/alarm/webhook` 只能配一个 URL（首版限制），所以三种渠道要么二选一，要么外面套一层"扇出"。例如在 nginx 或 API 网关上把 `/ems/all` 复制到 `/ems/feishu` + `/ems/email` + `/ems/sms`；或者客户开发自建一个总桥接，一次收到 EMS 推送后并发往三处。
+
+---
+
+## §6.5 拓扑一致性自动报警 (v1.1.5)
+
+`alarm_type = TOPOLOGY_NEGATIVE_RESIDUAL` is fired hourly when a parent meter's reading deviates more than 15% below its direct children's sum (negative residual = data quality issue: CT mis-multiplier / wrong topology / duplicated submeter). It auto-acks when the deviation recovers to within 10%.
+
+**Webhook payload fields populated in `detail`:**
+
+- `parent_code`, `parent_name` — the parent meter
+- `energy_type` — e.g. `ELEC`
+- `residual_ratio` — negative number, e.g. `-0.184` (i.e. -18.4%)
+- `children_count` — direct children participating in the comparison
+- `trigger_threshold`, `exit_threshold` — currently `-0.15` / `-0.10`
+- `first_seen_at` — ISO-8601 timestamp
+- (recovery only) `auto_ack_reason`, `auto_ack_at`, `recovery_ratio`
+
+The `X-EMS-Event` header is `alarm.triggered` for ENTER and `alarm.resolved` for the auto-ack EXIT (this is the only alarm type that fires both; see §6 for general behavior).
+
+**Recommended bridge-rendered templates:**
+
+ENTER (Feishu / email / SMS body):
+
+```
+【数据质量】{parent_name} 子表合计与父表偏差 {residual_ratio*100:.1f}%（>15% 阈值），
+可能 CT 倍率错 / 拓扑错配。详情 → /alarms/health
+```
+
+EXIT / auto-ack:
+
+```
+【数据质量】{parent_name} 拓扑残差已恢复至 {recovery_ratio*100:.1f}%，自动 ack。
+```
+
+For Python bridges (§3-§5), select on `event` then format `detail` accordingly. Example branch (Feishu, after the existing `event == "alarm.triggered"` block):
+
+```python
+if alarm_type == "TOPOLOGY_NEGATIVE_RESIDUAL":
+    if event == "alarm.triggered":
+        ratio_pct = detail["residual_ratio"] * 100
+        text = f"【数据质量】{detail['parent_name']} 子表合计与父表偏差 {ratio_pct:.1f}%（>15% 阈值），可能 CT 倍率错 / 拓扑错配。详情 → /alarms/health"
+    else:
+        ratio_pct = detail.get("recovery_ratio", 0) * 100
+        text = f"【数据质量】{detail['parent_name']} 拓扑残差已恢复至 {ratio_pct:.1f}%，自动 ack。"
+```
 
 ---
 
 ## §8 已知限制与路线图
 
-- **首版只能配 1 个全局 Webhook**：上面"扇出"是临时方案；v2.x 计划支持多端点 + 端点级别级分流（见 [alarm-feature-overview.md §5](./alarm-feature-overview.md)）。
-- **首版无严重程度分级**：所有告警 severity = WARNING，桥接侧无法按级别分发到不同收件群 / 不同号码。v1.7+ 路线图含 severity 分级。
-- **首版仅 `alarm.triggered`**：不发 `alarm.resolved`，桥接服务收不到"恢复"事件，IM 卡片 / 邮件 / 短信无法标"已恢复"。如需，订阅站内 `/api/v1/alarm/inbox` 轮询。
-- **首版无用户级订阅**：所有具备 ADMIN / OPERATOR 角色的用户均收到全量站内通知；外部桥接由桥接代码自行决定收件名单。
+- **首版只能配 1 个全局 Webhook**：上面的"扇出"是临时方案；v2.x 计划支持多端点 + 按端点分流（见 [alarm-feature-overview.md §5](./alarm-feature-overview.md)）。
+- **首版无严重程度分级**：所有报警 severity = WARNING，桥接侧无法按级别分发到不同收件群或号码。v1.7+ 路线图含 severity 分级。
+- **首版只发 `alarm.triggered`**：不发 `alarm.resolved`，桥接服务收不到"恢复"事件，IM 卡片、邮件、短信无法标"已恢复"。要标的话，订阅站内 `/api/v1/alarm/inbox` 轮询。
+- **首版无用户级订阅**：所有具备 ADMIN / OPERATOR 角色的用户都收到全量站内通知；外部桥接由桥接代码自己决定收件名单。
 
 ---
 
 ## §9 相关文档
 
 - Webhook 协议规约（必读）：[alarm-webhook-integration.md](./alarm-webhook-integration.md)
-- 告警功能概览：[alarm-feature-overview.md](./alarm-feature-overview.md)
-- 告警用户手册：[alarm-user-guide.md](./alarm-user-guide.md)
-- 告警 API：[../api/alarm-api.md](../api/alarm-api.md)
+- 报警功能概览：[alarm-feature-overview.md](./alarm-feature-overview.md)
+- 报警用户手册：[alarm-user-guide.md](./alarm-user-guide.md)
+- 报警 API：[../api/alarm-api.md](../api/alarm-api.md)
 - 平台总览：[product-overview.md](./product-overview.md)

@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_PRODUCTION_SHIFTS } from '@/components/pageHelp';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -136,7 +137,7 @@ export default function ShiftsPage() {
 
   return (
     <>
-      <PageHeader title="班次管理" />
+      <PageHeader title="班次管理" helpContent={HELP_PRODUCTION_SHIFTS} />
       <Card
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>

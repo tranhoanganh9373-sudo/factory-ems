@@ -18,9 +18,9 @@
 | 5 张预设报表（日/月/年/班次/月度成本） | ✅ GA | `ReportPresetController.java` |
 | 同步 CSV / 异步 token 下载 | ✅ GA | `ReportController.java` |
 | 矩阵 Excel / PDF 导出 | ✅ GA | `ReportExportController.java` |
-| **报表订阅 / 邮件推送** | ❌ **不在 v1.3** | `report-feature-overview.md §5` 明确写了"规划在 v2.x" |
+| 报表订阅 / 邮件推送 | ❌ 不在 v1.3 | `report-feature-overview.md §5` 明确写了"规划在 v2.x" |
 
-所以**月度自动邮件**这件事，需要你**自建一层薄薄的调度 + 邮件桥接**：
+所以月度自动邮件这件事，需要你自建一层薄薄的调度加邮件桥接：
 
 ```
 crontab (每月 1 号 06:00) ──┐
@@ -32,7 +32,7 @@ crontab (每月 1 号 06:00) ──┐
                           └─> sendmail / msmtp 发到收件人
 ```
 
-不要等 v2.x —— 这个外挂方案 50 行 bash + cron，**今天就能上线**。
+不要等 v2.x。这个外挂方案 50 行 bash 加 cron，今天就能上线。
 
 ---
 
@@ -191,9 +191,9 @@ EMS_BASE_URL=https://ems.example.com EMS_TOKEN=<jwt> \
 
 报表自动化跑通后，路线图剩最后一块：
 
-- **生产能效**（`ems-production`）：录入产量 → 计算"单位产品能耗" → 节能改造前后效果对比。**报表里 `单位产量能耗` 这一列只有产量数据后才有意义**。
+- **生产能效**（`ems-production`）：录入产量 → 计算"单位产品能耗" → 节能改造前后效果对比。报表里 `单位产量能耗` 这一列只有产量数据后才有意义。
 
-至此 EMS 的"装-通-看-警-钱-报" 全闭环。
+至此 EMS 的"装-通-看-警-钱-报"全闭环。
 
 ---
 
@@ -204,7 +204,7 @@ EMS_BASE_URL=https://ems.example.com EMS_TOKEN=<jwt> \
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)
 - 桥接脚本：`scripts/monthly-report-mail.sh`

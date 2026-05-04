@@ -61,7 +61,7 @@ public class ReportServiceImpl implements ReportService {
 
         // 时序查询（混合 rollup + Influx）
         List<MeterRef> refs = visible.stream()
-            .map(m -> new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()))
+            .map(m -> new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()))
             .toList();
         Map<Long, MeterRecord> byId = visible.stream()
             .collect(Collectors.toMap(MeterRecord::meterId, m -> m));
