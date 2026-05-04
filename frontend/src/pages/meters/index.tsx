@@ -19,17 +19,21 @@ import {
   DeleteOutlined,
   ApartmentOutlined,
   ImportOutlined,
+  ExportOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
+import Papa from 'papaparse';
 import { meterApi, MeterDTO, MeterTopologyEdgeDTO } from '@/api/meter';
+import { channelApi } from '@/api/channel';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
-import { alarmApi } from '@/api/alarm';
+import { alarmApi, type MeterOnlineState } from '@/api/alarm';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_METERS } from '@/components/pageHelp';
 import { StatusTag } from '@/components/StatusTag';
-import { METER_STATE_LABEL, translate } from '@/utils/i18n-dict';
 import { CreateMeterModal } from './CreateMeterModal';
 import { EditMeterModal } from './EditMeterModal';
 import { BindParentModal } from './BindParentModal';
@@ -124,7 +128,17 @@ export default function MetersPage() {
 
   const { data: activeAlarmsPage } = useQuery({
     queryKey: ['alarms', 'active', 'all'],
-    queryFn: () => alarmApi.list({ status: 'ACTIVE', page: 1, size: 500 }),
+    // 后端 size 上限 200（C2+C3 校验加固后）；活动报警一般 << 200，超出的边界场景看板分页打开。
+    queryFn: () => alarmApi.list({ status: 'ACTIVE', page: 1, size: 200 }),
+    refetchInterval: 30_000,
+  });
+
+  // 真实在线状态：与「报警健康」同口径，按 meter id 维度返回 ONLINE/OFFLINE/MAINTENANCE。
+  // 后端基于 ring.lastGoodSampleAt + freshness 5min 计算；维护中独立分支。
+  // 30s 刷新与 health 卡同步，避免两处数字"瞬时不一致"造成误解。
+  const { data: meterStatusMap } = useQuery({
+    queryKey: ['alarms', 'meter-status'],
+    queryFn: () => alarmApi.meterStatus(),
     refetchInterval: 30_000,
   });
 
@@ -142,6 +156,54 @@ export default function MetersPage() {
       qc.invalidateQueries({ queryKey: ['topology'] });
     },
   });
+
+  // 批量导出：用 papaparse 在浏览器构建 CSV，避免后端跨模块去 channel 表查 name 映射。
+  // 列与 backend MeterCsvParser 必填表头保持一致，导出文件可直接喂回批量导入。
+  const handleExport = async () => {
+    if (meters.length === 0) {
+      message.info('暂无测点可导出');
+      return;
+    }
+    let channelNameById = new Map<number, string>();
+    try {
+      const channels = await channelApi.list();
+      channelNameById = new Map(channels.map((c) => [c.id, c.name]));
+    } catch {
+      // channel 列表取不到不致命——channelName 列留空，导入时会绑不上 channel
+      message.warning('未能获取通道列表，channelName 列将为空');
+    }
+    const csv = Papa.unparse({
+      fields: [
+        'code',
+        'name',
+        'energyTypeId',
+        'orgNodeId',
+        'enabled',
+        'channelName',
+        'channelPointKey',
+      ],
+      data: meters.map((m) => [
+        m.code,
+        m.name,
+        m.energyTypeId,
+        m.orgNodeId,
+        m.enabled ? 'true' : 'false',
+        m.channelId != null ? (channelNameById.get(m.channelId) ?? '') : '',
+        m.channelPointKey ?? '',
+      ]),
+    });
+    // Excel 打开 UTF-8 CSV 默认按 GBK 解码会乱码，加 BOM 提示编码
+    const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `meters-export-${dayjs().format('YYYYMMDD-HHmmss')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    message.success(`已导出 ${meters.length} 条测点`);
+  };
 
   // Flatten org tree for filter select
   const orgOptions: { label: string; value: number }[] = [];
@@ -163,22 +225,43 @@ export default function MetersPage() {
       render: (_, r) => `${r.energyTypeCode} (${r.unit})`,
     },
     {
+      title: '量值类型',
+      key: 'valueKind',
+      width: 110,
+      render: (_, r) => {
+        const label =
+          r.valueKind === 'CUMULATIVE_ENERGY'
+            ? '累积电量'
+            : r.valueKind === 'INSTANT_POWER'
+              ? '瞬时功率'
+              : '周期增量';
+        const color =
+          r.valueKind === 'CUMULATIVE_ENERGY'
+            ? 'blue'
+            : r.valueKind === 'INSTANT_POWER'
+              ? 'orange'
+              : 'default';
+        return <Tag color={color}>{label}</Tag>;
+      },
+    },
+    {
       title: '组织节点',
       key: 'orgNode',
       width: 160,
       render: (_, r) => orgMap.get(r.orgNodeId) ?? String(r.orgNodeId),
     },
     {
-      title: '状态',
-      key: 'enabled',
-      width: 80,
+      title: '采集状态',
+      key: 'collectionState',
+      width: 100,
       render: (_, r) => {
-        const s = r.enabled ? 'ACTIVE' : 'INACTIVE';
-        return (
-          <StatusTag tone={r.enabled ? 'success' : 'default'}>
-            {translate(METER_STATE_LABEL, s)}
-          </StatusTag>
-        );
+        if (!r.enabled) return <StatusTag tone="default">未启用</StatusTag>;
+        const state: MeterOnlineState | undefined = meterStatusMap?.[r.id];
+        if (state === 'MAINTENANCE') return <StatusTag tone="warning">维护中</StatusTag>;
+        if (state === 'OFFLINE') return <StatusTag tone="error">离线</StatusTag>;
+        if (state === 'ONLINE') return <StatusTag tone="success">在线</StatusTag>;
+        // 后端首拉未到达：先按"加载中"显示，避免误判为离线。
+        return <StatusTag tone="default">—</StatusTag>;
       },
     },
     {
@@ -197,8 +280,9 @@ export default function MetersPage() {
       width: 120,
       render: (_, r) => {
         if (!r.parentMeterId) return '—';
-        const edge = topology.find((e) => e.childMeterId === r.id);
-        return edge ? edge.parentMeterCode : String(r.parentMeterId);
+        // 后端 /meter-topology 只回 (childId, parentId)，不带 code；直接用 meters 列表按 id 查
+        const parent = meters.find((m) => m.id === r.parentMeterId);
+        return parent?.code ?? String(r.parentMeterId);
       },
     },
     {
@@ -320,9 +404,17 @@ export default function MetersPage() {
     <Card>
       <PageHeader
         title="表计管理"
+        helpContent={HELP_METERS}
         extra={
           isAdmin && (
             <Space>
+              <Button
+                icon={<ExportOutlined />}
+                onClick={handleExport}
+                disabled={meters.length === 0}
+              >
+                批量导出
+              </Button>
               <Button icon={<ImportOutlined />} onClick={() => setBatchOpen(true)}>
                 批量导入
               </Button>

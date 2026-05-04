@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, Table, Space, Input, Select, DatePicker, Button, Tag } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_AUDIT_LOG } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { auditApi, AuditLogDTO, AuditQuery } from '@/api/audit';
@@ -34,7 +35,7 @@ export default function AuditListPage() {
 
   return (
     <>
-      <PageHeader title="审计日志" />
+      <PageHeader title="审计日志" helpContent={HELP_AUDIT_LOG} />
       <Card>
         <Space style={{ marginBottom: 16 }} wrap>
           <Select

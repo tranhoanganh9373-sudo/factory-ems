@@ -16,13 +16,10 @@ public interface MeterRepository extends JpaRepository<Meter, Long> {
 
     /**
      * 通过 (channel, point key) 反查 meter。
-     * 约定：channel 配置中 {@code points[].key} 等于该 meter 的 {@code code}。
      * 由 {@code InfluxSampleWriter} 用于把 collector Sample 路由到正确的 meter 并写 InfluxDB。
+     * V2.3.2 之前用 (channelId, code) 反查；现在 code 解耦后用独立的 channelPointKey 列。
      */
-    Optional<Meter> findByChannelIdAndCode(Long channelId, String code);
-
-    boolean existsByInfluxMeasurementAndInfluxTagKeyAndInfluxTagValue(
-        String measurement, String tagKey, String tagValue);
+    Optional<Meter> findByChannelIdAndChannelPointKey(Long channelId, String channelPointKey);
 
     long countByEnergyTypeId(Long energyTypeId);
     long countByOrgNodeId(Long orgNodeId);

@@ -3,6 +3,7 @@ import { App, Button, Card, Col, DatePicker, Divider, Form, Radio, Row, Select, 
 import { FileTextOutlined } from '@ant-design/icons';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_AD_HOC_QUERY } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import type { Dayjs } from 'dayjs';
 import { meterApi } from '@/api/meter';
@@ -136,7 +137,7 @@ export default function ReportPage() {
 
   return (
     <>
-      <PageHeader title="即席查询" />
+      <PageHeader title="即席查询" helpContent={HELP_AD_HOC_QUERY} />
       <Card>
         <Form<FormValues>
           form={form}

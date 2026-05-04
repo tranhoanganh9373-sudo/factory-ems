@@ -27,6 +27,7 @@ import {
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_FLOORPLAN_LIST } from '@/components/pageHelp';
 import { EmptyState } from '@/components/EmptyState';
 
 function buildTreeData(nodes: OrgNodeDTO[]): object[] {
@@ -99,11 +100,11 @@ export default function FloorplanListPage() {
 
   return (
     <>
-      <PageHeader title="设备分布图" />
+      <PageHeader title="设备分布图" helpContent={HELP_FLOORPLAN_LIST} />
       <Card
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>
-            上传新图
+            新建平面图
           </Button>
         }
       >

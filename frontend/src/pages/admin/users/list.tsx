@@ -16,6 +16,7 @@ import {
 } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_USERS } from '@/components/pageHelp';
 import { PlusOutlined, KeyOutlined, DeleteOutlined, SafetyOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userApi, UserDTO } from '@/api/user';
@@ -73,7 +74,7 @@ export default function UserListPage() {
 
   return (
     <>
-      <PageHeader title="用户管理" />
+      <PageHeader title="用户管理" helpContent={HELP_USERS} />
       <Card
         extra={
           <Space>

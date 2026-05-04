@@ -26,7 +26,7 @@ export default function TopNPanel({ onMeterClick }: TopNPanelProps) {
     queryFn: () =>
       dashboardApi.getTopN({ range, from: customFrom, to: customTo, orgNodeId, energyType }, limit),
     enabled: isCustomReady,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
 

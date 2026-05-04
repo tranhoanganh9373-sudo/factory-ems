@@ -91,7 +91,8 @@ public class DashboardSupport {
                     m.getEnergyTypeId(),
                     et != null ? et.getCode() : null,
                     et != null ? et.getUnit() : null,
-                    m.getEnabled()
+                    m.getEnabled(),
+                    m.getValueKind()
                 );
             })
             .filter(r -> energyType == null || energyType.isBlank() || energyType.equalsIgnoreCase(r.energyTypeCode()))
@@ -117,7 +118,8 @@ public class DashboardSupport {
             m.getEnergyTypeId(),
             et != null ? et.getCode() : null,
             et != null ? et.getUnit() : null,
-            m.getEnabled()
+            m.getEnabled(),
+            m.getValueKind()
         );
     }
 }

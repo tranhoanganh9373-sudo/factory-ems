@@ -10,6 +10,7 @@ import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { submitExport, pollExport, downloadBlob } from '@/api/reportPreset';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_BILL_LIST } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
 const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
@@ -150,7 +151,7 @@ export default function BillsListPage() {
 
   return (
     <>
-      <PageHeader title="账单列表" />
+      <PageHeader title="账单列表" helpContent={HELP_BILL_LIST} />
       <Card
         extra={
           <Button

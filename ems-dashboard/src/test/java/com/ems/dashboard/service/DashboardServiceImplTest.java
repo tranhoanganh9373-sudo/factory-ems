@@ -1,5 +1,6 @@
 package com.ems.dashboard.service;
 
+import com.ems.core.constant.ValueKind;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
 import com.ems.dashboard.support.DashboardSupport;
@@ -42,9 +43,9 @@ class DashboardServiceImplTest {
     FloorplanService floorplans;
     DashboardServiceImpl svc;
 
-    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true);
-    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true);
-    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true);
+    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
 
     @BeforeEach
     void setup() {
@@ -354,6 +355,21 @@ class DashboardServiceImplTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() ->
                 svc.floorplanLive(7L, new RangeQuery(RangeType.TODAY, null, null, null, null)))
                 .isInstanceOf(com.ems.core.exception.ForbiddenException.class);
+    }
+
+    @Test
+    void floorplanLive_orgFilterExcludesAll_returnsEmpty() {
+        // 用户主动选了 orgNodeId（例如"焊接车间"），但底图测点都不在该子树下：
+        // 不应抛 403——这是过滤器与底图交集为空，不是权限问题。
+        FloorplanPointDTO p = new FloorplanPointDTO(102L, 999L, BigDecimal.ZERO, BigDecimal.ZERO, "X");
+        when(floorplans.getById(7L)).thenReturn(fpFixture(7L, p));
+        when(support.resolveMeters(any(), isNull())).thenReturn(List.of(M1));
+
+        var out = svc.floorplanLive(7L,
+                new RangeQuery(RangeType.TODAY, null, null, 42L, null));
+
+        assertThat(out.floorplan().id()).isEqualTo(7L);
+        assertThat(out.points()).isEmpty();
     }
 
     @Test

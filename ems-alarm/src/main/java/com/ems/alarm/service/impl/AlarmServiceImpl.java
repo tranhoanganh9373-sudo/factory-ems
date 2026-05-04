@@ -3,6 +3,7 @@ package com.ems.alarm.service.impl;
 import com.ems.alarm.dto.AlarmDTO;
 import com.ems.alarm.dto.AlarmListItemDTO;
 import com.ems.alarm.dto.HealthSummaryDTO;
+import com.ems.alarm.dto.MeterOnlineState;
 import com.ems.alarm.entity.Alarm;
 import com.ems.alarm.entity.AlarmStatus;
 import com.ems.alarm.entity.AlarmType;
@@ -16,8 +17,7 @@ import com.ems.alarm.service.AlarmStateMachine;
 import com.ems.alarm.service.ThresholdResolver;
 import com.ems.collector.channel.Channel;
 import com.ems.collector.channel.ChannelRepository;
-import com.ems.collector.poller.DeviceSnapshot;
-import com.ems.collector.service.CollectorService;
+import com.ems.collector.sink.DiagnosticRingBuffer;
 import com.ems.core.dto.PageDTO;
 import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.MeterRepository;
@@ -27,6 +27,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -36,11 +38,17 @@ import java.util.Map;
 @Service
 public class AlarmServiceImpl implements AlarmService {
 
+    /**
+     * "看到样本才算在线" 的窗口阈值：超过该时长未收到 GOOD 样本即视为离线。
+     * 比典型采集周期（5s–60s）大一个数量级，给慢轮询协议（Modbus 5min 心跳）留余量。
+     */
+    static final Duration ONLINE_FRESHNESS_WINDOW = Duration.ofMinutes(5);
+
     private final AlarmRepository alarmRepo;
     private final AlarmStateMachine stateMachine;
     private final MeterRepository meterRepo;
     private final ChannelRepository channelRepo;
-    private final CollectorService collectorService;
+    private final DiagnosticRingBuffer ring;
     private final ThresholdResolver thresholds;
     private final AlarmMetrics metrics;
 
@@ -48,14 +56,14 @@ public class AlarmServiceImpl implements AlarmService {
                             AlarmStateMachine stateMachine,
                             MeterRepository meterRepo,
                             ChannelRepository channelRepo,
-                            CollectorService collectorService,
+                            DiagnosticRingBuffer ring,
                             ThresholdResolver thresholds,
                             AlarmMetrics metrics) {
         this.alarmRepo = alarmRepo;
         this.stateMachine = stateMachine;
         this.meterRepo = meterRepo;
         this.channelRepo = channelRepo;
-        this.collectorService = collectorService;
+        this.ring = ring;
         this.thresholds = thresholds;
         this.metrics = metrics == null ? AlarmMetrics.NOOP : metrics;
     }
@@ -117,28 +125,22 @@ public class AlarmServiceImpl implements AlarmService {
 
     @Override
     public HealthSummaryDTO healthSummary() {
-        List<DeviceSnapshot> snaps = collectorService.snapshots();
-        long online = snaps.stream().filter(s -> s.lastReadAt() != null).count();
-        long offline = snaps.size() - online;
-        long alarmCount = alarmRepo.countByStatus(AlarmStatus.ACTIVE)
-                + alarmRepo.countByStatus(AlarmStatus.ACKED);
+        // V2.4: 在线判定基于 meter 的最近 GOOD 样本（看到样本才算在线），不再依赖
+        // 遗留 YAML CollectorService.snapshots()——后者在新部署里始终为空。
+        // computeMeterOnlineStatuses() 的逻辑同时被 meterOnlineStatuses() 端点复用，
+        // 保证表计列表页与 health 卡的口径一致。
+        Map<Long, MeterOnlineState> states = computeMeterOnlineStatuses();
+        long total = states.size();
+        long online = states.values().stream().filter(s -> s == MeterOnlineState.ONLINE).count();
+        long maintenance = states.values().stream().filter(s -> s == MeterOnlineState.MAINTENANCE).count();
+        long offline = total - online - maintenance;
+        // 与"报警中心" drawer 口径一致：仅统计 ACTIVE（未确认/未处理）。ACKED 是"已知未修"，
+        // 用户在 drawer 里清掉之后健康总览的"报警中"也应同步归零，否则视觉上数字对不上。
+        long alarmCount = alarmRepo.countByStatus(AlarmStatus.ACTIVE);
 
-        // 统计维护中设备数：通过 ThresholdResolver 按 snapshot 设备 id 逐一检查
-        long maintenance = snaps.stream()
-                .filter(s -> {
-                    try {
-                        Long deviceId = Long.parseLong(s.deviceId());
-                        return thresholds.resolve(deviceId).maintenanceMode();
-                    } catch (NumberFormatException e) {
-                        return false;
-                    }
-                })
-                .count();
-
-        // top offenders：各设备 ACTIVE+ACKED 报警数前 5
+        // top offenders：仅统计 ACTIVE，与上方"报警中"卡对齐——避免出现卡=0 / 表非空的视觉割裂。
         Map<Long, Long> activeByDevice = new HashMap<>();
         countByDevice(activeByDevice, AlarmStatus.ACTIVE);
-        countByDevice(activeByDevice, AlarmStatus.ACKED);
 
         List<HealthSummaryDTO.TopOffender> top = activeByDevice.entrySet().stream()
                 .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
@@ -150,7 +152,44 @@ public class AlarmServiceImpl implements AlarmService {
                 })
                 .toList();
 
-        return new HealthSummaryDTO(online, offline, alarmCount, maintenance, top);
+        return new HealthSummaryDTO(online, offline, alarmCount, maintenance, total, top);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Map<Long, MeterOnlineState> meterOnlineStatuses() {
+        return computeMeterOnlineStatuses();
+    }
+
+    /**
+     * 按 meter id 计算 ONLINE / OFFLINE / MAINTENANCE。
+     *
+     * <p>口径：
+     * <ul>
+     *   <li>thresholds.resolve(id).maintenanceMode()=true → MAINTENANCE（独立分支，避免维护期被误计离线）</li>
+     *   <li>否则 ring.lastGoodSampleAt 在 freshness 窗口内 → ONLINE</li>
+     *   <li>其余（含从未上报样本）→ OFFLINE</li>
+     * </ul>
+     *
+     * <p>包含所有 meter（不过滤 enabled）。前端按 meter.enabled 单独渲染"未启用"。
+     */
+    private Map<Long, MeterOnlineState> computeMeterOnlineStatuses() {
+        Instant freshnessCutoff = Instant.now().minus(ONLINE_FRESHNESS_WINDOW);
+        List<Meter> allMeters = meterRepo.findAll();
+        Map<Long, MeterOnlineState> result = new HashMap<>(allMeters.size() * 2);
+        for (Meter m : allMeters) {
+            if (thresholds.resolve(m.getId()).maintenanceMode()) {
+                result.put(m.getId(), MeterOnlineState.MAINTENANCE);
+                continue;
+            }
+            Instant lastGood = ring.lastGoodSampleAt(m.getChannelId(), m.getChannelPointKey());
+            if (lastGood != null && lastGood.isAfter(freshnessCutoff)) {
+                result.put(m.getId(), MeterOnlineState.ONLINE);
+            } else {
+                result.put(m.getId(), MeterOnlineState.OFFLINE);
+            }
+        }
+        return result;
     }
 
     private void countByDevice(Map<Long, Long> acc, AlarmStatus status) {

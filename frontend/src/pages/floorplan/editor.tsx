@@ -26,6 +26,7 @@ import {
 import { meterApi, type MeterDTO } from '@/api/meter';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_FLOORPLAN_EDITOR } from '@/components/pageHelp';
 import { useThemeStore } from '@/stores/themeStore';
 import { floorplanTokens } from '@/utils/floorplanTokens';
 
@@ -160,7 +161,7 @@ export default function FloorplanEditorPage() {
 
   return (
     <>
-      <PageHeader title="编辑设备分布图" />
+      <PageHeader title="编辑设备分布图" helpContent={HELP_FLOORPLAN_EDITOR} />
       <Card
         title={
           <Space>

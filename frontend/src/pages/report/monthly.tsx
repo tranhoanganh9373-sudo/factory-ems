@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Alert, Card, DatePicker, Empty, Select, Skeleton, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_REPORT_MONTHLY } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -47,7 +48,7 @@ export default function MonthlyReportPage() {
 
   return (
     <>
-      <PageHeader title="月报" />
+      <PageHeader title="月报" helpContent={HELP_REPORT_MONTHLY} />
       <Card
         extra={
           <ExportButtons

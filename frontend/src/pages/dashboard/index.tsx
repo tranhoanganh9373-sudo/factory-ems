@@ -27,7 +27,7 @@ export default function DashboardPage() {
   const { data: summary } = useQuery({
     queryKey: ['alarms', 'health'],
     queryFn: () => alarmApi.healthSummary(),
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
   });
 
   const total = (summary?.onlineCount ?? 0) + (summary?.offlineCount ?? 0);

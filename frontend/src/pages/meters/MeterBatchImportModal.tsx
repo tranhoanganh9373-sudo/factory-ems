@@ -4,16 +4,10 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { InboxOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { meterApi, type CreateMeterReq } from '@/api/meter';
+import { meterApi, type CreateMeterReq, type MeterImportRow } from '@/api/meter';
 import { channelApi } from '@/api/channel';
 
 type RowStatus = 'pending' | 'loading' | 'success' | 'skip' | 'fail';
-
-interface ImportMeterInput extends Omit<CreateMeterReq, 'channelId' | 'enabled'> {
-  enabled?: boolean;
-  channelName?: string;
-  channelId?: number | null;
-}
 
 interface ImportRow {
   index: number;
@@ -22,7 +16,7 @@ interface ImportRow {
   channelLabel: string;
   status: RowStatus;
   message?: string;
-  body: ImportMeterInput;
+  body: MeterImportRow;
 }
 
 interface Props {
@@ -37,40 +31,6 @@ const STATUS_TAG: Record<RowStatus, { color: string; label: string }> = {
   skip: { color: 'warning', label: '已存在' },
   fail: { color: 'error', label: '失败' },
 };
-
-function parseMetersFile(text: string): ImportMeterInput[] {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    throw new Error('文件不是合法 JSON');
-  }
-  if (!parsed || typeof parsed !== 'object') {
-    throw new Error('JSON 顶层必须是对象');
-  }
-  const meters = (parsed as { meters?: unknown }).meters;
-  if (!Array.isArray(meters) || meters.length === 0) {
-    throw new Error('JSON 缺少非空 .meters[] 数组');
-  }
-  for (const [i, m] of meters.entries()) {
-    const v = m as Record<string, unknown>;
-    const required = [
-      'code',
-      'name',
-      'energyTypeId',
-      'orgNodeId',
-      'influxMeasurement',
-      'influxTagKey',
-      'influxTagValue',
-    ];
-    for (const k of required) {
-      if (v[k] === undefined || v[k] === null || v[k] === '') {
-        throw new Error(`第 ${i + 1} 条 meter 缺少字段 ${k}`);
-      }
-    }
-  }
-  return meters as ImportMeterInput[];
-}
 
 export function MeterBatchImportModal({ open, onClose }: Props) {
   const { message } = AntApp.useApp();
@@ -92,14 +52,17 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
       if (obj.size > MAX_BYTES) {
         throw new Error(`文件过大（${(obj.size / 1024 / 1024).toFixed(1)} MB），上限 5 MB`);
       }
-      const text = await obj.text();
-      const meters = parseMetersFile(text);
+      // 后端 /meters/parse-csv 解析 CSV 为 MeterImportRow[]，比前端 JSON 转换更宽容（BOM/空白行/中文 enabled 等）
+      const meters = await meterApi.parseCsv(obj);
+      if (meters.length === 0) {
+        throw new Error('CSV 中未找到任何有效行');
+      }
       setRows(
         meters.map((m, i) => ({
           index: i,
           code: m.code,
           name: m.name,
-          channelLabel: m.channelName ?? (m.channelId != null ? `#${m.channelId}` : '—'),
+          channelLabel: m.channelName ?? '—',
           status: 'pending',
           body: m,
         }))
@@ -107,7 +70,9 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
       setFileName(obj.name);
       message.success(`已读取 ${meters.length} 条 meter`);
     } catch (e) {
-      message.error(e instanceof Error ? e.message : '读取失败');
+      const ax = e as AxiosError<{ message?: string }>;
+      const backendMsg = ax.response?.data?.message;
+      message.error(backendMsg ?? (e instanceof Error ? e.message : '读取失败'));
       reset();
     }
     return false; // 阻止 antd 自动上传
@@ -144,8 +109,8 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
       if (row.status === 'success' || row.status === 'skip') continue;
       updateRow(row.index, { status: 'loading', message: undefined });
 
-      const { channelName, channelId: bodyChannelId, ...rest } = row.body;
-      let channelId: number | null = bodyChannelId ?? null;
+      const { channelName } = row.body;
+      let channelId: number | null = null;
       if (channelName) {
         const resolved = nameToId.get(channelName);
         if (resolved == null) {
@@ -159,10 +124,19 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
         channelId = resolved;
       }
 
+      // 只有当 channel 真的解析到 id 时才把 channelPointKey 一同提交，
+      // 镜像后端 chk_meters_channel_pair_consistent CHECK 约束（V2.3.2）
+      const channelPointKey =
+        channelId != null ? (row.body.channelPointKey ?? row.body.code) : null;
       const payload: CreateMeterReq = {
-        ...rest,
+        code: row.body.code,
+        name: row.body.name,
+        energyTypeId: row.body.energyTypeId,
+        orgNodeId: row.body.orgNodeId,
         enabled: row.body.enabled ?? true,
         channelId,
+        channelPointKey,
+        valueKind: row.body.valueKind ?? 'INTERVAL_DELTA',
       };
 
       try {
@@ -227,7 +201,7 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
       }
     >
       <Upload.Dragger
-        accept=".json,application/json"
+        accept=".csv,text/csv,application/vnd.ms-excel"
         multiple={false}
         showUploadList={false}
         beforeUpload={handleFile}
@@ -237,11 +211,11 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
           <InboxOutlined />
         </p>
         <p className="ant-upload-text">
-          {fileName ? `已选择：${fileName}` : '点击或拖入 meters JSON 文件'}
+          {fileName ? `已选择：${fileName}` : '点击或拖入 meters CSV 文件（Excel 另存为 CSV）'}
         </p>
         <p className="ant-upload-hint">
-          schema 与 scripts/csv-to-meters.py 输出一致；含 channelName 字段时 导入前会自动解析为
-          channelId
+          表头：code, name, energyTypeId, orgNodeId（必填）；enabled, channelName,
+          channelPointKey（可选； 若不填 channelPointKey 则默认与 code 相同，向后兼容）
         </p>
       </Upload.Dragger>
 

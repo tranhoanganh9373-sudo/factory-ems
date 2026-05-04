@@ -3,6 +3,7 @@ package com.ems.alarm.controller;
 import com.ems.alarm.dto.AlarmDTO;
 import com.ems.alarm.dto.AlarmListItemDTO;
 import com.ems.alarm.dto.HealthSummaryDTO;
+import com.ems.alarm.dto.MeterOnlineState;
 import com.ems.alarm.entity.AlarmStatus;
 import com.ems.alarm.entity.AlarmType;
 import com.ems.alarm.service.AlarmService;
@@ -77,5 +78,19 @@ public class AlarmController {
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
     public Result<HealthSummaryDTO> healthSummary() {
         return Result.ok(service.healthSummary());
+    }
+
+    /**
+     * 按 meter id 返回采集状态映射，供表计列表页直接联表渲染。
+     * 与 {@code /health-summary} 同口径（freshness 窗口 + 维护标记），但粒度到单表。
+     * 返回值用枚举名字符串，便于前端类型化（"ONLINE" / "OFFLINE" / "MAINTENANCE"）。
+     */
+    @GetMapping("/meter-status")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','VIEWER')")
+    public Result<Map<Long, String>> meterStatus() {
+        Map<Long, MeterOnlineState> states = service.meterOnlineStatuses();
+        Map<Long, String> out = new java.util.HashMap<>(states.size() * 2);
+        states.forEach((id, state) -> out.put(id, state.name()));
+        return Result.ok(out);
     }
 }

@@ -101,6 +101,88 @@ class ModbusTcpAdapterTransportTest {
         assertThat(r.message()).isNotBlank();
     }
 
+    /**
+     * 端到端验证：模拟安科瑞 ACR 系列电表的两种关键寄存器同时读取。
+     *  - 0031H (INT16, 带符号) 总有功功率 P总，单位 W。报文规约：scale = 10^(DPQ-4)，假设 DPQ=4 时 scale=1。
+     *  - 003FH-0040H (UINT32, 2 寄存器) 吸收有功总电能，单位 kWh。报文规约：actual = raw / 1000 × PT × CT，
+     *    假设 PT=CT=1 时 scale=0.001。
+     *
+     * <p>这两类语义并存，是后续 meter.value_kind (INSTANT_POWER vs CUMULATIVE_ENERGY) 的硬件依据。
+     */
+    @Test
+    @DisplayName("acrel-style meter: 0031H INT16 power + 003FH UINT32 cumulative energy")
+    void acrelStyleMeter_int16Power_and_uint32Energy() throws Exception {
+        try (ModbusSlaveTestFixture slave = ModbusSlaveTestFixture.start(1)) {
+            // 0031H: 瞬时功率 2000 W (INT16)
+            slave.setHoldingRegister(0x0031, (short) 2000);
+            // 003FH-0040H: 累积电能 raw=123456 (UINT32 BE) → scale 0.001 → 123.456 kWh
+            slave.setHoldingUInt32(0x003F, 123456);
+
+            ModbusTcpConfig cfg = new ModbusTcpConfig(
+                    "127.0.0.1", slave.port(), slave.unitId(),
+                    Duration.ofMillis(200), Duration.ofMillis(1000),
+                    List.of(
+                            new ModbusPoint("power_total", "HOLDING",
+                                    0x0031, 1, "INT16", "ABCD", 1.0, "W"),
+                            new ModbusPoint("energy_total", "HOLDING",
+                                    0x003F, 2, "UINT32", "ABCD", 0.001, "kWh")));
+
+            ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
+            ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport();
+            try {
+                t.start(99L, cfg, samples::add);
+                Awaitility.await().atMost(3, TimeUnit.SECONDS)
+                        .until(() -> samples.stream().anyMatch(s -> "power_total".equals(s.pointKey()))
+                                  && samples.stream().anyMatch(s -> "energy_total".equals(s.pointKey())));
+
+                Sample power = samples.stream().filter(s -> "power_total".equals(s.pointKey())).findFirst().orElseThrow();
+                assertThat(power.quality()).isEqualTo(Quality.GOOD);
+                assertThat(power.channelId()).isEqualTo(99L);
+                assertThat(((BigDecimal) power.value())).isEqualByComparingTo(new BigDecimal("2000.0"));
+
+                Sample energy = samples.stream().filter(s -> "energy_total".equals(s.pointKey())).findFirst().orElseThrow();
+                assertThat(energy.quality()).isEqualTo(Quality.GOOD);
+                assertThat(energy.channelId()).isEqualTo(99L);
+                assertThat(((BigDecimal) energy.value())).isEqualByComparingTo(new BigDecimal("123.456"));
+            } finally {
+                t.stop();
+            }
+        }
+    }
+
+    /**
+     * 负值瞬时功率（电表反向流动 / 上网，符号位生效）：
+     *  - 0031H raw = 0xFC80 → INT16 解码 -896
+     *  - scale 1.0 → -896.0 W
+     */
+    @Test
+    @DisplayName("acrel-style meter: negative INT16 power (reverse flow)")
+    void acrelStyleMeter_int16Power_negative() throws Exception {
+        try (ModbusSlaveTestFixture slave = ModbusSlaveTestFixture.start(1)) {
+            slave.setHoldingRegister(0x0031, (short) 0xFC80);  // -896
+
+            ModbusTcpConfig cfg = new ModbusTcpConfig(
+                    "127.0.0.1", slave.port(), slave.unitId(),
+                    Duration.ofMillis(200), Duration.ofMillis(1000),
+                    List.of(new ModbusPoint("power_total", "HOLDING",
+                            0x0031, 1, "INT16", "ABCD", 1.0, "W")));
+
+            ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
+            ModbusTcpAdapterTransport t = new ModbusTcpAdapterTransport();
+            try {
+                t.start(99L, cfg, samples::add);
+                Awaitility.await().atMost(3, TimeUnit.SECONDS)
+                        .until(() -> !samples.isEmpty());
+
+                Sample s = samples.peek();
+                assertThat(s.quality()).isEqualTo(Quality.GOOD);
+                assertThat(((BigDecimal) s.value())).isEqualByComparingTo(new BigDecimal("-896.0"));
+            } finally {
+                t.stop();
+            }
+        }
+    }
+
     // -------- Reconnect / backoff (Phase 1: 自动重连退避) ---------------------------
 
     private static ModbusTcpConfig fastPollCfg() {

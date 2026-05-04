@@ -21,6 +21,7 @@ import { alarmRuleApi, type AlarmRuleOverrideDTO, type OverrideRequest } from '@
 import { useAuthStore } from '@/stores/authStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_RULES } from '@/components/pageHelp';
 import { formatDateTime } from '@/utils/format';
 
 interface FormValues {
@@ -116,7 +117,7 @@ export default function AlarmRulesPage() {
 
   return (
     <div>
-      <PageHeader title="报警规则" />
+      <PageHeader title="报警规则" helpContent={HELP_ALARM_RULES} />
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>

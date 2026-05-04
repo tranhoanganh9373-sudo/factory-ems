@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/zh-cn';
+import Papa from 'papaparse';
 import { useState } from 'react';
 import { collectorDiagApi, type ChannelRuntimeState } from '@/api/collectorDiag';
 import { channelApi, type ChannelDTO } from '@/api/channel';
@@ -12,6 +13,7 @@ import { BatchImportModal } from './BatchImportModal';
 import { ChannelDetailDrawer } from './ChannelDetailDrawer';
 import { ChannelEditor } from './ChannelEditor';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_COLLECTOR } from '@/components/pageHelp';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 
 dayjs.extend(relativeTime);
@@ -23,6 +25,133 @@ const STATE_COLORS: Record<string, string> = {
   DISCONNECTED: 'red',
   ERROR: 'red',
 };
+
+// channels.csv 列：5 协议字段并集；某行只填它对应协议需要的列，其它留空。
+const CHANNEL_CSV_FIELDS = [
+  'name',
+  'protocol',
+  'enabled',
+  'isVirtual',
+  'description',
+  'host',
+  'port',
+  'serialPort',
+  'baudRate',
+  'dataBits',
+  'stopBits',
+  'parity',
+  'unitId',
+  'pollInterval',
+  'timeout',
+  'endpointUrl',
+  'securityMode',
+  'certRef',
+  'certPasswordRef',
+  'usernameRef',
+  'passwordRef',
+  'brokerUrl',
+  'clientId',
+  'qos',
+  'cleanSession',
+  'keepAlive',
+  'tlsCaCertRef',
+  'lastWillTopic',
+  'lastWillPayload',
+  'lastWillQos',
+  'lastWillRetained',
+];
+
+// points.csv 列：4 协议测点字段并集 + 通用 channelName/key/unit。
+const POINT_CSV_FIELDS = [
+  'channelName',
+  'key',
+  'unit',
+  'registerKind',
+  'address',
+  'quantity',
+  'dataType',
+  'byteOrder',
+  'scale',
+  'nodeId',
+  'mode',
+  'samplingIntervalMs',
+  'topic',
+  'jsonPath',
+  'timestampJsonPath',
+  'virtualMode',
+  'virtualParams',
+];
+
+type CfgRecord = Record<string, unknown> & { points?: unknown[] };
+
+function buildChannelsCsv(channels: ChannelDTO[]): string {
+  const rows = channels.map((c) => {
+    const cfg = (c.protocolConfig ?? {}) as CfgRecord;
+    return CHANNEL_CSV_FIELDS.map((f) => {
+      switch (f) {
+        case 'name':
+          return c.name;
+        case 'protocol':
+          return c.protocol;
+        case 'enabled':
+          return c.enabled ? 'true' : 'false';
+        case 'isVirtual':
+          return c.isVirtual ? 'true' : 'false';
+        case 'description':
+          return c.description ?? '';
+        default: {
+          const v = cfg[f];
+          if (v == null) return '';
+          if (typeof v === 'boolean') return v ? 'true' : 'false';
+          return String(v);
+        }
+      }
+    });
+  });
+  return Papa.unparse({ fields: CHANNEL_CSV_FIELDS, data: rows });
+}
+
+function buildPointsCsv(channels: ChannelDTO[]): string {
+  const rows: (string | number)[][] = [];
+  for (const c of channels) {
+    const cfg = (c.protocolConfig ?? {}) as CfgRecord;
+    const points = Array.isArray(cfg.points) ? cfg.points : [];
+    for (const pUnknown of points) {
+      const p = pUnknown as Record<string, unknown>;
+      rows.push(
+        POINT_CSV_FIELDS.map((f) => {
+          if (f === 'channelName') return c.name;
+          // VirtualPoint.mode 在 JSON 里是 mode 字段，需映射到 virtualMode 列
+          if (f === 'virtualMode') return c.protocol === 'VIRTUAL' ? String(p.mode ?? '') : '';
+          // VirtualPoint.params 是嵌套 Map，序列化成 JSON 串塞进单列
+          if (f === 'virtualParams') {
+            return c.protocol === 'VIRTUAL' && p.params ? JSON.stringify(p.params) : '';
+          }
+          // mode 列只用于 OPC UA（READ/SUBSCRIBE）；Virtual 的 mode 已被上一分支吃掉
+          if (f === 'mode') return c.protocol === 'OPC_UA' ? String(p.mode ?? '') : '';
+          const v = p[f];
+          if (v == null) return '';
+          if (typeof v === 'boolean') return v ? 'true' : 'false';
+          return String(v);
+        })
+      );
+    }
+  }
+  return Papa.unparse({ fields: POINT_CSV_FIELDS, data: rows });
+}
+
+function downloadCsv(filename: string, csv: string): void {
+  // Excel 打开 UTF-8 CSV 默认按 GBK 解码会乱码，加 BOM 提示编码
+  const blob = new Blob(['﻿', csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 export default function CollectorPage() {
   useDocumentTitle('数据采集');
@@ -126,12 +255,30 @@ export default function CollectorPage() {
     setEditorOpen(true);
   };
 
+  // 批量导出：拍平 protocolConfig 到两份 CSV——channels.csv（一行一通道）+ points.csv（一行一测点）。
+  // 列结构与后端 ChannelCsvParser 必填表头一一对齐，导出文件可直接喂回批量导入。
+  // VirtualPoint.params 是嵌套 Map，单列存 JSON 字符串（virtualParams 列）。
+  const handleExport = () => {
+    if (channels.length === 0) {
+      message.info('暂无通道可导出');
+      return;
+    }
+    const ts = dayjs().format('YYYYMMDD-HHmmss');
+    downloadCsv(`channels-export-${ts}.csv`, buildChannelsCsv(channels));
+    downloadCsv(`points-export-${ts}.csv`, buildPointsCsv(channels));
+    message.success(`已导出 ${channels.length} 条通道及其测点（2 个 CSV 文件）`);
+  };
+
   return (
     <>
       <PageHeader
         title="数据采集"
+        helpContent={HELP_COLLECTOR}
         extra={
           <Space>
+            <Button onClick={handleExport} disabled={channels.length === 0}>
+              批量导出
+            </Button>
             <Button onClick={() => setBatchOpen(true)}>批量导入</Button>
             <Button type="primary" onClick={() => openEditor()}>
               新增通道

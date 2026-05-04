@@ -53,6 +53,9 @@ export function MqttForm() {
       >
         <DurationInput />
       </Form.Item>
+      <Form.Item name="description" label="描述">
+        <Input.TextArea rows={2} />
+      </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <MqttPointsList fields={fields} ops={ops} />}
       </Form.List>

@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_HISTORY } from '@/components/pageHelp';
 import { StatusTag } from '@/components/StatusTag';
 
 interface FilterValues {
@@ -131,7 +132,7 @@ export default function AlarmHistoryPage() {
 
   return (
     <div>
-      <PageHeader title="报警历史" />
+      <PageHeader title="报警历史" helpContent={HELP_ALARM_HISTORY} />
 
       <Card style={{ marginBottom: 16 }}>
         <Form<FilterValues>

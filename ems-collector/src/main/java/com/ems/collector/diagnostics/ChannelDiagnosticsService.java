@@ -5,7 +5,7 @@ import com.ems.collector.channel.ChannelRepository;
 import com.ems.collector.channel.ChannelService;
 import com.ems.collector.runtime.ChannelRuntimeState;
 import com.ems.collector.runtime.ChannelStateRegistry;
-import com.ems.collector.sink.LoggingSampleWriter;
+import com.ems.collector.sink.DiagnosticRingBuffer;
 import com.ems.collector.transport.Sample;
 import com.ems.collector.transport.TestResult;
 import org.springframework.stereotype.Service;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 /**
  * Channel 诊断服务：暴露运行时状态、连接测试、强制重连。
@@ -30,16 +29,16 @@ public class ChannelDiagnosticsService {
     private final ChannelStateRegistry registry;
     private final ChannelService channelService;
     private final ChannelRepository repo;
-    private final Optional<LoggingSampleWriter> sampleWriter;
+    private final DiagnosticRingBuffer ring;
 
     public ChannelDiagnosticsService(ChannelStateRegistry registry,
                                      ChannelService channelService,
                                      ChannelRepository repo,
-                                     Optional<LoggingSampleWriter> sampleWriter) {
+                                     DiagnosticRingBuffer ring) {
         this.registry = registry;
         this.channelService = channelService;
         this.repo = repo;
-        this.sampleWriter = sampleWriter;
+        this.ring = ring;
     }
 
     public Collection<ChannelRuntimeState> snapshotAll() {
@@ -65,18 +64,18 @@ public class ChannelDiagnosticsService {
     }
 
     /**
-     * 返回 channel 最近样本（最新在前），生产环境（无 LoggingSampleWriter bean）返回空列表。
+     * 返回 channel 最近样本（最新在前）。诊断 ring buffer 由 {@link DiagnosticRingBuffer}
+     * 维护，InfluxSampleWriter / LoggingSampleWriter 都喂它，所以不论时序库是否在线
+     * 都能看到样本——曾经的"生产环境无 ring buffer"限制已移除。
      *
      * <p>limit 兜底：&lt;=0 → {@value #DEFAULT_SAMPLE_LIMIT}；&gt;{@value #MAX_SAMPLE_LIMIT} → 截断。
      */
     public List<SampleDTO> getRecentSamples(Long channelId, int limit) {
         int effectiveLimit = limit <= 0 ? DEFAULT_SAMPLE_LIMIT
             : Math.min(limit, MAX_SAMPLE_LIMIT);
-        return sampleWriter
-            .map(w -> w.getRecentSamples(channelId, effectiveLimit).stream()
-                .map(ChannelDiagnosticsService::toDto)
-                .toList())
-            .orElseGet(List::of);
+        return ring.getRecentSamples(channelId, effectiveLimit).stream()
+            .map(ChannelDiagnosticsService::toDto)
+            .toList();
     }
 
     private static SampleDTO toDto(Sample s) {

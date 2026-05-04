@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { alarmApi } from '@/api/alarm';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_HEALTH } from '@/components/pageHelp';
 
 export default function AlarmHealthPage() {
   useDocumentTitle('报警 - 健康');
@@ -15,27 +16,36 @@ export default function AlarmHealthPage() {
 
   return (
     <div>
-      <PageHeader title="报警健康" />
+      <PageHeader title="报警健康" helpContent={HELP_ALARM_HEALTH} />
       <Row gutter={16}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={5}>
           <Card loading={isLoading}>
             <Statistic
-              title="在线设备"
+              title="测点总数"
+              value={summary?.totalCount ?? 0}
+              valueStyle={{ color: '#1677ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={5}>
+          <Card loading={isLoading}>
+            <Statistic
+              title="在线测点"
               value={summary?.onlineCount ?? 0}
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={5}>
           <Card loading={isLoading}>
             <Statistic
-              title="离线设备"
+              title="离线测点"
               value={summary?.offlineCount ?? 0}
               valueStyle={{ color: '#999' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={5}>
           <Card loading={isLoading}>
             <Statistic
               title="报警中"
@@ -44,7 +54,7 @@ export default function AlarmHealthPage() {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card loading={isLoading}>
             <Statistic
               title="维护中"

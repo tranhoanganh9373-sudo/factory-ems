@@ -104,13 +104,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<SeriesDTO> realtimeSeries(RangeQuery query) {
-        // 强制小时分桶；range 默认 LAST_24H 由 controller 传入
+        // 短 range（TODAY/LAST_24H/YESTERDAY）用 MINUTE，曲线随时间真正前移；
+        // THIS_MONTH 与 CUSTOM 统一 HOUR，避免 1 个月 × 1440 分钟桶把前端打爆。
         TimeRange range = RangeResolver.resolve(query);
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
         if (meters.isEmpty()) return List.of();
 
         List<MeterRef> refs = toRefs(meters);
-        List<MeterPoint> pts = tsq.queryByMeter(refs, range, Granularity.HOUR);
+        List<MeterPoint> pts = tsq.queryByMeter(refs, range, pickRealtimeGranularity(query.range()));
 
         Map<Long, String> typeByMeter = new HashMap<>();
         Map<String, String> unitByType = unitByEnergyType(meters);
@@ -166,7 +167,7 @@ public class DashboardServiceImpl implements DashboardService {
         TimeRange range = RangeResolver.resolve(query);
         MeterRecord m = support.resolveOneMeter(meterId);
 
-        MeterRef ref = new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode());
+        MeterRef ref = new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind());
         List<MeterPoint> series = tsq.queryByMeter(List.of(ref), range, Granularity.HOUR);
         Map<Long, Double> totalsMap = tsq.sumByMeter(List.of(ref), range);
         double total = totalsMap.getOrDefault(m.meterId(), 0.0);
@@ -368,8 +369,10 @@ public class DashboardServiceImpl implements DashboardService {
         List<FloorplanPointDTO> visiblePts = fp.points().stream()
                 .filter(p -> byId.containsKey(p.meterId()))
                 .toList();
-        if (fp.points().size() > 0 && visiblePts.isEmpty()) {
-            // 整图都不可见 — 视作越权
+        // 仅在"未指定 orgNodeId"时把"全图不可见"判为越权——带过滤器时 visiblePts 为空
+        // 也可能是用户主动选的组织节点与底图测点没交集（admin 也会命中），不应抛 403。
+        // 带过滤器走空响应分支：前端只渲染底图、不显示 markers。
+        if (query.orgNodeId() == null && fp.points().size() > 0 && visiblePts.isEmpty()) {
             throw new ForbiddenException("无权访问该平面图上的任意测点");
         }
 
@@ -394,6 +397,14 @@ public class DashboardServiceImpl implements DashboardService {
         return new FloorplanLiveDTO(fp.floorplan(), out);
     }
 
+    private static Granularity pickRealtimeGranularity(RangeType r) {
+        if (r == null) return Granularity.HOUR;
+        return switch (r) {
+            case TODAY, LAST_24H, YESTERDAY -> Granularity.MINUTE;
+            case THIS_MONTH, CUSTOM -> Granularity.HOUR;
+        };
+    }
+
     private static String heatLevel(double v, double max) {
         if (max <= 0) return "NONE";
         double r = v / max;
@@ -408,7 +419,7 @@ public class DashboardServiceImpl implements DashboardService {
         for (FloorplanPointDTO p : pts) {
             MeterRecord m = byId.get(p.meterId());
             if (m != null) {
-                refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()));
+                refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
             }
         }
         return refs;
@@ -419,7 +430,7 @@ public class DashboardServiceImpl implements DashboardService {
     private List<MeterRef> toRefs(List<MeterRecord> meters) {
         List<MeterRef> refs = new ArrayList<>(meters.size());
         for (MeterRecord m : meters) {
-            refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode()));
+            refs.add(new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind()));
         }
         return refs;
     }

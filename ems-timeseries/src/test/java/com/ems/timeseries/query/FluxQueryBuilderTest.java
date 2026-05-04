@@ -80,6 +80,51 @@ class FluxQueryBuilderTest {
     }
 
     @Test
+    void cumulativeOverRange_emitsFirstLastUnionPivot() {
+        String q = FluxQueryBuilder.cumulativeOverRange("b", "m", List.of("M1"), RANGE);
+        assertThat(q)
+            .contains("data = from(bucket: \"b\")")
+            .contains("first_v = data |> first()")
+            .contains("last_v  = data |> last()")
+            .contains("union(tables: [first_v, last_v])")
+            .contains("pivot(rowKey: [\"meter_code\", \"energy_type\"]")
+            .contains("_value: r.last - r.first");
+    }
+
+    @Test
+    void integralOverRange_buildsTrapezoidalIntegralWith1hUnit() {
+        String q = FluxQueryBuilder.integralOverRange("b", "m", List.of("M1"), RANGE);
+        assertThat(q)
+            .contains("group(columns: [\"meter_code\", \"energy_type\"])")
+            .contains("|> integral(unit: 1h)")
+            .contains("keep(columns: [\"meter_code\", \"energy_type\", \"_value\"])");
+    }
+
+    @Test
+    void bucketedDeltaForMeter_emitsDifferenceAndAggregateSum() {
+        String q = FluxQueryBuilder.bucketedDeltaForMeter("b", "m", List.of("M1"), RANGE, Granularity.HOUR);
+        assertThat(q)
+            .contains("|> difference(nonNegative: true)")
+            .contains("aggregateWindow(every: 1h, fn: sum")
+            .contains("keep(columns: [\"_time\", \"_value\", \"meter_code\", \"energy_type\"])");
+    }
+
+    @Test
+    void bucketedIntegralForMeter_emitsAggregateWindowWithIntegralFn() {
+        String q = FluxQueryBuilder.bucketedIntegralForMeter("b", "m", List.of("M1"), RANGE, Granularity.HOUR);
+        assertThat(q)
+            .contains("aggregateWindow(every: 1h, fn: (column, tables=<-) => tables |> integral(unit: 1h, column: column)")
+            .contains("keep(columns: [\"_time\", \"_value\", \"meter_code\", \"energy_type\"])");
+    }
+
+    @Test
+    void integralOverRange_rejectsBadTagChars() {
+        assertThatThrownBy(() -> FluxQueryBuilder.integralOverRange(
+                "b", "m", List.of("bad\";drop"), RANGE))
+            .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
     void aggregateFunctions_haveCorrectFlux() {
         String q = FluxQueryBuilder.aggregateByMeter("b", "m", List.of("M1"),
             RANGE, Granularity.MINUTE, FluxQueryBuilder.Agg.MEAN);

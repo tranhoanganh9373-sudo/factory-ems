@@ -289,6 +289,79 @@ class ChannelServiceTest {
     }
 
     @Test
+    void decodeOnlyBadSampleDoesNotPoisonCycle() throws InterruptedException {
+        // 场景：6 个点 GOOD + 1 个点 errorKind=decode（dataType 配错）。
+        // 期望：cycle 整体算成功，channel 不应翻成 DISCONNECTED。
+        Transport transport = mock(Transport.class);
+        factoryMock.enqueue(transport);
+        Channel ch = newChannel(65L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(ch);
+
+        ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
+        verify(transport).start(eq(65L), any(VirtualConfig.class), sinkCaptor.capture());
+        SampleSink sink = sinkCaptor.getValue();
+
+        sink.accept(new Sample(65L, "p1",
+                Instant.parse("2026-04-30T10:00:00Z"),
+                1.0, Quality.GOOD, Map.of()));
+        sink.accept(new Sample(65L, "ggg",
+                Instant.parse("2026-04-30T10:00:00.010Z"),
+                null, Quality.BAD, Map.of(
+                    "error", "raw bytes length=2 mismatches dataType=FLOAT32 (expected 4)",
+                    Sample.TAG_ERROR_KIND, Sample.ERROR_KIND_DECODE)));
+        Thread.sleep(250);
+        // 跨 cycle-gap 后下一个 sample 触发上一周期 commit
+        sink.accept(new Sample(65L, "p1",
+                Instant.parse("2026-04-30T10:00:01Z"),
+                1.1, Quality.GOOD, Map.of()));
+
+        var snap = registry.snapshot(65L);
+        // 关键证明：cycle 算成功 → channel 不应 DISCONNECTED；lastFailureAt/lastErrorMessage 不应被写入。
+        // 注：24h 成功率以 CONNECTED 状态为准（hysteresis 阈值=3），单 cycle 后仍在 CONNECTING，
+        // 所以 successCount24h 是 0 而 lastSuccessAt 已写入，这是 ChannelStateRegistry 的预期行为。
+        assertThat(snap.connState()).isNotEqualTo(ConnectionState.DISCONNECTED);
+        assertThat(snap.lastSuccessAt()).isNotNull();
+        assertThat(snap.lastFailureAt()).isNull();
+        assertThat(snap.lastErrorMessage()).isNull();
+    }
+
+    @Test
+    void ioBadSampleStillRecordsFailureEvenWhenTagged() throws InterruptedException {
+        // 兜底：errorKind=io 的 BAD 样本仍计入 cycle failure（与未打 tag 的旧路径行为一致）。
+        Transport transport = mock(Transport.class);
+        factoryMock.enqueue(transport);
+        Channel ch = newChannel(66L, "VIRTUAL", true);
+        when(repo.save(any(Channel.class))).thenReturn(ch);
+
+        ChannelService svc = new ChannelService(repo, registry, factoryMock, sinkSvc);
+        svc.create(ch);
+
+        ArgumentCaptor<SampleSink> sinkCaptor = ArgumentCaptor.forClass(SampleSink.class);
+        verify(transport).start(eq(66L), any(VirtualConfig.class), sinkCaptor.capture());
+        SampleSink sink = sinkCaptor.getValue();
+
+        sink.accept(new Sample(66L, "p1",
+                Instant.parse("2026-04-30T10:00:00Z"),
+                null, Quality.BAD, Map.of(
+                    "error", "Connection reset",
+                    Sample.TAG_ERROR_KIND, Sample.ERROR_KIND_IO)));
+        Thread.sleep(250);
+        sink.accept(new Sample(66L, "p1",
+                Instant.parse("2026-04-30T10:00:01Z"),
+                null, Quality.BAD, Map.of(
+                    "error", "trigger",
+                    Sample.TAG_ERROR_KIND, Sample.ERROR_KIND_IO)));
+
+        var snap = registry.snapshot(66L);
+        assertThat(snap.connState()).isEqualTo(ConnectionState.DISCONNECTED);
+        assertThat(snap.failureCount24h()).isEqualTo(1L);
+        assertThat(snap.lastErrorMessage()).contains("Connection reset");
+    }
+
+    @Test
     void uncertainSampleRecordsFailureWithFallbackError() throws InterruptedException {
         Transport transport = mock(Transport.class);
         factoryMock.enqueue(transport);

@@ -119,9 +119,12 @@ public final class ModbusRtuAdapterTransport implements Transport {
             } catch (Exception e) {
                 String msg = e.getMessage() == null ? e.toString() : e.getMessage();
                 log.warn("Modbus RTU read failed for channel={} point={}: {}", channelId, p.key(), msg);
+                boolean isIo = e instanceof ModbusIoException;
                 sink.accept(new Sample(channelId, p.key(), Instant.now(),
-                        null, Quality.BAD, Map.of("error", msg)));
-                if (e instanceof ModbusIoException) {
+                        null, Quality.BAD, Map.of(
+                            "error", msg,
+                            Sample.TAG_ERROR_KIND, isIo ? Sample.ERROR_KIND_IO : Sample.ERROR_KIND_DECODE)));
+                if (isIo) {
                     ioFailureCount++;
                 }
             }

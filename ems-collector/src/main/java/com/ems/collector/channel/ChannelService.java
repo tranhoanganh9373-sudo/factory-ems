@@ -5,6 +5,7 @@ import com.ems.collector.runtime.ConnectionState;
 import com.ems.collector.sink.SampleWriter;
 import com.ems.collector.transport.ChannelTransportFactory;
 import com.ems.collector.transport.Quality;
+import com.ems.collector.transport.Sample;
 import com.ems.collector.transport.Transport;
 import com.ems.core.constant.ErrorCode;
 import com.ems.core.exception.BusinessException;
@@ -199,9 +200,15 @@ public class ChannelService {
                     log.warn("sampleWriter.write failed for channel={} point={}: {}",
                             sample.channelId(), sample.pointKey(), e.getMessage());
                 }
-                String err = sample.quality() == Quality.GOOD ? null
+                // 区分 cycle-ok 与 point-quality：单点解码失败（errorKind=decode）只影响该点 quality，
+                // 不污染整通道的 connState/24h 成功率——TCP/串口仍然连通，只是某个点的 dataType 配错。
+                // 传输层 IO 失败（errorKind=io，或未打 tag 的兜底）才计入 cycle failure。
+                boolean isDecodeOnly = sample.quality() != Quality.GOOD
+                        && Sample.ERROR_KIND_DECODE.equals(sample.tags().get(Sample.TAG_ERROR_KIND));
+                boolean cycleOk = sample.quality() == Quality.GOOD || isDecodeOnly;
+                String err = cycleOk ? null
                         : sample.tags().getOrDefault("error", "quality=" + sample.quality());
-                commitCycle(sample.channelId(), agg, sample.quality() == Quality.GOOD, err);
+                commitCycle(sample.channelId(), agg, cycleOk, err);
             });
         } catch (RuntimeException e) {
             stateRegistry.recordFailure(ch.getId(), e.getMessage());

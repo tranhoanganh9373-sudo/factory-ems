@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_USER_PERMISSIONS } from '@/components/pageHelp';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusOutlined } from '@ant-design/icons';
 import { permissionApi, NodePermissionDTO } from '@/api/permission';
@@ -74,7 +75,7 @@ export default function UserPermissionPage() {
 
   return (
     <>
-      <PageHeader title="用户权限" />
+      <PageHeader title="用户权限" helpContent={HELP_USER_PERMISSIONS} />
       <Card
         extra={
           <Space>

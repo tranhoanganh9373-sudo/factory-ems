@@ -21,6 +21,7 @@ import { MoveNodeModal } from './MoveNodeModal';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ORGTREE } from '@/components/pageHelp';
 
 interface DisplayNode {
   title: React.ReactNode;
@@ -42,6 +43,17 @@ export default function OrgTreePage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+
+  // 找选中节点在树中的父节点 nodeType，传给 EditNodeModal 做软约束。
+  const findParentNodeType = (nodes: OrgNodeDTO[], targetId: number): string | null => {
+    for (const n of nodes) {
+      if (n.children.some((c) => c.id === targetId)) return n.nodeType;
+      const inSub = findParentNodeType(n.children, targetId);
+      if (inSub != null) return inSub;
+    }
+    return null;
+  };
+  const selectedParentNodeType = selected != null ? findParentNodeType(tree, selected.id) : null;
 
   const del = useMutation({
     mutationFn: (id: number) => orgTreeApi.delete(id),
@@ -78,7 +90,7 @@ export default function OrgTreePage() {
 
   return (
     <>
-      <PageHeader title="组织树" />
+      <PageHeader title="组织树" helpContent={HELP_ORGTREE} />
       <Card
         extra={
           isAdmin && (
@@ -125,7 +137,12 @@ export default function OrgTreePage() {
           </Typography.Paragraph>
         )}
         <CreateNodeModal open={createOpen} parent={selected} onClose={() => setCreateOpen(false)} />
-        <EditNodeModal open={editOpen} node={selected} onClose={() => setEditOpen(false)} />
+        <EditNodeModal
+          open={editOpen}
+          node={selected}
+          parentNodeType={selectedParentNodeType}
+          onClose={() => setEditOpen(false)}
+        />
         <MoveNodeModal
           open={moveOpen}
           node={selected}

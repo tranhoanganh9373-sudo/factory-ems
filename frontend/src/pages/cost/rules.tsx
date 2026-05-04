@@ -20,6 +20,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_COST_RULES } from '@/components/pageHelp';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   costApi,
@@ -206,6 +207,7 @@ export default function CostRulesPage() {
     <>
       <PageHeader
         title="分摊规则"
+        helpContent={HELP_COST_RULES}
         extra={
           <Button type="primary" onClick={openCreate}>
             新建规则

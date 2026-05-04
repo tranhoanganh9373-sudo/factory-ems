@@ -15,7 +15,7 @@ export default function KpiPanel() {
     queryFn: () =>
       dashboardApi.getKpi({ range, from: customFrom, to: customTo, orgNodeId, energyType }),
     enabled: isCustomReady,
-    refetchInterval: 30_000,
+    refetchInterval: 60_000,
     refetchIntervalInBackground: false,
   });
 

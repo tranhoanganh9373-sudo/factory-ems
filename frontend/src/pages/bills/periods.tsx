@@ -7,6 +7,7 @@ import { billsApi, type BillPeriodDTO, type BillPeriodStatus } from '@/api/bills
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_BILL_PERIODS } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
 import { showTotal } from '@/utils/format';
 
@@ -127,7 +128,7 @@ export default function BillPeriodsPage() {
 
   return (
     <>
-      <PageHeader title="账期管理" />
+      <PageHeader title="账期管理" helpContent={HELP_BILL_PERIODS} />
       <Card
         extra={
           <Button type="primary" onClick={() => setCreateOpen(true)}>

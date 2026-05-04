@@ -21,6 +21,7 @@ import { webhookApi, type DeliveryLogDTO, type WebhookConfigRequest } from '@/ap
 import dayjs from 'dayjs';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_WEBHOOK } from '@/components/pageHelp';
 
 interface FormValues {
   enabled: boolean;
@@ -128,7 +129,7 @@ export default function AlarmWebhookPage() {
 
   return (
     <div>
-      <PageHeader title="报警通知配置" />
+      <PageHeader title="报警通知配置" helpContent={HELP_ALARM_WEBHOOK} />
 
       <Row gutter={16}>
         <Col xs={24} lg={14}>
