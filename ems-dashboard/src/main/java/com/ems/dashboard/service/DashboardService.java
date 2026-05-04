@@ -55,4 +55,10 @@ public interface DashboardService {
      * 仅返回 visible 范围内、severity != OK 的行。给"系统健康"面板用。
      */
     java.util.List<TopologyConsistencyDTO> topologyConsistency(RangeQuery query);
+
+    /**
+     * ⑫ 能源来源构成（PV 功能门控）：按 EnergySource 分组汇总，返回各来源占比。
+     * PV 未启用时返回空列表。
+     */
+    List<EnergySourceMixDTO> energySourceMix(RangeQuery query);
 }

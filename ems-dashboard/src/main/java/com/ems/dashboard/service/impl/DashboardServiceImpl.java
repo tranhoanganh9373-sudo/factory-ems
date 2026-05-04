@@ -236,6 +236,39 @@ public class DashboardServiceImpl implements DashboardService {
         return out;
     }
 
+    /* ---------------- ③b Energy source mix (PV-gated) ---------------- */
+
+    @Override
+    public List<EnergySourceMixDTO> energySourceMix(RangeQuery query) {
+        if (!pvProps.enabled()) return List.of();
+
+        TimeRange range = RangeResolver.resolve(query);
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), null);
+        if (meters.isEmpty()) return List.of();
+
+        Map<EnergySource, List<MeterRecord>> bySource = meters.stream()
+            .collect(java.util.stream.Collectors.groupingBy(MeterRecord::energySource));
+
+        Map<EnergySource, Double> totalBySource = new java.util.EnumMap<>(EnergySource.class);
+        String unit = meters.get(0).unit();
+        for (var entry : bySource.entrySet()) {
+            List<MeterRecord> roots = support.filterToVisibleRoots(entry.getValue());
+            Map<String, Double> sums = tsq.sumByEnergyType(toRefs(roots), range);
+            double v = sums.values().stream().mapToDouble(Double::doubleValue).sum();
+            totalBySource.put(entry.getKey(), v);
+        }
+
+        double grandTotal = totalBySource.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        List<EnergySourceMixDTO> out = new ArrayList<>(totalBySource.size());
+        totalBySource.forEach((src, v) -> {
+            Double share = grandTotal > 0 ? v / grandTotal : null;
+            out.add(new EnergySourceMixDTO(src, unit, v, share));
+        });
+        out.sort(Comparator.comparing(d -> d.energySource().name()));
+        return out;
+    }
+
     /* ---------------- ④ Meter detail ---------------- */
 
     @Override
