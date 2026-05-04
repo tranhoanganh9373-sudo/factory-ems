@@ -58,6 +58,18 @@ public class Meter {
     @Column(name = "value_kind", nullable = false, length = 32)
     private ValueKind valueKind = ValueKind.INTERVAL_DELTA;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 16)
+    private MeterRole role = MeterRole.CONSUME;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "energy_source", nullable = false, length = 16)
+    private EnergySource energySource = EnergySource.GRID;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "flow_direction", nullable = false, length = 16)
+    private FlowDirection flowDirection = FlowDirection.IMPORT;
+
     @Version
     private Long version;
 
@@ -89,6 +101,9 @@ public class Meter {
     public Long getChannelId() { return channelId; }
     public String getChannelPointKey() { return channelPointKey; }
     public ValueKind getValueKind() { return valueKind; }
+    public MeterRole getRole() { return role; }
+    public EnergySource getEnergySource() { return energySource; }
+    public FlowDirection getFlowDirection() { return flowDirection; }
     public Long getVersion() { return version; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
@@ -105,4 +120,7 @@ public class Meter {
     public void setChannelId(Long v) { this.channelId = v; }
     public void setChannelPointKey(String v) { this.channelPointKey = v; }
     public void setValueKind(ValueKind v) { this.valueKind = v; }
+    public void setRole(MeterRole v) { this.role = v; }
+    public void setEnergySource(EnergySource v) { this.energySource = v; }
+    public void setFlowDirection(FlowDirection v) { this.flowDirection = v; }
 }
