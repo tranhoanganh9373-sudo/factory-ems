@@ -1,4 +1,4 @@
-package com.ems.app.config;
+package com.ems.core.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

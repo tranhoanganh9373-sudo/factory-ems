@@ -1,5 +1,6 @@
 package com.ems.dashboard.service;
 
+import com.ems.core.config.PvFeatureProperties;
 import com.ems.core.constant.ValueKind;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
@@ -59,7 +60,8 @@ class DashboardServiceImplTest {
         production = mock(ProductionEntryService.class);
         topology = mock(MeterTopologyRepository.class);
         floorplans = mock(FloorplanService.class);
-        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans,
+                new PvFeatureProperties(false));
     }
 
     /* ---------------- KPI ---------------- */
