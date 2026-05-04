@@ -1,6 +1,6 @@
 import { Modal, Form, Input, Select, Switch, message } from 'antd';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { meterApi, CreateMeterReq, ValueKind } from '@/api/meter';
+import { meterApi, CreateMeterReq, ValueKind, MeterRole, EnergySource, FlowDirection } from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 import { channelApi } from '@/api/channel';
 
@@ -85,6 +85,9 @@ interface FormValues {
   channelPointKey?: string | null;
   enabled?: boolean;
   valueKind?: ValueKind;
+  role?: MeterRole;
+  energySource?: EnergySource;
+  flowDirection?: FlowDirection;
 }
 
 export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -145,6 +148,9 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
             channelId: v.channelId ?? null,
             channelPointKey,
             valueKind: v.valueKind ?? 'INTERVAL_DELTA',
+            role: v.role ?? 'CONSUME',
+            energySource: v.energySource ?? 'GRID',
+            flowDirection: v.flowDirection ?? 'IMPORT',
           });
         })
       }
@@ -174,6 +180,27 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
           tooltip={{ title: VALUE_KIND_TOOLTIP, overlayStyle: { maxWidth: 420 } }}
         >
           <Select options={VALUE_KIND_OPTIONS} />
+        </Form.Item>
+        <Form.Item name="role" label="角色" initialValue="CONSUME">
+          <Select>
+            <Select.Option value="CONSUME">纯耗电</Select.Option>
+            <Select.Option value="GENERATE">光伏发电</Select.Option>
+            <Select.Option value="GRID_TIE">并网点</Select.Option>
+          </Select>
+        </Form.Item>
+        <Form.Item name="energySource" label="来源" initialValue="GRID">
+          <Select>
+            <Select.Option value="GRID">电网</Select.Option>
+            <Select.Option value="SOLAR">光伏</Select.Option>
+            <Select.Option value="WIND">风电</Select.Option>
+            <Select.Option value="STORAGE">储能</Select.Option>
+          </Select>
+        </Form.Item>
+        <Form.Item name="flowDirection" label="方向" initialValue="IMPORT">
+          <Select>
+            <Select.Option value="IMPORT">进口</Select.Option>
+            <Select.Option value="EXPORT">出口</Select.Option>
+          </Select>
         </Form.Item>
         <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
           <Select
