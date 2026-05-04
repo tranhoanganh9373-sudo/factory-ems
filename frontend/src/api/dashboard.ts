@@ -121,6 +121,24 @@ export interface SankeyDTO {
   links: Array<{ source: string; target: string; value: number }>;
 }
 
+export interface EnergySourceMixDTO {
+  energySource: 'GRID' | 'SOLAR' | 'WIND' | 'STORAGE';
+  unit: string;
+  value: number;
+  share: number | null;
+}
+
+export interface PvCurveBucket {
+  ts: string;
+  generation: number;
+  load: number;
+}
+
+export interface PvCurveDTO {
+  unit: string;
+  buckets: PvCurveBucket[];
+}
+
 export interface FloorplanLivePoint {
   pointId: number;
   meterId: number;
@@ -230,4 +248,18 @@ export const dashboardApi = {
         params: toParams(q as DashboardQuery),
       })
       .then((r) => r.data as unknown as FloorplanLiveDTO),
+
+  getEnergySourceMix: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<EnergySourceMixDTO[]>('/dashboard/energy-source-mix', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as EnergySourceMixDTO[]),
+
+  getPvCurve: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<PvCurveDTO>('/dashboard/pv-curve', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as PvCurveDTO),
 };
