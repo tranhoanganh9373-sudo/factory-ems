@@ -61,7 +61,7 @@ class DashboardServiceImplTest {
         topology = mock(MeterTopologyRepository.class);
         floorplans = mock(FloorplanService.class);
         svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans,
-                new PvFeatureProperties(false));
+                new PvFeatureProperties(false), mock(com.ems.dashboard.service.SolarSelfConsumptionService.class));
     }
 
     /* ---------------- KPI ---------------- */

@@ -27,6 +27,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,7 +43,8 @@ class DashboardServiceImplEnergyMixTest {
 
     private DashboardServiceImpl service(boolean pvEnabled) {
         return new DashboardServiceImpl(support, tsq, tariff, energyTypes, production,
-                                        topology, floorplans, new PvFeatureProperties(pvEnabled));
+                                        topology, floorplans, new PvFeatureProperties(pvEnabled),
+                                        mock(com.ems.dashboard.service.SolarSelfConsumptionService.class));
     }
 
     private MeterRecord meter(Long id, MeterRole role, EnergySource source, FlowDirection dir) {

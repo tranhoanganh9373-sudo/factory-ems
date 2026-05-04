@@ -61,4 +61,10 @@ public interface DashboardService {
      * PV 未启用时返回空列表。
      */
     List<EnergySourceMixDTO> energySourceMix(RangeQuery query);
+
+    /**
+     * ⑬ PV 发电曲线（PV 功能门控）：按小时分桶，返回发电量与自耗量。
+     * PV 未启用时返回空桶列表。
+     */
+    PvCurveDTO pvCurve(RangeQuery query);
 }
