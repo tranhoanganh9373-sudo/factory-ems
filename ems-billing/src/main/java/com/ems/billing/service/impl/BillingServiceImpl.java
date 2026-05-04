@@ -23,6 +23,8 @@ import com.ems.cost.entity.EnergyTypeCode;
 import com.ems.cost.repository.CostAllocationLineRepository;
 import com.ems.cost.repository.CostAllocationRuleRepository;
 import com.ems.cost.repository.CostAllocationRunRepository;
+import com.ems.cost.service.FeedInRevenueService;
+import com.ems.meter.entity.EnergySource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -58,6 +60,7 @@ public class BillingServiceImpl implements BillingService {
     private final CostAllocationRuleRepository ruleRepo;
     private final ProductionLookupPort productionLookup;
     private final OrgNodeService orgNodes;
+    private final FeedInRevenueService feedInRevenue;
 
     public BillingServiceImpl(BillPeriodRepository periodRepo,
                               BillRepository billRepo,
@@ -66,7 +69,8 @@ public class BillingServiceImpl implements BillingService {
                               CostAllocationLineRepository lineRepo,
                               CostAllocationRuleRepository ruleRepo,
                               ProductionLookupPort productionLookup,
-                              OrgNodeService orgNodes) {
+                              OrgNodeService orgNodes,
+                              FeedInRevenueService feedInRevenue) {
         this.periodRepo = periodRepo;
         this.billRepo = billRepo;
         this.billLineRepo = billLineRepo;
@@ -75,6 +79,7 @@ public class BillingServiceImpl implements BillingService {
         this.ruleRepo = ruleRepo;
         this.productionLookup = productionLookup;
         this.orgNodes = orgNodes;
+        this.feedInRevenue = feedInRevenue;
     }
 
     @Override
@@ -173,6 +178,11 @@ public class BillingServiceImpl implements BillingService {
             b.setProductionQty(prodQty);
             b.setUnitCost(unitCost);
             b.setUnitIntensity(unitIntensity);
+            // v1.2.0 PV：上网卖电收入抵扣
+            EnergySource source = EnergySource.SOLAR;
+            BigDecimal revenue = feedInRevenue.computeRevenue(key.orgNodeId, source, from, to);
+            b.setFeedInRevenue(revenue);
+            b.setNetAmount(amt.subtract(revenue));
             b = billRepo.save(b);
 
             // GROUP lines by rule_id within this (org, energy) → 一行 bill_line per rule
