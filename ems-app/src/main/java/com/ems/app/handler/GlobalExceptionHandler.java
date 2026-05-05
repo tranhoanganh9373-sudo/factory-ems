@@ -20,6 +20,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
@@ -167,6 +168,29 @@ public class GlobalExceptionHandler {
         log.warn("data_integrity_violation: {}", ex.getMostSpecificCause().getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
             .body(Result.error(ErrorCode.CONFLICT, "操作冲突：该数据正被其他记录引用，或与已存在数据重复，请先解除关联或换一个值"));
+    }
+
+    /**
+     * Spring 的 ResponseStatusException（controller 直接 throw 携带状态码的异常）必须在
+     * Exception.class 兜底之前处理，否则会被 unknown(Exception) 吞成 500 "服务器错误"，
+     * 让原本明确的 404/409/400 等业务语义对前端不可见。映射规则：状态码 → ErrorCode；
+     * 消息透传 ex.getReason()（controller 自己写的，不会泄漏内部细节）。
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<Result<?>> responseStatus(ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) status = HttpStatus.INTERNAL_SERVER_ERROR;
+        int code = switch (status) {
+            case NOT_FOUND -> ErrorCode.NOT_FOUND;
+            case FORBIDDEN -> ErrorCode.FORBIDDEN;
+            case UNAUTHORIZED -> ErrorCode.UNAUTHORIZED;
+            case CONFLICT -> ErrorCode.CONFLICT;
+            case BAD_REQUEST -> ErrorCode.PARAM_INVALID;
+            default -> status.is4xxClientError() ? ErrorCode.BIZ_GENERIC : ErrorCode.INTERNAL_ERROR;
+        };
+        String reason = ex.getReason() != null ? ex.getReason() : status.getReasonPhrase();
+        log.warn("response_status_ex status={} reason={}", status.value(), reason);
+        return ResponseEntity.status(status).body(Result.error(code, reason));
     }
 
     @ExceptionHandler(Exception.class)
