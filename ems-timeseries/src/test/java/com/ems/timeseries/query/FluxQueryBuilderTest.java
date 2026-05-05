@@ -95,7 +95,7 @@ class FluxQueryBuilderTest {
     void integralOverRange_buildsTrapezoidalIntegralWith1hUnit() {
         String q = FluxQueryBuilder.integralOverRange("b", "m", List.of("M1"), RANGE);
         assertThat(q)
-            .contains("group(columns: [\"meter_code\", \"energy_type\"])")
+            .contains("group(columns: [\"meter_code\", \"energy_type\", \"_start\", \"_stop\"])")
             .contains("|> integral(unit: 1h)")
             .contains("keep(columns: [\"meter_code\", \"energy_type\", \"_value\"])");
     }
