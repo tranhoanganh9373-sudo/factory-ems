@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'ship/**']
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, 'ship/**']
 
 jobs:
   backend:
@@ -46,7 +46,7 @@ jobs:
       - name: Type Check
         run: pnpm typecheck
       - name: Test
-        run: pnpm test --run
+        run: pnpm test -- --run
       - name: Build
         run: pnpm build
 
