@@ -58,24 +58,44 @@ public class TimeseriesGenerator {
         ProfileGenerator profile = new ProfileGenerator();
         NoiseInjector noise = new NoiseInjector(new Random(seed + 1));
 
-        // load meters
-        List<Meter> meters = meterRepo.findAllByOrderByCodeAsc().stream()
-            .filter(m -> m.getCode().startsWith("MOCK-"))
-            .toList();
-        if (meters.isEmpty()) {
-            log.warn("No MOCK- meters found. Run MeterSeeder first.");
-            return;
-        }
-        log.info("Generating timeseries for {} meters, {} to {}", meters.size(), startDate, endDate);
-
-        // build topology maps
+        // build topology maps first — used by meter filter to include any meter
+        // participating in topology, regardless of code prefix. Without this,
+        // user-created meters wired into topology become phantom nodes:
+        // present in meter_topology but never get readings, breaking
+        // conservation (descendant readings exceed ancestor readings).
         Map<Long, List<Long>> parentToChildren = new HashMap<>(); // parentId -> [childIds]
         Map<Long, Long> childToParent = new HashMap<>();          // childId -> parentId
+        Set<Long> topologyMeterIds = new HashSet<>();
         for (MeterTopology t : topoRepo.findAll()) {
             parentToChildren.computeIfAbsent(t.getParentMeterId(), k -> new ArrayList<>())
                 .add(t.getChildMeterId());
             childToParent.put(t.getChildMeterId(), t.getParentMeterId());
+            topologyMeterIds.add(t.getParentMeterId());
+            topologyMeterIds.add(t.getChildMeterId());
         }
+
+        // load meters: MOCK- prefix OR any meter that participates in topology.
+        // Pure standalone non-MOCK meters (e.g. real meters fed by collector)
+        // remain excluded so this generator never overwrites their data.
+        List<Meter> meters = meterRepo.findAllByOrderByCodeAsc().stream()
+            .filter(m -> m.getCode().startsWith("MOCK-")
+                      || topologyMeterIds.contains(m.getId()))
+            .toList();
+        if (meters.isEmpty()) {
+            log.warn("No MOCK- meters or topology-linked meters found. Run MeterSeeder first.");
+            return;
+        }
+
+        // Sanity: every topology row must reference a loadable meter. Orphans
+        // (FK pointing to a deleted meter) cannot have readings generated and
+        // would silently break conservation — fail fast with offending IDs.
+        Set<Long> meterIds = meters.stream().map(Meter::getId).collect(Collectors.toSet());
+        validateTopologyCoverage(topologyMeterIds, meterIds);
+
+        long mockPrefixCount = meters.stream().filter(m -> m.getCode().startsWith("MOCK-")).count();
+        long topologyOnlyCount = meters.size() - mockPrefixCount;
+        log.info("Generating timeseries for {} meters ({} MOCK- prefix, {} topology-linked non-MOCK), {} to {}",
+            meters.size(), mockPrefixCount, topologyOnlyCount, startDate, endDate);
 
         Set<Long> parentMeterIds = new HashSet<>(parentToChildren.keySet());
         Set<Long> leafMeterIds = meters.stream()
@@ -299,6 +319,23 @@ public class TimeseriesGenerator {
             double avg = sum / cnt;
             rollupWriter.addMonthly(new MonthlyRow(
                 m.getId(), m.getOrgNodeId(), yearMonth, sum, avg, max, min, cnt));
+        }
+    }
+
+    /**
+     * Throws {@link IllegalStateException} if any meter id appears in the
+     * topology graph but is missing from the loadable meter set. Such orphans
+     * cannot receive generated readings and would silently break conservation.
+     *
+     * <p>Package-private + static for unit testability.
+     */
+    static void validateTopologyCoverage(Set<Long> topologyMeterIds, Set<Long> loadableMeterIds) {
+        Set<Long> orphans = new HashSet<>(topologyMeterIds);
+        orphans.removeAll(loadableMeterIds);
+        if (!orphans.isEmpty()) {
+            throw new IllegalStateException(
+                "meter_topology references meters that are not loadable: ids=" + orphans
+              + ". Either remove these topology rows or ensure the meters exist in the meters table.");
         }
     }
 
