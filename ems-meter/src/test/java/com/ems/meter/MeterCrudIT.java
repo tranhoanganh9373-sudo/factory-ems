@@ -69,7 +69,7 @@ class MeterCrudIT {
     @Test
     void create_list_get_works() {
         var dto = meterService.create(new CreateMeterReq(
-            "M-IT-1", "电表 1", elecId, workshopId, true, null, null, null));
+            "M-IT-1", "电表 1", elecId, workshopId, true, null, null, null, null, null, null));
 
         assertThat(dto.id()).isNotNull();
         assertThat(dto.energyTypeCode()).isEqualTo("ELEC");
@@ -87,20 +87,20 @@ class MeterCrudIT {
     @Test
     void duplicateCode_isRejected() {
         meterService.create(new CreateMeterReq(
-            "M-IT-2", "x", elecId, workshopId, true, null, null, null));
+            "M-IT-2", "x", elecId, workshopId, true, null, null, null, null, null, null));
         assertThatThrownBy(() -> meterService.create(new CreateMeterReq(
-            "M-IT-2", "y", elecId, workshopId, true, null, null, null)))
+            "M-IT-2", "y", elecId, workshopId, true, null, null, null, null, null, null)))
             .hasMessageContaining("测点编码已存在");
     }
 
     @Test
     void update_changesFieldsAndIncrementsVersion() {
         var created = meterService.create(new CreateMeterReq(
-            "M-IT-4", "old", elecId, workshopId, true, null, null, null));
+            "M-IT-4", "old", elecId, workshopId, true, null, null, null, null, null, null));
         var v0 = meters.findById(created.id()).orElseThrow().getVersion();
 
         meterService.update(created.id(), new UpdateMeterReq(
-            "M-IT-4", "new", elecId, workshopId, false, null, null, null));
+            "M-IT-4", "new", elecId, workshopId, false, null, null, null, null, null, null));
 
         var after = meters.findById(created.id()).orElseThrow();
         assertThat(after.getName()).isEqualTo("new");
@@ -111,10 +111,10 @@ class MeterCrudIT {
     @Test
     void update_changeCode_renamesTagValue() {
         var created = meterService.create(new CreateMeterReq(
-            "M-IT-OLD", "x", elecId, workshopId, true, null, null, null));
+            "M-IT-OLD", "x", elecId, workshopId, true, null, null, null, null, null, null));
 
         meterService.update(created.id(), new UpdateMeterReq(
-            "M-IT-NEW", "x", elecId, workshopId, true, null, null, null));
+            "M-IT-NEW", "x", elecId, workshopId, true, null, null, null, null, null, null));
 
         var after = meters.findById(created.id()).orElseThrow();
         assertThat(after.getCode()).isEqualTo("M-IT-NEW");
@@ -124,9 +124,9 @@ class MeterCrudIT {
     @Test
     void bindAndUnbindTopology_works() {
         var parent = meterService.create(new CreateMeterReq(
-            "P-IT", "总表", elecId, workshopId, true, null, null, null));
+            "P-IT", "总表", elecId, workshopId, true, null, null, null, null, null, null));
         var child = meterService.create(new CreateMeterReq(
-            "C-IT", "分表", elecId, workshopId, true, null, null, null));
+            "C-IT", "分表", elecId, workshopId, true, null, null, null, null, null, null));
 
         topologyService.bind(child.id(), new BindParentMeterReq(parent.id()));
         assertThat(meterService.getById(child.id()).parentMeterId()).isEqualTo(parent.id());
@@ -138,9 +138,9 @@ class MeterCrudIT {
     @Test
     void bindCycle_isRejected() {
         var a = meterService.create(new CreateMeterReq(
-            "A-IT", "A", elecId, workshopId, true, null, null, null));
+            "A-IT", "A", elecId, workshopId, true, null, null, null, null, null, null));
         var b = meterService.create(new CreateMeterReq(
-            "B-IT", "B", elecId, workshopId, true, null, null, null));
+            "B-IT", "B", elecId, workshopId, true, null, null, null, null, null, null));
         topologyService.bind(b.id(), new BindParentMeterReq(a.id()));   // a -> b
         // Now binding a's parent to b would cycle.
         assertThatThrownBy(() -> topologyService.bind(a.id(), new BindParentMeterReq(b.id())))
@@ -150,9 +150,9 @@ class MeterCrudIT {
     @Test
     void deleteParentWithChildren_isRejected() {
         var parent = meterService.create(new CreateMeterReq(
-            "P2-IT", "总", elecId, workshopId, true, null, null, null));
+            "P2-IT", "总", elecId, workshopId, true, null, null, null, null, null, null));
         var child = meterService.create(new CreateMeterReq(
-            "C2-IT", "分", elecId, workshopId, true, null, null, null));
+            "C2-IT", "分", elecId, workshopId, true, null, null, null, null, null, null));
         topologyService.bind(child.id(), new BindParentMeterReq(parent.id()));
 
         assertThatThrownBy(() -> meterService.delete(parent.id()))

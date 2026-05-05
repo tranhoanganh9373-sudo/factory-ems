@@ -2,8 +2,11 @@ package com.ems.dashboard.support;
 
 import com.ems.core.exception.ForbiddenException;
 import com.ems.core.security.PermissionResolver;
+import com.ems.meter.entity.EnergySource;
 import com.ems.meter.entity.EnergyType;
+import com.ems.meter.entity.FlowDirection;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterRepository;
 import com.ems.meter.service.MeterTopologyService;
@@ -99,7 +102,10 @@ public class DashboardSupport {
                     et != null ? et.getCode() : null,
                     et != null ? et.getUnit() : null,
                     m.getEnabled(),
-                    m.getValueKind()
+                    m.getValueKind(),
+                    m.getRole(),
+                    m.getEnergySource(),
+                    m.getFlowDirection()
                 );
             })
             .filter(r -> energyType == null || energyType.isBlank() || energyType.equalsIgnoreCase(r.energyTypeCode()))
@@ -126,7 +132,10 @@ public class DashboardSupport {
             et != null ? et.getCode() : null,
             et != null ? et.getUnit() : null,
             m.getEnabled(),
-            m.getValueKind()
+            m.getValueKind(),
+            m.getRole(),
+            m.getEnergySource(),
+            m.getFlowDirection()
         );
     }
 

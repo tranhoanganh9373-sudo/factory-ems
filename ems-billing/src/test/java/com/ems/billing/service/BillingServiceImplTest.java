@@ -18,6 +18,7 @@ import com.ems.billing.dto.CostDistributionDTO;
 import com.ems.cost.repository.CostAllocationLineRepository;
 import com.ems.cost.repository.CostAllocationRuleRepository;
 import com.ems.cost.repository.CostAllocationRunRepository;
+import com.ems.cost.service.FeedInRevenueService;
 import com.ems.orgtree.dto.OrgNodeDTO;
 import com.ems.orgtree.service.OrgNodeService;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,9 +63,10 @@ class BillingServiceImplTest {
     private final CostAllocationRuleRepository ruleRepo = mock(CostAllocationRuleRepository.class);
     private final ProductionLookupPort productionLookup = mock(ProductionLookupPort.class);
     private final OrgNodeService orgNodes = mock(OrgNodeService.class);
+    private final FeedInRevenueService feedInRevenue = mock(FeedInRevenueService.class);
 
     private final BillingServiceImpl service = new BillingServiceImpl(
-            periodRepo, billRepo, billLineRepo, runRepo, lineRepo, ruleRepo, productionLookup, orgNodes);
+            periodRepo, billRepo, billLineRepo, runRepo, lineRepo, ruleRepo, productionLookup, orgNodes, feedInRevenue);
 
     private BillPeriod openPeriod() {
         BillPeriod p = new BillPeriod();
@@ -170,6 +172,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_aggregates_by_org_and_energy() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         // 两条 rule，都打到 org=50, ELEC：(qty=10, amt=30) + (qty=20, amt=60) → 期望聚合 qty=30, amt=90
@@ -197,6 +200,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_separate_org_or_energy_creates_separate_bills() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -214,6 +218,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_unit_cost_computed_when_production_present() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -236,6 +241,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_unit_cost_null_when_no_production() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -256,6 +262,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_unit_cost_null_when_production_zero() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -278,6 +285,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_re_close_deletes_old_bills_first() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(closedPeriod()));   // 已 CLOSED
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -293,6 +301,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_first_close_does_not_delete() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));   // OPEN
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(
@@ -308,6 +317,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_creates_bill_line_per_rule_within_bill() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         // 同一 (org=50, ELEC)，两条不同的 rule
@@ -332,6 +342,7 @@ class BillingServiceImplTest {
 
     @Test
     void generateBills_marks_period_CLOSED() {
+        when(feedInRevenue.computeRevenue(any(), any(), any(), any())).thenReturn(BigDecimal.ZERO);
         when(periodRepo.findById(PERIOD_ID)).thenReturn(Optional.of(openPeriod()));
         when(runRepo.findLatestSuccessCovering(PSTART, PEND)).thenReturn(List.of(successRun(7L)));
         when(lineRepo.findByRunId(7L)).thenReturn(List.of(

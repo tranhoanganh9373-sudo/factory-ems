@@ -77,12 +77,7 @@ export interface EnergyBreakdownDTO {
   items: EnergyBreakdownItem[];
 }
 
-export type TopologyConsistencySeverity =
-  | 'OK'
-  | 'INFO'
-  | 'WARN'
-  | 'WARN_NEGATIVE'
-  | 'ALARM';
+export type TopologyConsistencySeverity = 'OK' | 'INFO' | 'WARN' | 'WARN_NEGATIVE' | 'ALARM';
 
 export interface TopologyConsistencyDTO {
   parentMeterId: number;
@@ -119,6 +114,24 @@ export interface EnergyIntensityDTO {
 export interface SankeyDTO {
   nodes: Array<{ id: string; name: string; energyType: string; unit: string }>;
   links: Array<{ source: string; target: string; value: number }>;
+}
+
+export interface EnergySourceMixDTO {
+  energySource: 'GRID' | 'SOLAR' | 'WIND' | 'STORAGE';
+  unit: string;
+  value: number;
+  share: number | null;
+}
+
+export interface PvCurveBucket {
+  ts: string;
+  generation: number;
+  load: number;
+}
+
+export interface PvCurveDTO {
+  unit: string;
+  buckets: PvCurveBucket[];
 }
 
 export interface FloorplanLivePoint {
@@ -230,4 +243,18 @@ export const dashboardApi = {
         params: toParams(q as DashboardQuery),
       })
       .then((r) => r.data as unknown as FloorplanLiveDTO),
+
+  getEnergySourceMix: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<EnergySourceMixDTO[]>('/dashboard/energy-source-mix', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as EnergySourceMixDTO[]),
+
+  getPvCurve: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<PvCurveDTO>('/dashboard/pv-curve', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as PvCurveDTO),
 };

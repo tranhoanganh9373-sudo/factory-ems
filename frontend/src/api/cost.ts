@@ -135,3 +135,14 @@ export const costApi = {
       })
       .then((r) => r.data as unknown as CostLineDTO[]),
 };
+
+export interface SavingsDTO {
+  amount: number;
+  feedInRevenue: number;
+  netAmount: number;
+}
+
+export const fetchSavings = (params: { orgNodeId: number; from: string; to: string }) =>
+  apiClient
+    .get<SavingsDTO>('/cost/savings', { params })
+    .then((r) => r.data as unknown as SavingsDTO);

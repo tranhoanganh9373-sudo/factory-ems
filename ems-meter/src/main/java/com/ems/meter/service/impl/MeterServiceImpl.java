@@ -6,8 +6,11 @@ import com.ems.core.constant.ValueKind;
 import com.ems.core.exception.BusinessException;
 import com.ems.core.exception.NotFoundException;
 import com.ems.meter.dto.*;
+import com.ems.meter.entity.EnergySource;
 import com.ems.meter.entity.EnergyType;
+import com.ems.meter.entity.FlowDirection;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterRepository;
@@ -81,6 +84,9 @@ public class MeterServiceImpl implements MeterService {
         m.setChannelId(req.channelId());
         m.setChannelPointKey(channelPointKey);
         m.setValueKind(req.valueKind() == null ? ValueKind.INTERVAL_DELTA : req.valueKind());
+        m.setRole(req.role() == null ? MeterRole.CONSUME : req.role());
+        m.setEnergySource(req.energySource() == null ? EnergySource.GRID : req.energySource());
+        m.setFlowDirection(req.flowDirection() == null ? FlowDirection.IMPORT : req.flowDirection());
         meters.save(m);
 
         return toDTO(m, type, null);
@@ -127,6 +133,9 @@ public class MeterServiceImpl implements MeterService {
         m.setChannelId(req.channelId());
         m.setChannelPointKey(channelPointKey);
         if (req.valueKind() != null) m.setValueKind(req.valueKind());
+        if (req.role() != null) m.setRole(req.role());
+        if (req.energySource() != null) m.setEnergySource(req.energySource());
+        if (req.flowDirection() != null) m.setFlowDirection(req.flowDirection());
         meters.save(m);
 
         Long parentId = topology.findByChildMeterId(id).map(MeterTopology::getParentMeterId).orElse(null);

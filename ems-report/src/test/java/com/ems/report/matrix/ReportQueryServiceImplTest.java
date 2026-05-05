@@ -4,6 +4,9 @@ import com.ems.core.constant.ValueKind;
 import com.ems.core.exception.BusinessException;
 import com.ems.dashboard.support.DashboardSupport;
 import com.ems.dashboard.support.MeterRecord;
+import com.ems.meter.entity.EnergySource;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import com.ems.orgtree.dto.OrgNodeDTO;
 import com.ems.orgtree.service.OrgNodeService;
 import com.ems.report.matrix.impl.ReportQueryServiceImpl;
@@ -32,9 +35,9 @@ class ReportQueryServiceImplTest {
     OrgNodeService orgNodes;
     ReportQueryServiceImpl svc;
 
-    static final MeterRecord M_ELEC_A = new MeterRecord(1L, "M-A", "A电表", 10L, "M-A", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M_ELEC_B = new MeterRecord(2L, "M-B", "B电表", 11L, "M-B", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M_WATER = new MeterRecord(3L, "M-W", "C水表", 10L, "M-W", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M_ELEC_A = new MeterRecord(1L, "M-A", "A电表", 10L, "M-A", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M_ELEC_B = new MeterRecord(2L, "M-B", "B电表", 11L, "M-B", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M_WATER = new MeterRecord(3L, "M-W", "C水表", 10L, "M-W", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
 
     @BeforeEach
     void setup() {

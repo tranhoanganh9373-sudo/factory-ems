@@ -2,6 +2,9 @@ package com.ems.meter.service;
 
 import com.ems.core.constant.ValueKind;
 import com.ems.meter.dto.MeterImportRow;
+import com.ems.meter.entity.EnergySource;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 
@@ -59,12 +62,16 @@ public final class MeterCsvParser {
             boolean hasChannelName = headers.contains("channelName");
             boolean hasChannelPointKey = headers.contains("channelPointKey");
             boolean hasValueKind = headers.contains("valueKind");
+            boolean hasRole = headers.contains("role");
+            boolean hasEnergySource = headers.contains("energySource");
+            boolean hasFlowDirection = headers.contains("flowDirection");
 
             for (CSVRecord r : parser) {
                 if (isBlankRow(r)) continue;
                 // commons-csv getRecordNumber() 是数据行序号（不含表头），+1 得到 CSV 实际行号
                 long line = r.getRecordNumber() + 1;
-                rows.add(parseRow(r, line, hasEnabled, hasChannelName, hasChannelPointKey, hasValueKind));
+                rows.add(parseRow(r, line, hasEnabled, hasChannelName, hasChannelPointKey, hasValueKind,
+                    hasRole, hasEnergySource, hasFlowDirection));
             }
         }
         return rows;
@@ -79,7 +86,9 @@ public final class MeterCsvParser {
 
     private static MeterImportRow parseRow(CSVRecord r, long line,
                                            boolean hasEnabled, boolean hasChannelName,
-                                           boolean hasChannelPointKey, boolean hasValueKind) {
+                                           boolean hasChannelPointKey, boolean hasValueKind,
+                                           boolean hasRole, boolean hasEnergySource,
+                                           boolean hasFlowDirection) {
         String code = required(r, "code", line);
         String name = required(r, "name", line);
         Long energyTypeId = parseLong(r.get("energyTypeId"), "energyTypeId", line);
@@ -88,7 +97,11 @@ public final class MeterCsvParser {
         String channelName = hasChannelName ? blankToNull(r.get("channelName")) : null;
         String channelPointKey = hasChannelPointKey ? blankToNull(r.get("channelPointKey")) : null;
         ValueKind valueKind = hasValueKind ? parseValueKind(r.get("valueKind"), line) : null;
-        return new MeterImportRow(code, name, energyTypeId, orgNodeId, enabled, channelName, channelPointKey, valueKind);
+        MeterRole role = hasRole ? parseRole(r.get("role")) : null;
+        EnergySource source = hasEnergySource ? parseSource(r.get("energySource")) : null;
+        FlowDirection direction = hasFlowDirection ? parseDir(r.get("flowDirection")) : null;
+        return new MeterImportRow(code, name, energyTypeId, orgNodeId, enabled, channelName, channelPointKey,
+            valueKind, role, source, direction);
     }
 
     private static ValueKind parseValueKind(String v, long line) {
@@ -99,6 +112,21 @@ public final class MeterCsvParser {
             throw new IllegalArgumentException(
                 "第 " + line + " 行 valueKind 不是合法值（INTERVAL_DELTA / CUMULATIVE_ENERGY / INSTANT_POWER）：" + v);
         }
+    }
+
+    private static MeterRole parseRole(String v) {
+        if (v == null || v.isBlank()) return null;
+        return MeterRole.valueOf(v.trim().toUpperCase());
+    }
+
+    private static EnergySource parseSource(String v) {
+        if (v == null || v.isBlank()) return null;
+        return EnergySource.valueOf(v.trim().toUpperCase());
+    }
+
+    private static FlowDirection parseDir(String v) {
+        if (v == null || v.isBlank()) return null;
+        return FlowDirection.valueOf(v.trim().toUpperCase());
     }
 
     private static String required(CSVRecord r, String column, long line) {

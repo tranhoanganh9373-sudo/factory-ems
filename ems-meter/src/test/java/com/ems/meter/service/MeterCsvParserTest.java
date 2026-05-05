@@ -1,6 +1,9 @@
 package com.ems.meter.service;
 
 import com.ems.meter.dto.MeterImportRow;
+import com.ems.meter.entity.EnergySource;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -142,6 +145,27 @@ class MeterCsvParserTest {
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("第 2 行")
             .hasMessageContaining("code");
+    }
+
+    @Test
+    void parsesPvFields() throws Exception {
+        String csv = "code,name,energyTypeId,orgNodeId,enabled,channelName,channelPointKey,valueKind,role,energySource,flowDirection\n"
+                   + "PV-1,Solar Roof,1,2,true,channel-pv,pv_main,INTERVAL_DELTA,GENERATE,SOLAR,EXPORT\n";
+        var rows = MeterCsvParser.parse(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
+        assertThat(rows).hasSize(1);
+        assertThat(rows.get(0).role()).isEqualTo(MeterRole.GENERATE);
+        assertThat(rows.get(0).energySource()).isEqualTo(EnergySource.SOLAR);
+        assertThat(rows.get(0).flowDirection()).isEqualTo(FlowDirection.EXPORT);
+    }
+
+    @Test
+    void emptyPvFields_defaultToNull() throws Exception {
+        String csv = "code,name,energyTypeId,orgNodeId,enabled,channelName,channelPointKey,valueKind,role,energySource,flowDirection\n"
+                   + "X,Old Meter,1,2,true,,,,,,\n";
+        var rows = MeterCsvParser.parse(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
+        assertThat(rows.get(0).role()).isNull();
+        assertThat(rows.get(0).energySource()).isNull();
+        assertThat(rows.get(0).flowDirection()).isNull();
     }
 
     private static InputStream toStream(String s) {

@@ -25,7 +25,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import Papa from 'papaparse';
-import { meterApi, MeterDTO, MeterTopologyEdgeDTO } from '@/api/meter';
+import {
+  meterApi,
+  MeterDTO,
+  MeterTopologyEdgeDTO,
+  MeterRole,
+  EnergySource,
+  FlowDirection,
+} from '@/api/meter';
 import { channelApi } from '@/api/channel';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 import { alarmApi, type MeterOnlineState } from '@/api/alarm';
@@ -81,6 +88,22 @@ function buildTopologyTree(meters: MeterDTO[], edges: MeterTopologyEdgeDTO[]): T
 
   return roots.map(buildNode);
 }
+
+const ROLE_LABEL: Record<MeterRole, string> = {
+  CONSUME: '纯耗电',
+  GENERATE: '光伏发电',
+  GRID_TIE: '并网点',
+};
+const SOURCE_LABEL: Record<EnergySource, string> = {
+  GRID: '电网',
+  SOLAR: '光伏',
+  WIND: '风电',
+  STORAGE: '储能',
+};
+const DIR_LABEL: Record<FlowDirection, string> = {
+  IMPORT: '进口',
+  EXPORT: '出口',
+};
 
 export default function MetersPage() {
   useDocumentTitle('表计管理');
@@ -181,6 +204,9 @@ export default function MetersPage() {
         'enabled',
         'channelName',
         'channelPointKey',
+        'role',
+        'energySource',
+        'flowDirection',
       ],
       data: meters.map((m) => [
         m.code,
@@ -190,6 +216,9 @@ export default function MetersPage() {
         m.enabled ? 'true' : 'false',
         m.channelId != null ? (channelNameById.get(m.channelId) ?? '') : '',
         m.channelPointKey ?? '',
+        m.role ?? '',
+        m.energySource ?? '',
+        m.flowDirection ?? '',
       ]),
     });
     // Excel 打开 UTF-8 CSV 默认按 GBK 解码会乱码，加 BOM 提示编码
@@ -243,6 +272,27 @@ export default function MetersPage() {
               : 'default';
         return <Tag color={color}>{label}</Tag>;
       },
+    },
+    {
+      title: '角色',
+      dataIndex: 'role',
+      key: 'role',
+      width: 90,
+      render: (v: MeterRole) => ROLE_LABEL[v] ?? v,
+    },
+    {
+      title: '来源',
+      dataIndex: 'energySource',
+      key: 'energySource',
+      width: 80,
+      render: (v: EnergySource) => SOURCE_LABEL[v] ?? v,
+    },
+    {
+      title: '方向',
+      dataIndex: 'flowDirection',
+      key: 'flowDirection',
+      width: 70,
+      render: (v: FlowDirection) => DIR_LABEL[v] ?? v,
     },
     {
       title: '组织节点',

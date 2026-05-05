@@ -17,12 +17,16 @@ import EnergyIntensityPanel from './EnergyIntensityPanel';
 import SankeyPanel from './SankeyPanel';
 import FloorplanLivePanel from './FloorplanLivePanel';
 import CostDistributionPanel from './CostDistributionPanel';
+import EnergySourceMixPanel from './EnergySourceMixPanel';
+import PvVsLoadPanel from './PvVsLoadPanel';
 import { DashboardSection } from '@/components/DashboardSection';
+import { useFeatureFlags } from '@/api/features';
 
 export default function DashboardPage() {
   useDashboardSearchParams();
   useDocumentTitle('综合看板');
 
+  const { data: features } = useFeatureFlags();
   const nav = useNavigate();
 
   const { data: summary } = useQuery({
@@ -163,7 +167,23 @@ export default function DashboardPage() {
         </Col>
       </Row>
 
-      {/* Row 6: ⑩ Cost distribution */}
+      {/* Row 6 (pv-gated): EnergySourceMix + PvVsLoad */}
+      {features?.pv && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} lg={12}>
+            <DashboardSection tone="primary">
+              <EnergySourceMixPanel />
+            </DashboardSection>
+          </Col>
+          <Col xs={24} lg={12}>
+            <DashboardSection>
+              <PvVsLoadPanel />
+            </DashboardSection>
+          </Col>
+        </Row>
+      )}
+
+      {/* Row 7: ⑩ Cost distribution */}
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <DashboardSection>
