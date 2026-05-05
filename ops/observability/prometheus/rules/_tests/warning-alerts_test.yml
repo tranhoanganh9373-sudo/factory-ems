@@ -1,9 +1,10 @@
 # promtool tests for warning-alerts.yml — 9 alerts × 2 cases (positive + negative).
 #
-# Strategy (Path B per task spec):
+# Strategy:
 #   - Validate labels (alertname + severity + team + matcher labels) on every case.
-#   - Omit exp_annotations because description templates render Go template values
-#     whose exact string output is brittle (humanizeDuration / humanizePercentage).
+#   - Mirror exp_annotations exactly on positive cases — promtool requires full
+#     annotation match when exp_alerts is non-empty. Values reflect what the rule
+#     templates render against the input_series at eval_time.
 #   - For histogram_quantile-based alerts, inject all required _bucket boundaries.
 #   - For EmsSchedulerDrift v1 placeholder, inject the recording rule output directly.
 #
@@ -38,6 +39,10 @@ tests:
           - exp_labels:
               severity: warning
               team: backend
+            exp_annotations:
+              summary: HTTP p99 延迟 > 1s（持续 10 分钟）
+              description: p99=1.99s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsapplatencyhigh
 
   - interval: 1m
     name: EmsAppLatencyHigh_silent_when_p99_below_1s
@@ -76,6 +81,10 @@ tests:
               severity: warning
               team: collector
               adapter: modbus-tcp
+            exp_annotations:
+              summary: 采集 poll p95 > 30s（modbus-tcp）
+              description: adapter=modbus-tcp p95=58.5s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emscollectorpollslow
 
   - interval: 1m
     name: EmsCollectorPollSlow_silent_when_fast
@@ -113,6 +122,10 @@ tests:
           - exp_labels:
               severity: warning
               team: alarm
+            exp_annotations:
+              summary: Alarm 检测扫描 p95 > 10s（持续 15 分钟）
+              description: p95=29s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsalarmdetectorslow
 
   - interval: 1m
     name: EmsAlarmDetectorSlow_silent_when_fast
@@ -147,6 +160,10 @@ tests:
           - exp_labels:
               severity: warning
               team: alarm
+            exp_annotations:
+              summary: Webhook 失败率 > 20%（持续 15 分钟）
+              description: failure ratio=40%
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emswebhookfailurerate
 
   - interval: 1m
     name: EmsWebhookFailureRate_silent_when_failure_low
@@ -175,6 +192,10 @@ tests:
           - exp_labels:
               severity: warning
               team: backend
+            exp_annotations:
+              summary: 调度漂移 > 60s（v1 placeholder — 待 drift 实际埋点后生效）
+              description: max drift=1m 10s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsschedulerdrift
 
   - interval: 1m
     name: EmsSchedulerDrift_silent_when_drift_zero
@@ -203,6 +224,10 @@ tests:
               severity: warning
               team: backend
               instance: prod-01
+            exp_annotations:
+              summary: JVM heap 使用率 > 85%（持续 15 分钟）
+              description: instance=prod-01 ratio=90%
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsjvmmemoryhigh
 
   - interval: 1m
     name: EmsJvmMemoryHigh_silent_when_heap_low
@@ -233,6 +258,10 @@ tests:
               team: backend
               instance: prod-01
               action: end of minor GC
+            exp_annotations:
+              summary: JVM GC 暂停时间速率 > 0.5（10 分钟内累计 GC 暂停时间 > 50%）
+              description: rate=1 s/s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsjvmgcpressure
 
   - interval: 1m
     name: EmsJvmGcPressure_silent_when_gc_low
@@ -260,6 +289,10 @@ tests:
           - exp_labels:
               severity: warning
               team: collector
+            exp_annotations:
+              summary: 离线设备占比 > 10%（持续 10 分钟）
+              description: offline ratio=20%
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emscollectorofflinedevices
 
   - interval: 1m
     name: EmsCollectorOfflineDevices_silent_when_offline_low
@@ -288,6 +321,10 @@ tests:
               severity: warning
               team: alarm
               type: silent_timeout
+            exp_annotations:
+              summary: silent_timeout 报警积压 > 50 条（持续 30 分钟）
+              description: count=60
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsalarmbacklog
 
   - interval: 1m
     name: EmsAlarmBacklog_silent_when_backlog_low

@@ -1,10 +1,10 @@
 # promtool tests for critical-alerts.yml — 5 alerts × 2 cases (positive + negative).
 #
-# Strategy (Path B per task spec):
+# Strategy:
 #   - Validate labels (alertname + severity + team + matcher labels) on every case.
-#   - Omit exp_annotations because description templates render Go template values
-#     (humanizePercentage / humanizeDuration / humanize) whose exact string output
-#     is brittle and adds no signal beyond what label assertions already provide.
+#   - Mirror exp_annotations exactly on positive cases — promtool requires full
+#     annotation match when exp_alerts is non-empty. Values reflect what the rule
+#     templates render against the input_series at eval_time.
 #   - Verifying alert fires (positive) and silences (negative) is the load-bearing
 #     contract — annotation rendering is exercised by F2 smoke / Alertmanager UI.
 
@@ -29,6 +29,10 @@ tests:
               team: ops
               instance: prod-01
               job: factory-ems
+            exp_annotations:
+              summary: factory-ems 实例不可达
+              description: prod-01 actuator 抓取失败 ≥ 2 分钟
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsappdown
 
   - interval: 1m
     name: EmsAppDown_silent_when_up
@@ -56,6 +60,10 @@ tests:
               team: backend
               type: RuntimeException
               instance: prod-01
+            exp_annotations:
+              summary: 应用异常速率超过 1 次/秒（持续 5 分钟）
+              description: instance=prod-01 当前 rate=1.5/s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsapphigherrorrate
 
   - interval: 1m
     name: EmsAppHighErrorRate_silent_at_low_rate
@@ -81,6 +89,10 @@ tests:
           - exp_labels:
               severity: critical
               team: data
+            exp_annotations:
+              summary: 数据新鲜度劣化（max lag > 10 分钟）
+              description: 当前最大 lag=11m 40s
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsdatafreshnesscritical
 
   - interval: 1m
     name: EmsDataFreshnessCritical_silent_when_lag_ok
@@ -109,6 +121,10 @@ tests:
               severity: critical
               team: backend
               pool: HikariPool-1
+            exp_annotations:
+              summary: 数据库连接池近满（>95%）
+              description: pool=HikariPool-1 active/max=96.67%
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsdbconnectionpoolexhausted
 
   - interval: 1m
     name: EmsDbConnectionPoolExhausted_silent_at_low_usage
@@ -140,6 +156,10 @@ tests:
               team: ops
               fstype: ext4
               mountpoint: /var/lib/postgres
+            exp_annotations:
+              summary: 磁盘可用空间 < 10%
+              description: mount=/var/lib/postgres avail=5%
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsdiskspacecritical
 
   - interval: 1m
     name: EmsDiskSpaceCritical_silent_at_high_avail
