@@ -16,12 +16,15 @@ evaluation_interval: 1m
 tests:
   # --- EmsBudgetBurnFastAvailability -------------------------------------
   # Fast burn: 1h window + 5m for. 8 minutes down out of 60 → 1 - 52/60 = 0.133 > 0.072.
+  # Place the 8-min outage at minutes 8..15 so it stays inside every 1h window
+  # covering eval_time - for .. eval_time (minutes 61..66 → windows 2..61 .. 7..66),
+  # letting the alert pend continuously and fire at 1h6m.
   - interval: 1m
     name: EmsBudgetBurnFastAvailability_fires_when_8min_down_in_1h
     input_series:
       - series: 'up{job="factory-ems",instance="prod-01"}'
-        # 8 min down, then 60+ min up (extra samples beyond eval_time)
-        values: '0 0 0 0 0 0 0 0 1+0x60'
+        # 8 min up, 8 min down (minutes 8..15), 61 min up (extra samples beyond eval_time)
+        values: '1+0x7 0+0x7 1+0x60'
     alert_rule_test:
       - eval_time: 1h6m
         alertname: EmsBudgetBurnFastAvailability
@@ -32,6 +35,10 @@ tests:
               slo: availability
               instance: prod-01
               job: factory-ems
+            exp_annotations:
+              summary: 可用性 SLO 1h 燃烧率 14.4×（错误预算 ~2 天耗尽）
+              description: '1h 实际不可用率=13.11%'
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsbudgetburnfast
 
   - interval: 1m
     name: EmsBudgetBurnFastAvailability_silent_when_all_up
@@ -45,11 +52,15 @@ tests:
 
   # --- EmsBudgetBurnSlowAvailability -------------------------------------
   # Slow burn: 6h window + 30m for. 12 min down out of 360 → 1 - 348/360 = 0.0333 > 0.03.
+  # Place the 12-min outage at minutes 32..43 so it sits inside every 6h window
+  # covering eval_time - for .. eval_time (minutes 361..391 → windows 2..361 .. 32..391),
+  # letting the alert pend continuously and fire at 6h31m.
   - interval: 1m
     name: EmsBudgetBurnSlowAvailability_fires_when_long_outage
     input_series:
       - series: 'up{job="factory-ems",instance="prod-01"}'
-        values: '0 0 0 0 0 0 0 0 0 0 0 0 1+0x400'
+        # 32 min up, 12 min down (minutes 32..43), 401 min up (extra samples beyond eval_time)
+        values: '1+0x31 0+0x11 1+0x400'
     alert_rule_test:
       - eval_time: 6h31m
         alertname: EmsBudgetBurnSlowAvailability
@@ -60,6 +71,10 @@ tests:
               slo: availability
               instance: prod-01
               job: factory-ems
+            exp_annotations:
+              summary: 可用性 SLO 6h 燃烧率 6×（错误预算 ~5 天耗尽）
+              description: '6h 实际不可用率=3.324%'
+              runbook_url: https://internal/docs/ops/observability-runbook.md#emsbudgetburnslow
 
   - interval: 1m
     name: EmsBudgetBurnSlowAvailability_silent_when_all_up
