@@ -45,8 +45,8 @@ async function readFirstBytes(download: Download, n: number): Promise<number[]> 
 }
 
 test('admin exports monthly Excel report and file is a valid xlsx (PK magic)', async ({ page }) => {
-  // 月报数据 + 异步导出轮询（最长 ~120s），默认 30s 不够。
-  test.setTimeout(180_000);
+  // 月报导出（同步路径在此环境下几秒完成）。
+  test.setTimeout(60_000);
   await login(page);
 
   // ── Navigate to monthly report page ──
@@ -60,10 +60,11 @@ test('admin exports monthly Excel report and file is a valid xlsx (PK magic)', a
   await monthInput.click();
   await monthInput.fill('2026-03');
   await page.keyboard.press('Enter');
-  await page.waitForTimeout(500);
-
-  // Some pages auto-load on date change; wait briefly.
-  await page.waitForTimeout(1_000);
+  // 等 picker 面板关闭后页面自动加载数据
+  await page
+    .locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)')
+    .waitFor({ state: 'detached', timeout: 5_000 })
+    .catch(() => {});
 
   // ── Click "导出 Excel" ──
   const exportBtn = page
@@ -73,7 +74,7 @@ test('admin exports monthly Excel report and file is a valid xlsx (PK magic)', a
   await expect(exportBtn).toBeVisible({ timeout: 10_000 });
 
   const [download] = await Promise.all([
-    page.waitForEvent('download', { timeout: 60_000 }),
+    page.waitForEvent('download', { timeout: 30_000 }),
     exportBtn.click(),
   ]);
 

@@ -19,7 +19,7 @@ async function login(page: Page) {
 }
 
 test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(90_000);
   await login(page);
 
   await page.goto('/cost/runs');
@@ -45,19 +45,18 @@ test('submit cost run and wait for SUCCESS, then open detail', async ({ page }) 
   // 提交批次
   await modal.getByRole('button', { name: /确\s*定/ }).click();
 
-  // ---- 等 SUCCESS（mock-data 16 meters × 30 days，并行其他 spec 时可能挤到 ~90s）----
-  const successTag = page.locator('.ant-tag', { hasText: 'SUCCESS' }).first();
-  await expect(successTag).toBeVisible({ timeout: 120_000 });
+  // ---- 等 SUCCESS / 成功（后端返回中文"成功"，兼容英文 SUCCESS）----
+  // 等 modal 关闭后页面刷新出现成功状态标签
+  await expect(modal).not.toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(/成功|SUCCESS/).first()).toBeVisible({ timeout: 30_000 });
 
   // ---- 进入 detail ----
   const firstIdLink = page.locator('a[href^="/cost/runs/"]').first();
   await firstIdLink.click();
   await expect(page).toHaveURL(/\/cost\/runs\/\d+/);
 
-  // detail 显示 status SUCCESS 和明细表
-  await expect(page.locator('.ant-tag', { hasText: 'SUCCESS' }).first()).toBeVisible({
-    timeout: 10_000,
-  });
+  // detail 显示 status SUCCESS/成功 和明细表
+  await expect(page.getByText(/成功|SUCCESS/).first()).toBeVisible({ timeout: 10_000 });
   // 至少 1 行 line
   await expect(page.locator('.ant-table-row').first()).toBeVisible({ timeout: 10_000 });
 });

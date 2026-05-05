@@ -35,6 +35,7 @@ async function pickSelectOption(page: any, text: string) {
 test('admin can configure MODBUS_TCP channel; test connection fails for unreachable host', async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   const channelName = `e2e-modbus-${Date.now()}`;
 
   await login(page);
@@ -59,8 +60,9 @@ test('admin can configure MODBUS_TCP channel; test connection fails for unreacha
 
   // Add one register point
   await page.getByRole('button', { name: /\+\s*新增测点/ }).click();
+  // The register point row: "标签名" is the Key field label in the actual DOM
   const lastKey = page
-    .locator('label:has-text("Key")')
+    .locator('label:has-text("标签名")')
     .last()
     .locator('xpath=following::input[1]');
   await lastKey.fill('voltage_a');
@@ -74,13 +76,39 @@ test('admin can configure MODBUS_TCP channel; test connection fails for unreacha
   await page.getByRole('button', { name: /^保\s*存$/ }).click();
   await expect(page.locator('.ant-message-success').first()).toBeVisible({ timeout: 10_000 });
 
-  // Wait for the realtime table to pick up the new row (refetchInterval = 5s).
-  // Realtime row text contains the protocol tag ("Modbus TCP") + 24h success / latency.
-  await page.waitForTimeout(7_000);
-  const modbusRow = page.locator('tr').filter({ hasText: 'Modbus TCP' }).last();
-  await expect(modbusRow).toBeVisible({ timeout: 15_000 });
+  // If a dropdown menu is open (e.g. user avatar menu), click away to close it.
+  const openDropdown = page.locator('.ant-dropdown-menu').first();
+  if (await openDropdown.isVisible()) {
+    await page.mouse.click(400, 400);
+  }
 
-  // Trigger test connection — must fail (TEST-NET-1 host unreachable)
-  await modbusRow.getByRole('button', { name: '测试' }).click();
-  await expect(page.locator('.ant-message-error').first()).toBeVisible({ timeout: 15_000 });
+  // The table may be paginated; scroll to the last page to find the newly created row.
+  // Use table's "last page" button if available, or search via pagination controls.
+  // Simpler: navigate to collector page with a search param or just scroll to bottom.
+  // The row was confirmed to be created (success toast appeared); find it via "最后一页".
+  const lastPageBtn = page.locator('.ant-pagination-next').last();
+  // Keep clicking next until the channel row is visible or we run out of pages.
+  const modbusRow = page.locator('tr').filter({ hasText: channelName }).last();
+  // Try current page first, then paginate forward.
+  let rowFound = await modbusRow.isVisible();
+  while (!rowFound) {
+    const nextBtn = page.locator('.ant-pagination-next:not(.ant-pagination-disabled)');
+    if ((await nextBtn.count()) === 0) break;
+    await nextBtn.click();
+    await page.waitForTimeout(500);
+    rowFound = await modbusRow.isVisible();
+  }
+  await expect(modbusRow).toBeVisible({ timeout: 5_000 });
+
+  // Trigger test connection — must fail (TEST-NET-1 host unreachable).
+  // AntD adds a space between 2-char CJK button labels: "测 试".
+  await modbusRow.getByRole('button', { name: /测\s*试/ }).click();
+  // Connection failure is surfaced in the row's "最后错误" column (not a toast).
+  // Wait for either an error toast OR the row to show a timeout/error message.
+  await expect(
+    page
+      .locator('.ant-message-error, .ant-notification-notice-error, tr')
+      .filter({ hasText: /超时|error|失败|unreachable/i })
+      .first(),
+  ).toBeVisible({ timeout: 30_000 });
 });

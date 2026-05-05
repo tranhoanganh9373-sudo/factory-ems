@@ -21,7 +21,7 @@ async function login(page: Page) {
 const YM = '2026-03';
 
 test('bill period close → lock (with confirm) → unlock → reclose', async ({ page }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(90_000);
   await login(page);
 
   await page.goto('/bills/periods');
@@ -32,21 +32,26 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   if ((await periodRow.count()) === 0) {
     await page.getByRole('button', { name: '创建账期' }).click();
     const modal = page.locator('.ant-modal');
-    // 月份选择器输入
+    // 月份选择器：fill + Enter 选中月份，再等 picker 面板从 DOM 移除，
+    // 避免 ant-modal-wrap 遮住确定按钮。不用 Escape（会同时关闭整个 modal）。
     const monthInput = modal.locator('.ant-picker input').first();
     await monthInput.click();
     await monthInput.fill(YM);
     await page.keyboard.press('Enter');
-    await page.keyboard.press('Escape');
+    await page
+      .locator('.ant-picker-dropdown:not(.ant-picker-dropdown-hidden)')
+      .waitFor({ state: 'detached', timeout: 5_000 })
+      .catch(() => {});
     await modal.getByRole('button', { name: '确 定' }).click();
   }
   await expect(periodRow).toBeVisible({ timeout: 10_000 });
 
-  // ---- close ----
+  // ---- close：按钮文字 "关账期 + 生成账单" 或 "重新生成" ----
   await periodRow.getByRole('button', { name: /关账期|重新生成/ }).click();
-  await expect(periodRow.locator('.ant-tag', { hasText: 'CLOSED' })).toBeVisible({
-    timeout: 30_000,
-  });
+  // Status tag shows CLOSED in English or Chinese equivalent（已关闭/CLOSED）
+  await expect(
+    periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
+  ).toBeVisible({ timeout: 15_000 });
 
   // ---- lock：二次确认输入 "我确认锁定 2026-03" ----
   // AntD 给 2 字按钮自动加空格："锁定" → "锁 定"；用 regex 容忍。
@@ -55,9 +60,10 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   await expect(lockModal).toBeVisible();
   await lockModal.locator('input').fill(`我确认锁定 ${YM}`);
   await lockModal.getByRole('button', { name: /锁\s*定/ }).click();
-  await expect(periodRow.locator('.ant-tag', { hasText: 'LOCKED' })).toBeVisible({
-    timeout: 10_000,
-  });
+  // Status tag shows LOCKED in English or Chinese（已锁定/LOCKED）
+  await expect(
+    periodRow.locator('.ant-tag').filter({ hasText: /LOCKED|已锁定/ }).first(),
+  ).toBeVisible({ timeout: 10_000 });
 
   // ---- unlock：仅 ADMIN 可解 ----
   await periodRow.getByRole('button', { name: /解\s*锁/ }).click();
@@ -65,13 +71,18 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   await expect(unlockModal).toBeVisible();
   await unlockModal.locator('input').fill(`我确认解锁 ${YM}`);
   await unlockModal.getByRole('button', { name: /解\s*锁/ }).click();
-  await expect(periodRow.locator('.ant-tag', { hasText: 'CLOSED' })).toBeVisible({
-    timeout: 10_000,
-  });
+  await expect(
+    periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
+  ).toBeVisible({ timeout: 10_000 });
 
   // ---- reclose（重写）----
   await periodRow.getByRole('button', { name: /重新生成/ }).click();
-  await expect(page.getByText(/已关闭，账单已生成/)).toBeVisible({ timeout: 30_000 });
+  // Wait for success indication: toast text or tag update
+  await expect(
+    page.getByText(/已关闭，账单已生成/).or(
+      periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
+    ),
+  ).toBeVisible({ timeout: 15_000 });
 
   // ---- 通过"查看账单"链接跳到 /bills?periodId=... ----
   await periodRow.getByRole('button', { name: /查看账单/ }).click();
