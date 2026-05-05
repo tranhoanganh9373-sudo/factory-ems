@@ -7,11 +7,14 @@ import com.ems.cost.dto.CostRunDTO;
 import com.ems.cost.dto.DryRunReq;
 import com.ems.cost.dto.SubmitRunReq;
 import com.ems.cost.entity.CostAllocationLine;
+import com.ems.cost.service.BillPeriodLookupPort;
 import com.ems.cost.service.CostAllocationService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -56,8 +59,13 @@ public class CostAllocationController {
     @PostMapping("/runs")
     @PreAuthorize("hasAnyRole('FINANCE','ADMIN')")
     public ResponseEntity<Result<Map<String, Long>>> submit(@Valid @RequestBody SubmitRunReq req) {
-        Long runId = service.submitRun(req.periodStart(), req.periodEnd(),
-                req.ruleIds(), auditContext.currentUserId());
+        Long runId;
+        try {
+            runId = service.submitRun(req.billPeriodId(), req.ruleIds(), auditContext.currentUserId());
+        } catch (BillPeriodLookupPort.BillPeriodNotFoundException ex) {
+            // 显式映射成 404，使用 ResponseStatusException 让 GlobalExceptionHandler 走标准路径
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, ex.getMessage());
+        }
         return ResponseEntity.status(202).body(Result.ok(Map.of("runId", runId)));
     }
 

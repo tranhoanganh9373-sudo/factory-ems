@@ -64,7 +64,7 @@ class CostAllocationPerfIT {
         SeedIds ids = seed();
 
         long t0 = System.nanoTime();
-        Long runId = service.submitRun(PERIOD_START, PERIOD_END, ids.ruleIds, 1L);
+        Long runId = service.submitRun(ids.billPeriodId, ids.ruleIds, 1L);
         await().atMost(60, TimeUnit.SECONDS).pollInterval(250, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     CostAllocationRun r = runRepo.findById(runId).orElseThrow();
@@ -87,6 +87,9 @@ class CostAllocationPerfIT {
         jdbc.update("DELETE FROM cost_allocation_line");
         jdbc.update("DELETE FROM cost_allocation_run");
         jdbc.update("DELETE FROM cost_allocation_rule");
+        jdbc.update("DELETE FROM bill_line");
+        jdbc.update("DELETE FROM bill");
+        jdbc.update("DELETE FROM bill_period WHERE year_month = '2026-03'");
         jdbc.update("DELETE FROM ts_rollup_hourly WHERE meter_id IN (SELECT id FROM meters WHERE code LIKE 'PERF-%')");
         jdbc.update("DELETE FROM meters WHERE code LIKE 'PERF-%'");
         jdbc.update("DELETE FROM tariff_periods WHERE plan_id IN (SELECT id FROM tariff_plans WHERE name = 'PERF-TARIFF')");
@@ -97,6 +100,12 @@ class CostAllocationPerfIT {
     private SeedIds seed() {
         Long elecId = jdbc.queryForObject(
                 "SELECT id FROM energy_types WHERE code = 'ELEC'", Long.class);
+
+        // Seed bill_period covering the cost run period — submitRun resolves边界 from this row.
+        Long billPeriodId = jdbc.queryForObject(
+                "INSERT INTO bill_period(year_month, status, period_start, period_end, version) " +
+                "VALUES ('2026-03', 'OPEN', ?, ?, 0) RETURNING id",
+                Long.class, PERIOD_START, PERIOD_END);
 
         Long plantId = jdbc.queryForObject(
                 "INSERT INTO org_nodes(parent_id, code, name, node_type) " +
@@ -141,7 +150,7 @@ class CostAllocationPerfIT {
             }
             ruleIds.add(insertRule(r, meters[r], targetIds));
         }
-        return new SeedIds(plantId, orgs, meters, planId, ruleIds);
+        return new SeedIds(billPeriodId, plantId, orgs, meters, planId, ruleIds);
     }
 
     private void seedRollupBatch(Long[] meters, Long plantId) {
@@ -201,6 +210,6 @@ class CostAllocationPerfIT {
                 planId, type, start, end, price);
     }
 
-    private record SeedIds(Long plantId, Long[] orgIds, Long[] meterIds,
+    private record SeedIds(Long billPeriodId, Long plantId, Long[] orgIds, Long[] meterIds,
                            Long planId, List<Long> ruleIds) {}
 }

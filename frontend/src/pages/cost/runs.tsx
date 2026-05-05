@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import dayjs, { type Dayjs } from 'dayjs';
 import { costApi, type CostRunDTO, type RunStatus } from '@/api/cost';
+import { billsApi } from '@/api/bills';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 import { HELP_COST_RUNS } from '@/components/pageHelp';
@@ -52,9 +53,11 @@ export default function CostRunsPage() {
   const onSubmit = async () => {
     const v = await form.validateFields();
     try {
+      // 由账期开始时间推导 YearMonth；ensurePeriod 幂等：已存在直接返回，未存在则创建
+      const ym = v.range[0].format('YYYY-MM');
+      const period = await billsApi.ensurePeriod(ym);
       const { runId } = await costApi.submitRun({
-        periodStart: v.range[0].toISOString(),
-        periodEnd: v.range[1].toISOString(),
+        billPeriodId: period.id,
         ruleIds: v.ruleIds && v.ruleIds.length > 0 ? v.ruleIds : null,
       });
       message.success(`已提交分摊批次 #${runId}`);

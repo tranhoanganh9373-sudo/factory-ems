@@ -11,6 +11,7 @@ import com.ems.cost.repository.CostAllocationRunRepository;
 import com.ems.cost.service.AllocationAlgorithmFactory;
 import com.ems.cost.service.AllocationContext;
 import com.ems.cost.service.AllocationStrategy;
+import com.ems.cost.service.BillPeriodLookupPort;
 import com.ems.cost.service.CostAllocationService;
 import com.ems.cost.service.MeterMetadataPort;
 import com.ems.cost.service.MeterUsageReader;
@@ -45,6 +46,7 @@ public class CostAllocationServiceImpl implements CostAllocationService {
     private final MeterUsageReader meterUsage;
     private final TariffPriceLookupService tariffLookup;
     private final MeterMetadataPort meterMetadata;
+    private final BillPeriodLookupPort billPeriodLookup;
     private final Executor executor;
     private final TransactionTemplate txTemplate;
 
@@ -55,6 +57,7 @@ public class CostAllocationServiceImpl implements CostAllocationService {
                                      MeterUsageReader meterUsage,
                                      TariffPriceLookupService tariffLookup,
                                      MeterMetadataPort meterMetadata,
+                                     BillPeriodLookupPort billPeriodLookup,
                                      @Qualifier(CostAllocationExecutorConfig.BEAN_NAME) Executor executor,
                                      PlatformTransactionManager txManager) {
         this.ruleRepository = ruleRepository;
@@ -64,6 +67,7 @@ public class CostAllocationServiceImpl implements CostAllocationService {
         this.meterUsage = meterUsage;
         this.tariffLookup = tariffLookup;
         this.meterMetadata = meterMetadata;
+        this.billPeriodLookup = billPeriodLookup;
         this.executor = executor;
         this.txTemplate = new TransactionTemplate(txManager);
         this.txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -113,10 +117,15 @@ public class CostAllocationServiceImpl implements CostAllocationService {
 
     @Override
     @Transactional
-    public Long submitRun(OffsetDateTime periodStart,
-                          OffsetDateTime periodEnd,
+    public Long submitRun(Long billPeriodId,
                           List<Long> ruleIds,
                           Long createdBy) {
+        if (billPeriodId == null) {
+            throw new IllegalArgumentException("billPeriodId must be non-null");
+        }
+        BillPeriodLookupPort.BillPeriodBoundaries bounds = billPeriodLookup.findBoundariesById(billPeriodId);
+        OffsetDateTime periodStart = bounds.periodStart();
+        OffsetDateTime periodEnd = bounds.periodEnd();
         validatePeriod(periodStart, periodEnd);
         CostAllocationRun run = new CostAllocationRun();
         run.setPeriodStart(periodStart);

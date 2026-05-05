@@ -35,12 +35,15 @@ public interface CostAllocationService {
     /**
      * 异步触发分摊运行。立即返回 runId，状态 PENDING；worker 线程负责跑完转 SUCCESS / FAILED。
      *
+     * 账期边界 (periodStart/periodEnd) 通过 BillPeriodLookupPort 从 bill_period.id 解析，
+     * 单一事实源 — 调用方不再需要拼时间戳，避免与 +08:00 边界产生时区错配（issue #24）。
+     *
+     * @param billPeriodId 账期 id；找不到时抛 BillPeriodLookupPort.BillPeriodNotFoundException
      * @param ruleIds null 或空 = 跑当期全部 active 规则；非空 = 仅跑指定规则
      * @param createdBy 触发人 user id（可为 null = 系统调度）
      * @return 新建的 run 的 id
      */
-    Long submitRun(OffsetDateTime periodStart,
-                   OffsetDateTime periodEnd,
+    Long submitRun(Long billPeriodId,
                    List<Long> ruleIds,
                    Long createdBy);
 

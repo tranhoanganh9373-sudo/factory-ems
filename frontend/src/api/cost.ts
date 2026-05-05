@@ -85,8 +85,11 @@ export interface CostRunDTO {
 }
 
 export interface SubmitRunReq {
-  periodStart: string;
-  periodEnd: string;
+  /**
+   * 账期 id；后端从 bill_period 直接读 (periodStart, periodEnd)，
+   * 单一事实源，避免与 +08:00 边界产生时区错配（issue #24）。
+   */
+  billPeriodId: number;
   ruleIds?: number[] | null;
 }
 
