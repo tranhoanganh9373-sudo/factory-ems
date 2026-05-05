@@ -34,10 +34,7 @@ function buildOption(data: EnergySourceMixDTO[]) {
           name: SOURCE_LABEL[d.energySource] ?? d.energySource,
           value: d.value,
           label: {
-            formatter:
-              d.share != null
-                ? `{b}\n${(d.share * 100).toFixed(1)}%`
-                : '{b}',
+            formatter: d.share != null ? `{b}\n${(d.share * 100).toFixed(1)}%` : '{b}',
           },
         })),
         emphasis: {

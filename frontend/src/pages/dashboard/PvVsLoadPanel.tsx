@@ -48,8 +48,7 @@ export default function PvVsLoadPanel() {
 
   const { data, isLoading, isError } = useQuery<PvCurveDTO>({
     queryKey: ['dashboard', 'pv-curve', { range, customFrom, customTo, orgNodeId }],
-    queryFn: () =>
-      dashboardApi.getPvCurve({ range, from: customFrom, to: customTo, orgNodeId }),
+    queryFn: () => dashboardApi.getPvCurve({ range, from: customFrom, to: customTo, orgNodeId }),
     enabled: isCustomReady,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,

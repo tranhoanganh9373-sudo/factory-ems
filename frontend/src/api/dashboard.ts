@@ -77,12 +77,7 @@ export interface EnergyBreakdownDTO {
   items: EnergyBreakdownItem[];
 }
 
-export type TopologyConsistencySeverity =
-  | 'OK'
-  | 'INFO'
-  | 'WARN'
-  | 'WARN_NEGATIVE'
-  | 'ALARM';
+export type TopologyConsistencySeverity = 'OK' | 'INFO' | 'WARN' | 'WARN_NEGATIVE' | 'ALARM';
 
 export interface TopologyConsistencyDTO {
   parentMeterId: number;

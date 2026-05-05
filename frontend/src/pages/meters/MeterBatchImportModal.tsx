@@ -4,7 +4,14 @@ import type { UploadFile } from 'antd/es/upload/interface';
 import { InboxOutlined } from '@ant-design/icons';
 import { AxiosError } from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
-import { meterApi, type CreateMeterReq, type MeterImportRow, type MeterRole, type EnergySource, type FlowDirection } from '@/api/meter';
+import {
+  meterApi,
+  type CreateMeterReq,
+  type MeterImportRow,
+  type MeterRole,
+  type EnergySource,
+  type FlowDirection,
+} from '@/api/meter';
 import { channelApi } from '@/api/channel';
 
 type RowStatus = 'pending' | 'loading' | 'success' | 'skip' | 'fail';
@@ -233,8 +240,8 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
           {fileName ? `已选择：${fileName}` : '点击或拖入 meters CSV 文件（Excel 另存为 CSV）'}
         </p>
         <p className="ant-upload-hint">
-          表头：code, name, energyTypeId, orgNodeId（必填）；enabled, channelName,
-          channelPointKey, role, energySource, flowDirection（可选；若不填则使用服务端默认值）
+          表头：code, name, energyTypeId, orgNodeId（必填）；enabled, channelName, channelPointKey,
+          role, energySource, flowDirection（可选；若不填则使用服务端默认值）
         </p>
       </Upload.Dragger>
 
@@ -262,14 +269,18 @@ export function MeterBatchImportModal({ open, onClose }: Props) {
               key: 'energySource',
               width: 70,
               render: (_: unknown, r: ImportRow) =>
-                r.body.energySource ? (SOURCE_LABEL[r.body.energySource] ?? r.body.energySource) : '—',
+                r.body.energySource
+                  ? (SOURCE_LABEL[r.body.energySource] ?? r.body.energySource)
+                  : '—',
             },
             {
               title: '方向',
               key: 'flowDirection',
               width: 60,
               render: (_: unknown, r: ImportRow) =>
-                r.body.flowDirection ? (DIR_LABEL[r.body.flowDirection] ?? r.body.flowDirection) : '—',
+                r.body.flowDirection
+                  ? (DIR_LABEL[r.body.flowDirection] ?? r.body.flowDirection)
+                  : '—',
             },
             {
               title: '状态',
