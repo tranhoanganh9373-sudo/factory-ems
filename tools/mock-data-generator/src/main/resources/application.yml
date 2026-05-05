@@ -40,6 +40,10 @@ ems:
     max-failed-attempts: 5
     lockout-minutes: 15
 
+mock:
+  scenario:
+    name: basic    # 默认场景；CLI 用 --mock.scenario.name=with-pv 切换
+
 logging:
   level:
     root: WARN
