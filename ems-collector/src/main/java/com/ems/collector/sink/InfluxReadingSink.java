@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -34,12 +35,14 @@ import java.util.Map;
  *
  * <p>{@link WriteApiBlocking}：同步写。collector 速率 << 1000 写/秒，无需 batching。
  *
- * <p>该 Bean 自动覆盖 {@link com.ems.collector.config.CollectorAutoConfiguration} 里的
- * {@code defaultReadingSink}（@ConditionalOnMissingBean）—— 一旦 InfluxDBClient 在 context 里，
- * 这条路径就生效。InfluxDBClient 由 ems-timeseries 的 InfluxConfig 提供。
+ * <p>该 Bean 与 {@link com.ems.collector.config.CollectorAutoConfiguration} 里的
+ * {@code defaultReadingSink} 通过 {@code ems.collector.enabled} 互斥：enabled=true 时
+ * 用 Influx sink，enabled=false（含未设置）时用 noop sink。InfluxDBClient 由 ems-timeseries
+ * 的 InfluxConfig 提供；BufferStore 由 CollectorAutoConfiguration 在 enabled=true 时创建。
  */
 @Component
-@ConditionalOnBean(InfluxDBClient.class)
+@ConditionalOnBean({InfluxDBClient.class, BufferStore.class})
+@ConditionalOnProperty(name = "ems.collector.enabled", havingValue = "true")
 public class InfluxReadingSink implements ReadingSink {
 
     private static final Logger log = LoggerFactory.getLogger(InfluxReadingSink.class);

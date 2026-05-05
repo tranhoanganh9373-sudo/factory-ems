@@ -8,9 +8,9 @@
 
 ## 1. 概述
 
-本文档描述如何在客户服务器上部署 factory-ems 可观测性栈（Prometheus + Loki + Tempo + Promtail + Alertmanager + webhook-bridge + Grafana），该栈以独立 Docker Compose 文件运行，与产品栈（`docker-compose.yml`）生命周期互不干扰，共享同一个 `ems-net` 网络。
+本文档讲怎么在客户服务器上部署 factory-ems 可观测性栈（Prometheus + Loki + Tempo + Promtail + Alertmanager + webhook-bridge + Grafana）。它以独立 Docker Compose 文件运行，与产品栈（`docker-compose.yml`）生命周期互不干扰，共享同一个 `ems-net` 网络。
 
-**与产品栈的关系**：观测栈抓取产品栈暴露的指标（`:8080/actuator/prometheus`）并收集其容器日志；产品栈无需感知观测栈是否在线，两侧可独立启停。
+**与产品栈的关系**：观测栈抓产品栈暴露的指标（`:8080/actuator/prometheus`）并收集容器日志；产品栈不感知观测栈是否在线，两侧可独立启停。
 
 ---
 
@@ -29,7 +29,7 @@
 | Grafana | 256 MB | ~200 MB | 0.15 vCPU |
 | **合计** | **~1.44 GB** | **~15.3 GB** | **~0.64 vCPU** |
 
-> **保守预留**：建议为突发峰值预留 20% 余量，实际总占用约 1.8 GB 内存 / 15 GB 磁盘 / 0.85 vCPU。
+> **保守预留**：为突发峰值留 20% 余量，实际总占用约 1.8 GB 内存 / 15 GB 磁盘 / 0.85 vCPU。
 
 ### 客户最低服务器配置
 
@@ -108,7 +108,7 @@ cd ops/observability
 cp .env.obs.example .env.obs
 ```
 
-用编辑器打开 `.env.obs`，按下表填写必填项和需要启用的告警通道：
+用编辑器打开 `.env.obs`，按下表填写必填项和需要启用的报警通道：
 
 | 变量 | 必填 | 说明 |
 |------|------|------|
@@ -117,17 +117,17 @@ cp .env.obs.example .env.obs
 | `OBS_PROMETHEUS_RETENTION` | 否 | 默认 `30d` |
 | `OBS_LOKI_RETENTION` | 否 | 默认 `336h`（14 天） |
 | `OBS_TEMPO_RETENTION` | 否 | 默认 `72h`（3 天） |
-| `OBS_SMTP_HOST` | 否 | 邮件告警，格式 `smtp.example.com:587` |
+| `OBS_SMTP_HOST` | 否 | 邮件报警，格式 `smtp.example.com:587` |
 | `OBS_SMTP_USER` | 否 | SMTP 用户名 |
 | `OBS_SMTP_PASSWORD` | 否 | SMTP 密码 |
-| `OBS_ALERT_RECEIVER_EMAIL` | 否 | 告警接收邮箱 |
+| `OBS_ALERT_RECEIVER_EMAIL` | 否 | 报警接收邮箱 |
 | `OBS_DINGTALK_WEBHOOK` | 否 | 钉钉机器人 Webhook URL |
 | `OBS_DINGTALK_SECRET` | 否 | 钉钉加签密钥（建议配置） |
 | `OBS_WECHAT_WEBHOOK` | 否 | 企业微信机器人 Webhook URL |
 | `OBS_GENERIC_WEBHOOK` | 否 | 通用 Webhook URL（客户内部 IT 系统） |
 | `OBS_NETWORK_NAME` | 否 | 默认 `ems-net` |
 
-> **告警通道说明**：所有告警通道变量均为可选。留空时对应接收方被 Alertmanager 静默跳过，不影响启动。**至少配置一个告警通道**，否则告警无处发送。
+> **报警通道说明**：所有报警通道变量都是可选。留空时对应接收方被 Alertmanager 静默跳过，不影响启动。**至少配一个报警通道**，否则报警无处发送。
 
 **失败回退**：若 `.env.obs.example` 不存在，确认当前目录是否为 `ops/observability/`，或确认 git 分支已包含 Phase C 代码。
 
@@ -257,11 +257,11 @@ Grafana 登录用户名 / 密码即步骤 3 中记录的值。
 
 若客户业务量显著高于估算（如日志量达平均值 3 倍以上），建议缩短 Loki 保留期至 `168h`（7 天），或挂载额外磁盘并调整 volume 挂载路径。
 
-### 磁盘告警
+### 磁盘报警
 
-Phase D（D2 任务）将配置 `EmsDiskSpaceCritical` 告警规则，当磁盘使用率超过阈值时触发 critical 级别告警。建议在客户 SRE 手册中记录响应流程：
+Phase D（D2 任务）将配置 `EmsDiskSpaceCritical` 报警规则，当磁盘使用率超过阈值时触发 critical 级别报警。建议在客户 SRE 手册中记录响应流程：
 
-1. 收到 `EmsDiskSpaceCritical` 告警
+1. 收到 `EmsDiskSpaceCritical` 报警
 2. 确认哪个 volume 增长（`docker system df -v`）
 3. 根据业务情况缩短保留期，或清理旧数据后重启对应容器
 
@@ -348,8 +348,8 @@ docker compose --env-file .env.obs -f docker-compose.obs.yml up -d obs-webhook-b
 
 | 问题类型 | 参考文档 | 状态 |
 |---------|---------|------|
-| 观测栈服务本身故障（容器崩溃、告警不发等） | `docs/ops/observability-runbook.md` | Phase F 待完成 |
-| 业务告警触发但无法定位根因 | dashboard 使用指南 | Phase E 待完成 |
+| 观测栈服务本身故障（容器崩溃、报警不发等） | `docs/ops/observability-runbook.md` | Phase F 待完成 |
+| 业务报警触发但无法定位根因 | dashboard 使用指南 | Phase E 待完成 |
 | 环境变量 / 配置参数含义 | [`docs/product/observability-config-reference.md`](../product/observability-config-reference.md) | Phase A 已完成 |
 | 指标名称 / 含义 / PromQL 示例 | [`docs/product/observability-metrics-dictionary.md`](../product/observability-metrics-dictionary.md) | Phase B 已完成 |
 
@@ -544,15 +544,15 @@ Grafana volume（`grafana-data`）保留 dashboard、数据源等配置，不受
 
 ### Q2：我没有 SMTP，能跑吗？
 
-可以。所有告警通道变量（`OBS_SMTP_*`、`OBS_DINGTALK_*`、`OBS_WECHAT_*`、`OBS_GENERIC_WEBHOOK`）均为可选。留空时 Alertmanager 静默跳过对应接收方，**不影响观测栈正常启动**。
+可以。所有报警通道变量（`OBS_SMTP_*`、`OBS_DINGTALK_*`、`OBS_WECHAT_*`、`OBS_GENERIC_WEBHOOK`）均为可选。留空时 Alertmanager 静默跳过对应接收方，**不影响观测栈正常启动**。
 
-若所有通道均未配置，Alertmanager 仍然工作，告警规则仍然持续评估，只是无通知发出。可通过 Alertmanager UI（`http://127.0.0.1:9093`）手动查看当前告警状态。
+若所有通道均未配置，Alertmanager 仍然工作，报警规则仍然持续评估，只是无通知发出。可通过 Alertmanager UI（`http://127.0.0.1:9093`）手动查看当前报警状态。
 
 ---
 
 ### Q3：钉钉 / 企微 Webhook 在内网不通怎么办？
 
-观测栈通过 `obs-webhook-bridge` 服务转发告警到钉钉 / 企微。若客户服务器无法直连外网：
+观测栈通过 `obs-webhook-bridge` 服务转发报警到钉钉 / 企微。若客户服务器无法直连外网：
 
 **方案 A（推荐）**：在有外网访问权限的跳板机上单独部署 `obs-webhook-bridge`，修改 Alertmanager 配置中的 webhook URL 指向该服务器。
 

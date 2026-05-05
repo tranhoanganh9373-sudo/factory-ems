@@ -1,5 +1,7 @@
 package com.ems.meter.dto;
 
+import com.ems.core.constant.ValueKind;
+
 import java.time.OffsetDateTime;
 
 public record MeterDTO(
@@ -16,7 +18,9 @@ public record MeterDTO(
     String influxTagValue,
     Boolean enabled,
     Long channelId,
+    String channelPointKey,
     Long parentMeterId,
+    ValueKind valueKind,
     OffsetDateTime createdAt,
     OffsetDateTime updatedAt
 ) {}

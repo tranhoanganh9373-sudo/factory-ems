@@ -122,6 +122,6 @@ groups:
           severity: warning
           team: alarm
         annotations:
-          summary: silent_timeout 告警积压 > 50 条（持续 30 分钟）
+          summary: silent_timeout 报警积压 > 50 条（持续 30 分钟）
           description: 'count={{ $value }}'
           runbook_url: https://internal/docs/ops/observability-runbook.md#emsalarmbacklog

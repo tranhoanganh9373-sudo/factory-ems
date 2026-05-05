@@ -4,8 +4,8 @@ import { PageHeader } from './PageHeader';
 
 describe('PageHeader', () => {
   it('shows title and optional extra', () => {
-    render(<PageHeader title="告警历史" extra={<button>导出</button>} />);
-    expect(screen.getByText('告警历史')).toBeInTheDocument();
+    render(<PageHeader title="报警历史" extra={<button>导出</button>} />);
+    expect(screen.getByText('报警历史')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '导出' })).toBeInTheDocument();
   });
 

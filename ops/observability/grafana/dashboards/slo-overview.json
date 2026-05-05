@@ -163,7 +163,7 @@
     {
       "id": 8,
       "type": "table",
-      "title": "当前 firing 告警",
+      "title": "当前 firing 报警",
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "gridPos": { "x": 12, "y": 13, "w": 12, "h": 8 },
       "targets": [

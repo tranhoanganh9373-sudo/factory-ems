@@ -74,38 +74,50 @@ export default function FilterBar() {
     customFrom && customTo ? [dayjs(customFrom), dayjs(customTo)] : null;
 
   return (
-    <Space wrap style={{ marginBottom: 16 }}>
-      <Select
-        style={{ width: 130 }}
-        options={RANGE_OPTIONS}
-        value={range}
-        onChange={handleRangeChange}
-      />
-      {range === 'CUSTOM' && (
-        <DatePicker.RangePicker showTime value={dateValue} onChange={handleDateRange} />
-      )}
-      <TreeSelect
-        allowClear
-        placeholder="组织节点"
-        style={{ width: 240 }}
-        dropdownStyle={{ minWidth: 360 }}
-        treeData={buildTreeData(tree)}
-        value={orgNodeId}
-        onChange={(v: number | undefined) => setOrgNodeId(v)}
-        treeDefaultExpandAll
-      />
-      <Select
-        allowClear
-        placeholder="能源类型"
-        style={{ width: 140 }}
-        options={energyTypes.map((e) => ({ label: e.name, value: e.code }))}
-        value={energyType}
-        onChange={(v) => setEnergyType(v)}
-      />
-      <Button onClick={reset}>重置</Button>
-      <Button type="primary" icon={<ReloadOutlined />} onClick={handleRefresh}>
-        刷新
-      </Button>
-    </Space>
+    <div
+      style={{
+        position: 'sticky',
+        top: 56,
+        zIndex: 10,
+        marginBottom: 16,
+        padding: '12px 0',
+        background: 'var(--ems-color-bg-page, #f5f7fa)',
+        backdropFilter: 'saturate(140%) blur(4px)',
+      }}
+    >
+      <Space wrap>
+        <Select
+          style={{ width: 130 }}
+          options={RANGE_OPTIONS}
+          value={range}
+          onChange={handleRangeChange}
+        />
+        {range === 'CUSTOM' && (
+          <DatePicker.RangePicker showTime value={dateValue} onChange={handleDateRange} />
+        )}
+        <TreeSelect
+          allowClear
+          placeholder="组织节点"
+          style={{ width: 240 }}
+          dropdownStyle={{ minWidth: 360 }}
+          treeData={buildTreeData(tree)}
+          value={orgNodeId}
+          onChange={(v: number | undefined) => setOrgNodeId(v)}
+          treeDefaultExpandAll
+        />
+        <Select
+          allowClear
+          placeholder="能源类型"
+          style={{ width: 140 }}
+          options={energyTypes.map((e) => ({ label: e.name, value: e.code }))}
+          value={energyType}
+          onChange={(v) => setEnergyType(v)}
+        />
+        <Button onClick={reset}>重置</Button>
+        <Button type="primary" icon={<ReloadOutlined />} onClick={handleRefresh}>
+          刷新
+        </Button>
+      </Space>
+    </div>
   );
 }

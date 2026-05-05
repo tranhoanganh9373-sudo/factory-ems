@@ -71,7 +71,7 @@
    - `HOUR/DAY/MONTH` 已 rollup 部分查 PG，未 rollup 桶查 InfluxDB 现算，结果合并
 3. **Rollup 写冗余 `org_node_id`**：便于报表直接 `GROUP BY org_node_id`，避免 join meters 表
 4. **Rollup 幂等**：`ON CONFLICT (meter_id, bucket) DO UPDATE`；补跑 API 随调随用
-5. **失败重试**：`rollup_job_failures` 表 + 指数退避（5min → 30min → 2h），3 次后停并告警
+5. **失败重试**：`rollup_job_failures` 表 + 指数退避（5min → 30min → 2h），3 次后停并报警
 6. **权限强制过滤**：Controller 层调 `PermissionResolver.visibleNodeIds()`，传入 Service；Service 对登录态无感
 7. **看板刷新**：30s TanStack Query 轮询；不用 WebSocket
 8. **CSV 编码**：UTF-8 with BOM（Excel 中文兼容）；流式写出，不全量加载到内存

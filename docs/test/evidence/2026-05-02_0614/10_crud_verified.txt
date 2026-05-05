@@ -1,0 +1,6 @@
+CRUD FULL CHAIN: CREATE(id=30)→READ→DELETE→VERIFY(404)
+Sat May  2 06:18:43 PDT 2026
+CREATE: {"code":0,"data":{"id":30,"code":"EVD-FINAL2","name":"CRUD证据","energyTypeId":1,"energyTypeCode":"ELEC","energyTypeName":"电","unit":"kWh","orgNodeId":1,"influxMeasurement":"energy_reading","influxTagKey":"meter_code","influxTagValue":"EVD-FINAL2","enabled":true,"channelId":null,"parentMeterId":null,"createdAt":"2026-05-02T13:18:43.026869428Z","updatedAt":"2026-05-02T13:18:43.026869428Z"},"message":"ok","traceId":"d9000e0bb9cd5b002c90ddb886765e57"}
+READ: {"code":0,"data":{"id":30,"code":"EVD-FINAL2","name":"CRUD证据","energyTypeId":1,"energyTypeCode":"ELEC","energyTypeName":"电","unit":"kWh","orgNodeId":1,"influxMeasurement":"energy_reading","influxTagKey":"meter_code","influxTagValue":"EVD-FINAL2","enabled":true,"channelId":null,"parentMeterId":null,"createdAt":"2026-05-02T13:18:43.026869Z","updatedAt":"2026-05-02T13:18:43.026869Z"},"message":"ok","traceId":"eb3e5699cc875b9ae50ab6bb3bc3b940"}
+VERIFY: {"code":40004,"data":null,"message":"Meter not found: 30","traceId":"9168af3cabb810f91210d9961ae405dd"}
+HTTP:404

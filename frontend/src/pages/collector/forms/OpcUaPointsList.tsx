@@ -14,7 +14,7 @@ export function OpcUaPointsList({ fields, ops }: Props) {
       <div style={{ marginBottom: 8, fontWeight: 500 }}>测点列表</div>
       {fields.map((f) => (
         <Space key={f.key} align="baseline" wrap style={{ marginBottom: 8 }}>
-          <Form.Item name={[f.name, 'key']} label="Key" rules={[{ required: true }]}>
+          <Form.Item name={[f.name, 'key']} label="标签名" rules={[{ required: true }]}>
             <Input style={{ width: 120 }} />
           </Form.Item>
           <Form.Item name={[f.name, 'nodeId']} label="NodeId" rules={[{ required: true }]}>

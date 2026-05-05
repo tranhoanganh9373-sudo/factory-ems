@@ -1,5 +1,6 @@
 package com.ems.collector.channel;
 
+import com.ems.collector.channel.csv.ChannelCsvParser;
 import com.ems.collector.transport.ChannelTransportFactory;
 import com.ems.collector.transport.TestResult;
 import com.ems.collector.transport.Transport;
@@ -13,9 +14,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -88,5 +92,21 @@ public class ChannelController {
         Transport t = service.activeTransport(id)
                 .orElseGet(() -> factory.create(ch.getProtocol()));
         return t.testConnection(ch.getProtocolConfig());
+    }
+
+    /**
+     * channels.csv + points.csv → ChannelDTO[] 解析端点。前端把用户上传的两份 CSV 喂给这里，
+     * 拿到通道列表后再逐行调用 POST /channel 创建——复用现有"逐行状态表 + 同名 409 跳过"UX。
+     *
+     * <p>解析失败抛 IllegalArgumentException，由 GlobalExceptionHandler 映射为 400。
+     */
+    @PostMapping(value = "/parse-csv", consumes = "multipart/form-data")
+    public List<ChannelDTO> parseCsv(@RequestPart("channels") MultipartFile channelsFile,
+                                     @RequestPart("points") MultipartFile pointsFile)
+            throws IOException {
+        try (var chIn = channelsFile.getInputStream();
+             var ptIn = pointsFile.getInputStream()) {
+            return ChannelCsvParser.parse(chIn, ptIn).stream().map(ChannelDTO::from).toList();
+        }
     }
 }

@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'ship/**']
   pull_request:
-    branches: [main, develop]
+    branches: [main, develop, 'ship/**']
 
 jobs:
   backend:
@@ -46,7 +46,7 @@ jobs:
       - name: Type Check
         run: pnpm typecheck
       - name: Test
-        run: pnpm test --run
+        run: pnpm test -- --run
       - name: Build
         run: pnpm build
 
@@ -61,16 +61,29 @@ jobs:
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
-      - name: Build backend image
-        run: docker build -t factory-ems:ci -f ems-app/Dockerfile .
-      - name: Build frontend
-        run: cd frontend && pnpm install --frozen-lockfile && pnpm build
+      - name: Prepare .env from example
+        run: cp .env.example .env
+      - name: Build images via compose
+        run: docker compose -f docker-compose.yml build
       - name: Start stack
         run: docker compose -f docker-compose.yml up -d --wait
       - name: Install Playwright
         run: cd e2e && pnpm install && pnpm exec playwright install --with-deps chromium
       - name: E2E
         run: cd e2e && pnpm test
+      - name: Dump container logs on failure
+        if: failure()
+        run: |
+          echo "=== docker compose ps ==="
+          docker compose -f docker-compose.yml ps
+          echo "=== factory-ems logs ==="
+          docker compose -f docker-compose.yml logs --tail=200 factory-ems
+          echo "=== nginx logs ==="
+          docker compose -f docker-compose.yml logs --tail=50 nginx
+          echo "=== postgres logs (last 50) ==="
+          docker compose -f docker-compose.yml logs --tail=50 postgres
+          echo "=== influxdb logs (last 50) ==="
+          docker compose -f docker-compose.yml logs --tail=50 influxdb
       - name: Tear down
         if: always()
         run: docker compose -f docker-compose.yml down -v
@@ -116,7 +129,11 @@ jobs:
           OBS_SMTP_PASSWORD: x
           OBS_ALERT_RECEIVER_EMAIL: oncall@example.com
           OBS_GENERIC_WEBHOOK: http://example.com/wh
-        run: amtool check-config ops/observability/alertmanager/alertmanager.yml
+        # amtool check-config does NOT expand ${VAR} placeholders; pre-expand
+        # with envsubst (provided by gettext-base, present on ubuntu runners).
+        run: |
+          envsubst < ops/observability/alertmanager/alertmanager.yml > /tmp/alertmanager.expanded.yml
+          amtool check-config /tmp/alertmanager.expanded.yml
 
       - name: Validate Grafana dashboards JSON
         run: |

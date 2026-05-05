@@ -4,7 +4,7 @@
 > 受众：负责把 Factory EMS 装到客户现场或公司机房的实施工程师
 > 阅读时长：完整跑一遍约 60 分钟（不含等待 Docker 拉镜像）
 
-本向导是**主流程**版——覆盖 80% 客户场景。如果遇到这里没列的可选项（高可用、外部 DB、内网代理、PKI 证书等），请进 [installation-manual.md](./installation-manual.md)。
+本向导是主流程版，覆盖 80% 客户场景。遇到这里没列的可选项（高可用、外部 DB、内网代理、PKI 证书等），请进 [installation-manual.md](./installation-manual.md)。
 
 ---
 
@@ -22,7 +22,7 @@
 | OS | Ubuntu 20.04+ / CentOS 8+ / Debian 11+ / RHEL 9+ | Ubuntu 22.04 LTS |
 | 时区 | UTC（推荐）| 业务时区（如 Asia/Shanghai）|
 
-**500 仪表 / 10 万条/天**规模用推荐配置。规模更大请走 [installation-manual.md §6 容量规划](./installation-manual.md)。
+500 仪表 / 10 万条/天 这一规模用推荐配置。规模更大请走 [installation-manual.md §6 容量规划](./installation-manual.md)。
 
 ### 1.2 软件
 
@@ -84,11 +84,11 @@ echo "EMS_INFLUX_TOKEN=$(openssl rand -hex 32)"
 echo "INFLUXDB_ADMIN_PASSWORD=$(openssl rand -base64 32)"
 ```
 
-把输出**完整粘贴**到 `.env` 里覆盖原占位值。
+把输出完整粘贴到 `.env` 里覆盖原占位值。
 
 ### 2.3 选定 EMS_VERSION
 
-生产环境**禁止**使用 `1.1.0-SNAPSHOT`（默认值是开发用）。改成最新稳定版 tag：
+生产环境禁止使用 `1.1.0-SNAPSHOT`（默认值是开发用）。改成最新稳定版 tag：
 
 ```bash
 # .env 里改
@@ -132,7 +132,7 @@ docker compose build         # 本地从源码构建（首次 5~10 分钟）
 docker compose up -d
 ```
 
-`-d` 后台运行。首次启动 Postgres 和 InfluxDB 会做 init，约 30 秒。Spring Boot 起栈约 10 秒。
+`-d` 后台运行。首次启动 Postgres 和 InfluxDB 会做 init，约 30 秒；Spring Boot 起栈约 10 秒。
 
 ### 3.3 等待健康
 
@@ -161,7 +161,7 @@ docker compose logs factory-ems --tail 100
 
 ## §4 验收
 
-按顺序跑这 5 个验收命令，全过 = 部署成功：
+按顺序跑这 5 个验收命令，全过即部署成功：
 
 ### 4.1 后端 Liveness
 
@@ -199,7 +199,7 @@ curl -fsS -X POST http://localhost:8888/api/v1/auth/login \
 
 ### 4.5 浏览器登录
 
-打开 `http://<部署机 IP>:8888` 或 `http://localhost:8888`，用 `admin` / `admin123!` 登录，看到仪表盘 = 验收通过。
+打开 `http://<部署机 IP>:8888` 或 `http://localhost:8888`，用 `admin` / `admin123!` 登录，看到仪表盘即验收通过。
 
 ---
 
@@ -209,7 +209,7 @@ curl -fsS -X POST http://localhost:8888/api/v1/auth/login \
 
 进 `/profile`，改成强密码（至少 12 字符 + 大小写 + 数字 + 符号）。
 
-**记下来放密码管理器**——平台不开放邮件 / 短信自助找回。
+记下来放密码管理器，平台不开放邮件 / 短信自助找回。
 
 ### 5.2 建组织树
 
@@ -223,7 +223,7 @@ curl -fsS -X POST http://localhost:8888/api/v1/auth/login \
 └── 分厂区
 ```
 
-每个节点填上**面积、人数**等元数据（后续分摊会用）。
+每个节点填上面积、人数等元数据（后续分摊会用）。
 
 ### 5.3 建用户和角色
 
@@ -234,7 +234,7 @@ curl -fsS -X POST http://localhost:8888/api/v1/auth/login \
 - 1~2 个 FINANCE（财务）
 - N 个 VIEWER（按需）
 
-每个非 ADMIN 用户**必须绑定节点权限范围**，否则看不到任何数据。
+每个非 ADMIN 用户必须绑定节点权限范围，否则看不到任何数据。
 
 ### 5.4 登记仪表
 
@@ -278,13 +278,13 @@ docker compose up -d
 
 ## §6 接 HTTPS（强烈推荐）
 
-⚠️ 公网暴露的 EMS 不上 HTTPS = JWT token 在传输层裸奔，攻击者抓包就能拿到管理员凭据。
+⚠️ 公网暴露的 EMS 不上 HTTPS，JWT token 就在传输层裸奔，攻击者抓包就能拿到管理员凭据。
 
 ### 6.1 方案 A：反代到现有 HTTPS（推荐）
 
 如果客户已有边缘 nginx / IIS / F5 等反代设备，让它把 `https://ems.client.com/` 反代到部署机的 `:8888`。
 
-这是最省事的方案——证书让客户的反代去管。
+这是最省事的方案，证书让客户的反代去管。
 
 ### 6.2 方案 B：本机 nginx + Let's Encrypt
 
@@ -337,7 +337,7 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 ### 7.3 演练恢复
 
-部署完 30 天内**至少做一次完整恢复演练**——把备份在另一台机器恢复，看能不能正常起栈、登录、查历史数据。没演练的备份等于没有。
+部署完 30 天内至少做一次完整恢复演练：把备份在另一台机器恢复，看能不能正常起栈、登录、查历史数据。没演练的备份等于没有。
 
 ---
 
@@ -375,7 +375,7 @@ docker compose down
 docker compose up -d
 ```
 
-⚠️ **DB 迁移不可逆**——回滚版本后 schema 仍是新版，应用代码是旧版。如果新版引入了破坏性 schema 变更，回滚后老代码会读不出数据。所以升级前**必须备份 + 看 release notes 是否有破坏性变更**。
+⚠️ DB 迁移不可逆。回滚版本后 schema 仍是新版，应用代码是旧版。如果新版引入了破坏性 schema 变更，回滚后老代码会读不出数据。所以升级前必须备份，并且看 release notes 是否有破坏性变更。
 
 ---
 
@@ -447,7 +447,7 @@ sed 's/=.*/=<redacted>/' .env > env.sanitized
 tar czf debug-$(date +%Y%m%d).tgz debug.txt debug.log env.sanitized
 ```
 
-⚠️ 上传 / 邮件之前**必须**确认 `env.sanitized` 把所有密码 / token 都脱敏了。
+⚠️ 上传 / 邮件之前必须确认 `env.sanitized` 把所有密码 / token 都脱敏了。
 
 ---
 
@@ -467,7 +467,7 @@ tar czf debug-$(date +%Y%m%d).tgz debug.txt debug.log env.sanitized
 - [ ] 至少做过 1 次恢复演练（部署后 30 天内）
 - [ ] 客户已收到部署交付物：访问地址、ADMIN 凭据、文档链接
 
-完成 → 进 [`../product/user-guide.md`](../product/user-guide.md) 给客户做培训。
+完成后进 [`../product/user-guide.md`](../product/user-guide.md) 给客户做培训。
 
 ---
 
@@ -490,7 +490,7 @@ tar czf debug-$(date +%Y%m%d).tgz debug.txt debug.log env.sanitized
 4. 仪表导入：`scripts/csv-to-meters.py` + `scripts/import-meters.sh`（或前端 `/meters` 页"批量导入"按钮，v2 新增）
 5. 看板上线：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 6. 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-7. 告警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+7. 报警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 8. 账单上线：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 9. 月报自动化：[report-automation-sop.md](./report-automation-sop.md)
 10. 生产能效：[production-energy-sop.md](./production-energy-sop.md)
@@ -499,4 +499,4 @@ tar czf debug-$(date +%Y%m%d).tgz debug.txt debug.log env.sanitized
 
 - 平台总览（功能 + 用户）：[../product/README.md](../product/README.md)
 - 用户使用手册：[../product/user-guide.md](../product/user-guide.md)
-- 各模块功能概览：见 `../product/*-feature-overview.md`（仪表 / 电价 / 报表 / 成本 / 账单 / 告警 等）
+- 各模块功能概览：见 `../product/*-feature-overview.md`（仪表 / 电价 / 报表 / 成本 / 账单 / 报警 等）

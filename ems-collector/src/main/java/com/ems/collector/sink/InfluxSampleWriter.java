@@ -19,10 +19,12 @@ import java.util.Optional;
 /**
  * SampleWriter 实装：把 collector 采集的 {@link Sample} 桥接到 InfluxDB。
  *
- * <p>映射规则：通过 (sample.channelId, sample.pointKey) 反查 meter，
+ * <p>映射规则：通过 (sample.channelId, sample.pointKey) 反查 meter（按 meter 的
+ * {@code channel_point_key} 列匹配，V2.3.2 起与 {@code code} 解耦），
  * 用 meter.influxMeasurement / influxTagKey / influxTagValue 构建 Point。
  *
- * <p>约定：channel 配置中 {@code points[].key} 应等于对应 meter 的 {@code code}。
+ * <p>约定：channel 配置中 {@code points[].key} 等于对应 meter 的 {@code channelPointKey}；
+ * meter.code 是纯业务标识，不再参与采集器侧路由。
  *
  * <p>{@link ConditionalOnBean}：仅在 {@link InfluxDBClient} 可用时启用。
  * 与 {@link LoggingSampleWriter} 通过 {@code @ConditionalOnMissingBean(SampleWriter.class)}
@@ -37,13 +39,16 @@ public class InfluxSampleWriter implements SampleWriter {
     private final InfluxProperties influxProps;
     private final MeterRepository meters;
     private final WriteApiBlocking writeApi;
+    private final DiagnosticRingBuffer ring;
 
     public InfluxSampleWriter(InfluxDBClient client,
                               InfluxProperties influxProps,
-                              MeterRepository meters) {
+                              MeterRepository meters,
+                              DiagnosticRingBuffer ring) {
         this.influxProps = influxProps;
         this.meters = meters;
         this.writeApi = client.getWriteApiBlocking();
+        this.ring = ring;
     }
 
     @Override
@@ -51,8 +56,10 @@ public class InfluxSampleWriter implements SampleWriter {
         if (sample == null || sample.channelId() == null || sample.pointKey() == null) {
             return;
         }
+        // 诊断缓冲：无论后面 Influx 路径成功与否，都先喂一条进 ring，让 UI 看到采集动了
+        ring.record(sample);
 
-        Optional<Meter> meterOpt = meters.findByChannelIdAndCode(
+        Optional<Meter> meterOpt = meters.findByChannelIdAndChannelPointKey(
             sample.channelId(), sample.pointKey());
         if (meterOpt.isEmpty()) {
             // channel 未绑 / pointKey 不匹配任何 meter；channel 可能服务于多种用途，不报错
@@ -68,8 +75,9 @@ public class InfluxSampleWriter implements SampleWriter {
                 .time(sample.timestamp() != null ? sample.timestamp() : Instant.now(),
                     WritePrecision.MS);
 
-            // pointKey 即 InfluxDB field key
-            String fieldKey = sample.pointKey();
+            // 每个 meter 通过 meter_code tag 区分；field 固定写 "value" 以匹配
+            // FluxQueryBuilder.sumOverRange() 等查询的硬编码 `_field == "value"`。
+            // pointKey 是 collector 内部寻址 key，不应作为 schema 字段泄漏到时序库。
             Object value = sample.value();
             if (value == null) {
                 log.debug("null value for sample channel={} point={}; skipping",
@@ -77,11 +85,11 @@ public class InfluxSampleWriter implements SampleWriter {
                 return;
             }
             if (value instanceof Number n) {
-                point.addField(fieldKey, n.doubleValue());
+                point.addField("value", n.doubleValue());
             } else if (value instanceof Boolean b) {
-                point.addField(fieldKey, b);
+                point.addField("value", b);
             } else {
-                point.addField(fieldKey, value.toString());
+                point.addField("value", value.toString());
             }
 
             writeApi.writePoint(influxProps.getBucket(), influxProps.getOrg(), point);

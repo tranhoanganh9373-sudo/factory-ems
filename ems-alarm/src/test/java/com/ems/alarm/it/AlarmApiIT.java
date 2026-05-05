@@ -55,7 +55,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * 告警 REST API 端到端测试（@SpringBootTest + MockMvc + Testcontainers + Spring Security）。
+ * 报警 REST API 端到端测试（@SpringBootTest + MockMvc + Testcontainers + Spring Security）。
  * 本机 Docker Desktop 兼容问题，CI 中删除 {@code @Disabled} 即可启用。
  */
 @Disabled("Testcontainers + Docker Desktop 本地兼容问题，CI 环境删除此注解即可")

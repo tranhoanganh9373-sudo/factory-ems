@@ -19,7 +19,7 @@
 > ```
 >
 > 含义：channel 抓到的所有 point 都会触发一次 sink，但只有 `meter.code = point.key` 的才真正落库。
-> **所以不必给每个测点都建 Meter——挑你要看的（功率 + 电量）即可，其余白白浪费 5 千条/天的写入量。**
+> 所以不必给每个测点都建 Meter，挑你要看的（功率 + 电量）即可。其余的白白多写 5 千条/天没意义。
 
 ---
 
@@ -223,7 +223,7 @@ done
 
 > 数据存储：`floorplan.points` JSONB 字段，每个挂点 `{meterId, xRatio, yRatio, label}`，xy 是 0-1 之间的相对坐标，浏览器按底图原始尺寸缩放。
 >
-> 要批量化（不在前端拖）：调 `PUT /api/v1/floorplans/{id}/points`，传 `SetPointsReq` JSON。但实践上拖一遍比写脚本快——50 块表的位置只有现场工程师知道。
+> 要批量化（不在前端拖）：调 `PUT /api/v1/floorplans/{id}/points`，传 `SetPointsReq` JSON。但实践上拖一遍比写脚本快，50 块表的位置只有现场工程师知道。
 
 ---
 
@@ -236,7 +236,7 @@ done
 
 | 面板 | 看什么 | 通过标准 |
 |---|---|---|
-| KPI 摘要卡 | 今日累计电量 / 当前需求功率 / 采集在线率 / 活跃告警 | 数字非 0 / 在线率 ≥ 99% |
+| KPI 摘要卡 | 今日累计电量 / 当前需求功率 / 采集在线率 / 活跃报警 | 数字非 0 / 在线率 ≥ 99% |
 | 实时功率曲线 | 1F 总功率近 1h 折线 | 有数据点、5 min 粒度连续 |
 | 能耗构成饼图 | 1F 各表电量占比 | 12 块表都出现 |
 | Top N 设备 | 1F 用电 Top 10 | 排序正确，电量随时间累计 |
@@ -256,7 +256,7 @@ done
 | Top N 显示一半 | 有些 meter 的 `energy_total` 没注册或 `enabled=false` |
 | 平面图挂点全灰 | meter 的 `channelId` 或 `point_key` 写错；后端 join 不到实时数据 |
 | 平面图挂点位置乱 | 之前编辑后没点保存；或者底图换过尺寸（重新拖） |
-| Sankey 桑基图空 | Sankey 需要"上下游能源关系"；50 块表如果没建电气拓扑就显示空。这是正常的，不影响其他面板 |
+| Sankey 桑基图空 | Sankey 需要"上下游能源关系"；50 块表如果没建电气拓扑就显示空。这属于正常情况，不影响其他面板 |
 
 ---
 
@@ -269,18 +269,18 @@ done
 - [ ] 4 张底图已拖完挂点，每张 ~12 个挂点
 - [ ] `/dashboard` 切到工厂根：KPI 全有数、实时曲线连续、Top N 排序正确
 - [ ] `/dashboard` 切到 1F：平面图实时态显示 12 个绿色挂点，悬停有 meter 名 + 数字
-- [ ] 关掉某条 channel 5 分钟，对应楼层的挂点变红 → 说明告警链路也通（下一阶段告警 SOP 详细测）
+- [ ] 关掉某条 channel 5 分钟，对应楼层的挂点变红 → 说明报警链路也通（下一阶段报警 SOP 详细测）
 
 ---
 
-## 10. 与下一阶段（告警）的衔接
+## 10. 与下一阶段（报警）的衔接
 
-看板上线后，下一步（告警上线）可以复用：
-- **org-tree 节点**：告警规则按节点过滤（如"1F 任一表掉线 → 告警")
-- **Meter 注册**：告警阈值挂在 Meter 上（如"1F-M-01 当前功率 > 100 kW 持续 5 min → 告警"）
-- **平面图**：挂点会自动随告警状态变红/变黄，无需额外配置
+看板上线后，下一步（报警上线）可以复用：
+- **org-tree 节点**：报警规则按节点过滤（如"1F 任一表掉线 → 报警")
+- **Meter 注册**：报警阈值挂在 Meter 上（如"1F-M-01 当前功率 > 100 kW 持续 5 min → 报警"）
+- **平面图**：挂点会自动随报警状态变红/变黄，无需额外配置
 
-告警 SOP 后续单独出一份。
+报警 SOP 后续单独出一份。
 
 ---
 
@@ -292,7 +292,7 @@ done
 - 选型指南：[meter-selection-guide.md](./meter-selection-guide.md)
 - 现场施工 SOP：[field-installation-sop.md](./field-installation-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 月报自动化 SOP：[report-automation-sop.md](./report-automation-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)

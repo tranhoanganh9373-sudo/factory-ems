@@ -2,11 +2,14 @@ import { useRef, useEffect } from 'react';
 import * as echarts from 'echarts/core';
 import type { EChartsOption } from 'echarts';
 import { useEchartsTheme } from './useEchartsTheme';
+import { useReducedMotion } from './useReducedMotion';
+import { applyReducedMotion } from '@/styles/echarts/reduced-motion';
 
 export function useEcharts(option: EChartsOption) {
   const elRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<echarts.ECharts | null>(null);
   const themeName = useEchartsTheme();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     if (!elRef.current) return;
@@ -23,9 +26,12 @@ export function useEcharts(option: EChartsOption) {
 
   useEffect(() => {
     if (chartRef.current) {
-      chartRef.current.setOption(option, { notMerge: false, lazyUpdate: true });
+      chartRef.current.setOption(applyReducedMotion(option, reduced), {
+        notMerge: false,
+        lazyUpdate: true,
+      });
     }
-  }, [option]);
+  }, [option, reduced]);
 
   return elRef;
 }

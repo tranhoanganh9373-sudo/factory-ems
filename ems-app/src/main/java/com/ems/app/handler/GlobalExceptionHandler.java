@@ -4,8 +4,10 @@ import com.ems.app.observability.AppMetrics;
 import com.ems.core.constant.ErrorCode;
 import com.ems.core.dto.Result;
 import com.ems.core.exception.*;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -49,6 +51,26 @@ public class GlobalExceptionHandler {
         String msg = ex.getBindingResult().getFieldErrors().stream()
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b).orElse("validation failed");
+        return ResponseEntity.badRequest().body(Result.error(ErrorCode.PARAM_INVALID, msg));
+    }
+
+    /**
+     * Triggered by Bean Validation constraints on {@code @RequestParam} / {@code @PathVariable}
+     * when the controller is annotated with {@code @Validated} — e.g. {@code @Min(1) @Max(200) int size}.
+     * Without this handler the violation falls through to the catch-all and returns 500.
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Result<?>> constraintViolation(ConstraintViolationException ex) {
+        String msg = ex.getConstraintViolations().stream()
+                .map(v -> {
+                    String path = v.getPropertyPath().toString();
+                    int dot = path.lastIndexOf('.');
+                    String name = dot >= 0 ? path.substring(dot + 1) : path;
+                    return name + ": " + v.getMessage();
+                })
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("validation failed");
+        log.info("constraint_violation: {}", msg);
         return ResponseEntity.badRequest().body(Result.error(ErrorCode.PARAM_INVALID, msg));
     }
 
@@ -132,6 +154,19 @@ public class GlobalExceptionHandler {
         log.info("illegal_state: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.CONFLICT)
             .body(Result.error(ErrorCode.CONFLICT, ex.getMessage()));
+    }
+
+    /**
+     * DB 完整性约束违例（FK / UNIQUE / NOT NULL 等）→ 409 CONFLICT。
+     * 兜底：service 层若已用 BusinessException 预检，会先走 {@link #biz}；只有走到 DB 才发现的
+     * 冲突落到这里，避免泄成"服务器错误，请联系管理员"。原始 SQL 错误细节留在 ERROR 日志，
+     * 给客户端的消息保持通用（避免暴露表/列名）。
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Result<?>> dataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("data_integrity_violation: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Result.error(ErrorCode.CONFLICT, "操作冲突：该数据正被其他记录引用，或与已存在数据重复，请先解除关联或换一个值"));
     }
 
     @ExceptionHandler(Exception.class)

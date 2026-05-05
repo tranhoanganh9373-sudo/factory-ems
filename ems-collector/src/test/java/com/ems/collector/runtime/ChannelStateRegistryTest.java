@@ -30,16 +30,33 @@ class ChannelStateRegistryTest {
     }
 
     @Test
-    void recordSuccess_afterRegister_setsConnectedAndIncrementsCounter() {
+    void recordSuccess_belowThreshold_staysConnectingAndDoesNotInflateCounter() {
+        // hysteresis: CONNECTING → CONNECTED 需连续 STATE_FLIP_THRESHOLD 次成功；
+        // 在那之前 24h 计数器不应记 success（避免间歇通讯期间成功率虚高）。
         registry.register(1L, "VIRTUAL");
 
         registry.recordSuccess(1L, 42L);
 
         var state = registry.snapshot(1L);
-        assertThat(state.connState()).isEqualTo(ConnectionState.CONNECTED);
-        assertThat(state.successCount24h()).isEqualTo(1);
+        assertThat(state.connState()).isEqualTo(ConnectionState.CONNECTING);
+        assertThat(state.successCount24h()).isZero();
         assertThat(state.avgLatencyMs()).isEqualTo(42L);
         assertThat(state.lastSuccessAt()).isNotNull();
+    }
+
+    @Test
+    void recordSuccess_atThreshold_transitionsToConnectedAndCountsSuccess() {
+        registry.register(1L, "VIRTUAL");
+
+        for (int i = 0; i < ChannelStateRegistry.STATE_FLIP_THRESHOLD; i++) {
+            registry.recordSuccess(1L, 42L);
+        }
+
+        var state = registry.snapshot(1L);
+        assertThat(state.connState()).isEqualTo(ConnectionState.CONNECTED);
+        // 仅最后一次（转 CONNECTED 当下）记 success；前 N-1 次因 connState 未稳定而记 failure。
+        assertThat(state.successCount24h()).isEqualTo(1);
+        assertThat(state.failureCount24h()).isEqualTo(ChannelStateRegistry.STATE_FLIP_THRESHOLD - 1);
     }
 
     @Test

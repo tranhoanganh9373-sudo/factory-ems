@@ -2,6 +2,7 @@ package com.ems.alarm.service.adapter;
 
 import com.ems.alarm.entity.Alarm;
 import com.ems.alarm.entity.AlarmStatus;
+import com.ems.alarm.entity.ResolvedReason;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
@@ -25,7 +26,9 @@ public class GenericJsonAdapter implements WebhookAdapter {
     @Override
     public String buildPayload(Alarm a, String deviceCode, String deviceName) {
         Map<String, Object> p = new LinkedHashMap<>();
-        p.put("event", a.getStatus() == AlarmStatus.RESOLVED ? "alarm.resolved" : "alarm.triggered");
+        boolean isResolveEvent = a.getStatus() == AlarmStatus.RESOLVED
+                || (a.getStatus() == AlarmStatus.ACKED && a.getResolvedReason() == ResolvedReason.AUTO);
+        p.put("event", isResolveEvent ? "alarm.resolved" : "alarm.triggered");
         p.put("alarm_id", a.getId());
         p.put("device_id", a.getDeviceId());
         p.put("device_type", a.getDeviceType());

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Alert, Card, DatePicker, Empty, Select, Space, Spin, TreeSelect } from 'antd';
+import { Alert, Card, DatePicker, Empty, Select, Skeleton, Space, TreeSelect } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_REPORT_SHIFT } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
@@ -57,7 +58,7 @@ export default function ShiftReportPage() {
 
   return (
     <>
-      <PageHeader title="班次报表" />
+      <PageHeader title="班次报表" helpContent={HELP_REPORT_SHIFT} />
       <Card
         extra={
           <ExportButtons
@@ -77,7 +78,8 @@ export default function ShiftReportPage() {
           <DatePicker value={date} onChange={(v) => v && setDate(v)} allowClear={false} />
           <Select
             placeholder="选择班次"
-            style={{ width: 240 }}
+            style={{ minWidth: 360 }}
+            popupMatchSelectWidth={false}
             value={shiftId}
             onChange={setShiftId}
             options={shifts.map((s) => ({
@@ -113,7 +115,7 @@ export default function ShiftReportPage() {
         {!shiftId ? (
           <Alert type="info" message="请选择班次" showIcon />
         ) : isLoading ? (
-          <Spin />
+          <Skeleton active paragraph={{ rows: 8 }} />
         ) : error ? (
           <Alert type="error" message="加载失败" showIcon />
         ) : !data ? (

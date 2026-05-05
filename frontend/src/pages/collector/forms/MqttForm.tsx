@@ -1,4 +1,5 @@
 import { Form, Input, Select, Switch } from 'antd';
+import { DurationInput } from '@/components/DurationInput';
 import { SecretInput } from '@/components/SecretInput';
 import { MqttPointsList } from './MqttPointsList';
 
@@ -46,11 +47,14 @@ export function MqttForm() {
       </Form.Item>
       <Form.Item
         name={['protocolConfig', 'keepAlive']}
-        label="KeepAlive（ISO-8601，例 PT60S）"
+        label="KeepAlive"
         rules={[{ required: true }]}
         initialValue="PT60S"
       >
-        <Input />
+        <DurationInput />
+      </Form.Item>
+      <Form.Item name="description" label="描述">
+        <Input.TextArea rows={2} />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <MqttPointsList fields={fields} ops={ops} />}

@@ -31,9 +31,9 @@
 
 | 厂家 | 型号 | 单价（元） | 备注 |
 |---|---|---|---|
-| **江苏安科瑞** | **PZ72L-E4/C** | 350–500 | **首选**，性价比最高、寄存器表清晰 |
+| **江苏安科瑞** | **PZ72L-E4/C** | 350–500 | 首选，性价比高、寄存器表清晰 |
 | 上海钰盟 | YM200E | 300–450 | 替代品，外观尺寸 96×96 |
-| 浙江华邦 | DTSF1352 | 250–400 | 便宜但寄存器表偶有版本差异 |
+| 浙江华邦 | DTSF1352 | 250–400 | 便宜，但寄存器表偶有版本差异 |
 
 > **避坑**：淘宝 100–200 元 "导轨表" 慎选，多数没有 RS-485 或站号不可改。
 
@@ -67,15 +67,15 @@
 
 | 厂家 | 型号 | 单价（元） | 备注 |
 |---|---|---|---|
-| **有人物联** | **USR-N510** | 200–300 | **首选**，国产稳定，配置 Web UI 友好 |
+| **有人物联** | **USR-N510** | 200–300 | 首选，国产稳定，配置 Web UI 友好 |
 | 友善之臂 | DTU-N810 | 150–250 | 更便宜，质量稍弱 |
-| Moxa（台资） | NPort 5150 | 1200–1500 | 高端项目 / 合规要求严选这个 |
+| Moxa（台资） | NPort 5150 | 1200–1500 | 高端项目 / 合规要求严的选这个 |
 
-**配置要点**：
-- 模式：**TCP Server**
+配置要点：
+- 模式：TCP Server
 - 监听端口：502（标准 Modbus TCP 端口）
 - 串口参数与电表完全一致（波特率 9600、8N1）
-- 包间隔 / 超时建议保留默认（一般 50–200 ms）
+- 包间隔 / 超时保留默认即可（一般 50–200 ms）
 
 ## 5. 配套物料
 
@@ -104,7 +104,7 @@
 | 超五类网线 | 200 m | 2 | 400 |
 | EMS 工控机 i5/16G/512G | 1 | 6000 | 6000 |
 
-**合计：约 ¥39,200**（电表占 58%，硬件其他占比小）
+合计约 ¥39,200（电表占 58%，硬件其他占比小）
 
 ## 7. 采购前校验清单
 
@@ -118,7 +118,7 @@
 
 ## 8. 已知不兼容清单
 
-EMS 当前 **不支持** 以下场景，下单前规避：
+EMS 当前不支持以下场景，下单前规避：
 
 | 协议 / 表型 | 说明 |
 |---|---|
@@ -138,7 +138,7 @@ EMS 当前 **不支持** 以下场景，下单前规避：
 - 寄存器映射模板：[meter-register-mapping-template.csv](./meter-register-mapping-template.csv)
 - 看板上线 SOP：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 - 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-- 告警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+- 报警上线 SOP：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 - 账单上线 SOP：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 - 月报自动化 SOP：[report-automation-sop.md](./report-automation-sop.md)
 - 生产能效 SOP：[production-energy-sop.md](./production-energy-sop.md)

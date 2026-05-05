@@ -24,10 +24,10 @@ import java.util.Optional;
 
 /**
  * 监听 {@link com.ems.collector.runtime.ChannelStateRegistry} 发布的 channel 故障/恢复事件，
- * 创建 / 解除 {@link AlarmType#COMMUNICATION_FAULT} 告警。
+ * 创建 / 解除 {@link AlarmType#COMMUNICATION_FAULT} 报警。
  *
  * <p>设计：channel-scoped — alarm.deviceType="CHANNEL"，alarm.deviceId=channelId。
- * 这样在 meter 绑定之前就能告警。
+ * 这样在 meter 绑定之前就能报警。
  *
  * <p>幂等：同一 channel 同时只有一条 ACTIVE/ACKED 的 COMMUNICATION_FAULT。
  *

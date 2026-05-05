@@ -1,0 +1,22 @@
+HTTP/1.1 200 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:15:06 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: d32356a71b264ca6
+Set-Cookie: emsRefresh=eyJhbGciOiJIUzM4NCJ9.eyJqdGkiOiJlYzE2MTBlZS1kZDExLTRjYWUtODAyZS1jNDU0YjIxNjhhODYiLCJ1aWQiOjEsInR5cCI6InJlZnJlc2giLCJpYXQiOjE3Nzc3Mjc3MDYsImV4cCI6MTc3ODMzMjUwNn0.GE8nqtFtUVwAhSjXEHmXogHtjQ4BJ6SyZ6Yji6napMl6cKP37161JebI4Ye-yShO; Max-Age=604800; Expires=Sat, 09 May 2026 13:15:06 GMT; Path=/api/v1/auth; HttpOnly; SameSite=Lax
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":0,"data":{"accessToken":"eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbiIsInVpZCI6MSwicm9sZXMiOlsiQURNSU4iXSwidHlwIjoiYWNjZXNzIiwiaWF0IjoxNzc3NzI3NzA2LCJleHAiOjE3Nzc3Mjg2MDZ9.t5zw4-RM4AMowrXPa9YNYCAnJG1IndxtEFIATUEHB1wMESOH7R7DmpZ5RPJ53Pnr","expiresInSeconds":900,"user":{"id":1,"username":"admin","displayName":"系统管理员","roles":["ADMIN"]}},"message":"ok","traceId":"d32356a71b264ca6"}

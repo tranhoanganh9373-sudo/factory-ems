@@ -2,7 +2,7 @@
 
 > **适用版本**：v1.0.0-ga ｜ 最近更新：2026-05-01
 > **受众**：实施工程师 / 客户 SRE / 等保测评对接人
-> **适用边界**：PCI-DSS、等保 2.0 三级、ISO 27001 等需要"主机加固报告"的合规交付。常规内网部署不必全部执行；**`installation-manual.md §3.1` 已覆盖最低基线**（非 root 用户 + docker 组 + 目录所有权），本文是进阶补充。
+> **适用边界**：PCI-DSS、等保 2.0 三级、ISO 27001 等需要"主机加固报告"的合规交付。常规内网部署不用全部执行；**`installation-manual.md §3.1` 已覆盖最低基线**（非 root 用户 + docker 组 + 目录所有权），本文补充进阶项。
 
 ---
 
@@ -19,13 +19,13 @@
 | §8 容器安全 | 越狱风险 | 8.1.4.6 | 15 min |
 | §9 加固验证脚本 | 一键自检 | — | 5 min |
 
-完整跑完约 2 小时；建议在客户验收前一周排上。
+完整跑完约 2 小时；客户验收前一周排上即可。
 
 ---
 
 ## §2 部署用户最小权限 sudoers
 
-`installation-manual.md §3.1` 建用户后默认加 docker 组即可全控 docker，但等保审计要求"sudo 命令逐条记录 + 不能 root shell"。改为 NOPASSWD 列白名单：
+`installation-manual.md §3.1` 建用户后默认加 docker 组就能全控 docker，但等保审计要求"sudo 命令逐条记录 + 不能 root shell"。改为 NOPASSWD 列白名单：
 
 ```bash
 # /etc/sudoers.d/ems-ops
@@ -90,7 +90,7 @@ sudo sshd -t                      # 校验配置
 sudo systemctl reload sshd
 ```
 
-> ⚠️ 改之前**保持当前 SSH 会话别断**，新开一个会话验证密钥能登录后再退出原会话，否则改错锁外面进不来。
+> ⚠️ 改之前**保持当前 SSH 会话别断**，新开一个会话验证密钥能登录后再退出原会话；改错了会被锁在外面。
 
 ### §3.3 fail2ban（可选）
 
@@ -152,7 +152,7 @@ check /opt/factory-ems-backups    ems:ems  700
 exit $fail
 ```
 
-测评前在每台服务器跑一次，结果存档作为加固证据。
+测评前每台服务器跑一次，结果存档备查。
 
 ---
 
@@ -225,8 +225,8 @@ sudo systemctl enable --now dnf-automatic.timer
 
 **EMS 容器侧**：
 
-- `factory-ems` / `nginx` 等镜像由 CI 构建发布；客户侧 `docker compose pull && docker compose up -d` 即可滚动升级。
-- `postgres:15` / `influxdb:2.7` 基础镜像建议在 `docker-compose.yml` 钉死 minor 版本（如 `15.6`），由实施侧定期手动验证升级，不开自动 latest 拉取（避免不兼容变更）。
+- `factory-ems` / `nginx` 等镜像由 CI 构建发布；客户侧 `docker compose pull && docker compose up -d` 滚动升级。
+- `postgres:15` / `influxdb:2.7` 基础镜像在 `docker-compose.yml` 钉死 minor 版本（如 `15.6`），由实施侧定期手动验证升级，不开自动 latest 拉取（避免不兼容变更）。
 
 ---
 
@@ -244,7 +244,7 @@ sudo ufw enable
 sudo ufw status verbose
 ```
 
-> ⚠️ **绝不直接暴露 5432 / 8086 / 8080**：PostgreSQL / InfluxDB / Spring Boot 端口仅在 docker 网络互通，不应在主机层 `-p 5432:5432`。检查 `docker-compose.yml` 中 `ports:` 段，仅 `nginx` 容器需要 `:80` 和 `:443`。
+> ⚠️ **不要直接暴露 5432 / 8086 / 8080**：PostgreSQL / InfluxDB / Spring Boot 端口只在 docker 网络互通，不要在主机层 `-p 5432:5432`。检查 `docker-compose.yml` 中 `ports:` 段，只有 `nginx` 容器需要 `:80` 和 `:443`。
 
 ---
 
@@ -288,7 +288,7 @@ trivy image --severity HIGH,CRITICAL factory-ems:1.0.0-ga
 docker scout cves factory-ems:1.0.0-ga
 ```
 
-CRITICAL 漏洞必须在交付前修复或文档说明缓解措施。
+CRITICAL 漏洞交付前必须修复，或在文档里写清缓解措施。
 
 ---
 
@@ -336,18 +336,18 @@ chmod +x scripts/audit-hardening.sh
 sudo bash scripts/audit-hardening.sh > hardening-report-$(date +%F).txt
 ```
 
-输出存档作为加固证据。
+输出存档备查。
 
 ---
 
 ## §10 已知妥协与例外
 
-某些加固项与 EMS 功能冲突，需要在合规报告里写"例外说明"：
+部分加固项与 EMS 功能冲突，需在合规报告里写"例外说明"：
 
-- **容器 read_only + InfluxDB**：InfluxDB 需要写 `/var/lib/influxdb2`（数据卷）和 `/tmp`，已通过 `volumes` + `tmpfs` 处理；如客户测评工具误判，提供 `docker inspect` 输出说明。
-- **postgres 容器需 SETUID/SETGID capability**：PG 启动时切换到 `postgres` 用户必需，无法 cap_drop 所有。
-- **OPC UA `.pfx` 文件 0600**：当前由 `FilesystemSecretResolver` 读，权限放在 0600 已是最严；不能进一步放到 0400，因为更新证书时需要写。
-- **EMS 业务用户密码哈希存 PostgreSQL**：bcrypt-12 已是行业标准，不再加 KMS 包封；如客户要求可对接 Vault Transit（未在首版规划，定制对接）。
+- **容器 read_only + InfluxDB**：InfluxDB 要写 `/var/lib/influxdb2`（数据卷）和 `/tmp`，已用 `volumes` + `tmpfs` 处理；如客户测评工具误判，提供 `docker inspect` 输出说明。
+- **postgres 容器需 SETUID/SETGID capability**：PG 启动时切换到 `postgres` 用户用得上，没法 cap_drop 全部。
+- **OPC UA `.pfx` 文件 0600**：当前由 `FilesystemSecretResolver` 读，0600 已是最严；不能再收紧到 0400，因为更新证书要写。
+- **EMS 业务用户密码哈希存 PostgreSQL**：bcrypt-12 是行业常用强度，不再加 KMS 包封；客户要求时可对接 Vault Transit（首版未规划，按定制处理）。
 
 ---
 

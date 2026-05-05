@@ -1388,7 +1388,7 @@ export const NAV_LABEL = {
   dashboard: '综合看板',
   collector: '数据采集',
   floorplan: '设备分布图',
-  alarms: '告警',
+  alarms: '报警',
   meters: '表计',
   cost: '成本核算',
   bills: '账单',
@@ -1432,7 +1432,7 @@ import { StatusTag } from './StatusTag';
 describe('StatusTag', () => {
   it.each([
     ['success', '在线'],
-    ['warning', '告警'],
+    ['warning', '报警'],
     ['error', '严重'],
     ['info', '已确认'],
     ['default', '离线'],
@@ -1512,8 +1512,8 @@ import { PageHeader } from './PageHeader';
 
 describe('PageHeader', () => {
   it('shows title and optional extra', () => {
-    render(<PageHeader title="告警历史" extra={<button>导出</button>} />);
-    expect(screen.getByText('告警历史')).toBeInTheDocument();
+    render(<PageHeader title="报警历史" extra={<button>导出</button>} />);
+    expect(screen.getByText('报警历史')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '导出' })).toBeInTheDocument();
   });
 
@@ -1861,18 +1861,18 @@ git commit -m "feat(dashboard): document title and Chinese chart/panel labels"
 
 | 文件 | 标题 |
 |---|---|
-| `history.tsx` | 告警历史 |
-| `rules.tsx` | 告警规则 |
-| `health.tsx` | 告警健康 |
-| `webhook.tsx` | 告警通知配置 |
+| `history.tsx` | 报警历史 |
+| `rules.tsx` | 报警规则 |
+| `health.tsx` | 报警健康 |
+| `webhook.tsx` | 报警通知配置 |
 
 ```tsx
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
 // 顶部：
-useDocumentTitle('告警 - 历史');
+useDocumentTitle('报警 - 历史');
 // JSX 顶部：
-<PageHeader title="告警历史" extra={<Button onClick={refresh}>刷新</Button>} />
+<PageHeader title="报警历史" extra={<Button onClick={refresh}>刷新</Button>} />
 ```
 
 - [x] **Step 2：history.tsx 状态列改 StatusTag**
@@ -1921,7 +1921,7 @@ describe('alarms/history', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    expect(screen.getByText('告警历史')).toBeInTheDocument();
+    expect(screen.getByText('报警历史')).toBeInTheDocument();
   });
 });
 ```

@@ -7,6 +7,7 @@ import { costApi, type CostLineDTO, type EnergyTypeCode, type RunStatus } from '
 import { orgTreeApi, type OrgNodeDTO } from '@/api/orgtree';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_COST_RUN_DETAIL } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
 
 const BATCH_STATE: Record<RunStatus, { tone: StatusTone; label: string }> = {
@@ -71,7 +72,7 @@ export default function CostRunDetailPage() {
 
   return (
     <>
-      <PageHeader title="批次详情" />
+      <PageHeader title="批次详情" helpContent={HELP_COST_RUN_DETAIL} />
       <Card title={`分摊批次 #${runId}`}>
         {run && (
           <Descriptions size="small" column={3} bordered style={{ marginBottom: 16 }}>

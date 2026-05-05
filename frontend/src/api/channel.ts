@@ -29,4 +29,14 @@ export const channelApi = {
     apiClient.put<ChannelDTO>(`/channel/${id}`, body).then((r) => r.data),
   delete: (id: number) => apiClient.delete(`/channel/${id}`).then((r) => r.data),
   test: (id: number) => apiClient.post<TestResult>(`/channel/${id}/test`).then((r) => r.data),
+  parseCsv: (channelsFile: File, pointsFile: File) => {
+    const fd = new FormData();
+    fd.append('channels', channelsFile);
+    fd.append('points', pointsFile);
+    return apiClient
+      .post<ChannelDTO[]>('/channel/parse-csv', fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data as unknown as ChannelDTO[]);
+  },
 };

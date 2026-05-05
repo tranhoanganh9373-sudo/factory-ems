@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 告警模块业务 metrics（spec §8.3）。
+ * 报警模块业务 metrics（spec §8.3）。
  *
  * <p>5 个指标：
  * <ul>
@@ -63,7 +63,7 @@ public class AlarmMetrics {
     }
 
     /**
-     * 同步 ACTIVE+ACKED 告警数（按 type 分）。
+     * 同步 ACTIVE+ACKED 报警数（按 type 分）。
      * <p>调用方负责传入正确的 count（来自 repo 计数）。未知 type 归一化到 {@code other}。
      */
     public void setActive(String type, long count) {
@@ -75,7 +75,7 @@ public class AlarmMetrics {
         }).set(count);
     }
 
-    /** 累计触发告警数。 */
+    /** 累计触发报警数。 */
     public void incrementCreated(String type) {
         Counter.builder("ems.alarm.created.total")
                 .description("Total alarms created")
@@ -84,7 +84,7 @@ public class AlarmMetrics {
                 .increment();
     }
 
-    /** 累计恢复告警数（auto / manual）。 */
+    /** 累计恢复报警数（auto / manual）。 */
     public void incrementResolved(String reason) {
         String norm = KNOWN_REASONS.contains(reason) ? reason : "other";
         Counter.builder("ems.alarm.resolved.total")

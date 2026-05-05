@@ -2,6 +2,7 @@ package com.ems.collector.diagnostics;
 
 import com.ems.collector.runtime.ChannelRuntimeState;
 import com.ems.collector.transport.TestResult;
+import com.ems.collector.transport.TransportException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,8 +45,14 @@ public class ChannelDiagnosticsController {
     }
 
     @PostMapping("/{id}/reconnect")
-    public void reconnect(@PathVariable Long id) {
-        svc.reconnect(id);
+    public TestResult reconnect(@PathVariable Long id) {
+        long t0 = System.currentTimeMillis();
+        try {
+            svc.reconnect(id);
+            return TestResult.ok(System.currentTimeMillis() - t0);
+        } catch (TransportException e) {
+            return TestResult.fail(e.getMessage());
+        }
     }
 
     @GetMapping("/{id}/recent-samples")

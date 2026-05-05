@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 /**
- * 告警完整生命周期集成测试（Testcontainers + PostgreSQL）。
+ * 报警完整生命周期集成测试（Testcontainers + PostgreSQL）。
  *
  * <p>本地 macOS Docker Desktop + docker-java 兼容问题（plan §7.2 已记录）会导致
  * Testcontainers 找不到合法的 Docker 环境。FloorplanServiceIT 同样在本机被 skip。

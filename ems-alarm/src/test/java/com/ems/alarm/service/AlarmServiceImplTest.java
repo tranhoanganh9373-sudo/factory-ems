@@ -12,7 +12,7 @@ import com.ems.alarm.repository.AlarmRepository;
 import org.springframework.data.jpa.domain.Specification;
 import com.ems.alarm.service.impl.AlarmServiceImpl;
 import com.ems.collector.channel.ChannelRepository;
-import com.ems.collector.service.CollectorService;
+import com.ems.collector.sink.DiagnosticRingBuffer;
 import com.ems.core.dto.PageDTO;
 import com.ems.meter.entity.Meter;
 import com.ems.meter.repository.MeterRepository;
@@ -38,11 +38,11 @@ class AlarmServiceImplTest {
     private final AlarmStateMachine stateMachine = mock(AlarmStateMachine.class);
     private final MeterRepository meterRepo = mock(MeterRepository.class);
     private final ChannelRepository channelRepo = mock(ChannelRepository.class);
-    private final CollectorService collectorService = mock(CollectorService.class);
+    private final DiagnosticRingBuffer ring = new DiagnosticRingBuffer();
     private final ThresholdResolver thresholds = mock(ThresholdResolver.class);
 
     private final AlarmServiceImpl service = new AlarmServiceImpl(
-            alarmRepo, stateMachine, meterRepo, channelRepo, collectorService, thresholds,
+            alarmRepo, stateMachine, meterRepo, channelRepo, ring, thresholds,
             AlarmMetrics.NOOP);
 
     // ── getById ──────────────────────────────────────────────────────────────
@@ -179,6 +179,97 @@ class AlarmServiceImplTest {
         assertThat(result.total()).isEqualTo(0L);
         assertThat(result.page()).isEqualTo(2);
         assertThat(result.size()).isEqualTo(10);
+    }
+
+    // ── healthSummary ─────────────────────────────────────────────────────────
+
+    @Test
+    void healthSummary_onlyMetersWithRecentGoodSampleCountAsOnline() {
+        // 3 meters: m1 有近期 GOOD 样本，m2 仅有 BAD 样本，m3 没绑通道。
+        // 期望：online=1（仅 m1），offline=2（m2 + m3）。
+        Meter m1 = newMeter(1L, "M1", "n1");
+        m1.setChannelId(10L);
+        m1.setChannelPointKey("aaa");
+        Meter m2 = newMeter(2L, "M2", "n2");
+        m2.setChannelId(10L);
+        m2.setChannelPointKey("bbb");
+        Meter m3 = newMeter(3L, "M3", "n3");  // 未绑通道
+
+        when(meterRepo.findAll()).thenReturn(java.util.List.of(m1, m2, m3));
+        when(thresholds.resolve(anyLong())).thenReturn(
+            new ThresholdResolver.Resolved(60, 3, false));
+        when(alarmRepo.countByStatus(any(AlarmStatus.class))).thenReturn(0L);
+        when(alarmRepo.findAll(any(Specification.class), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(java.util.List.of()));
+
+        ring.record(new com.ems.collector.transport.Sample(
+            10L, "aaa", java.time.Instant.now(),
+            42.0, com.ems.collector.transport.Quality.GOOD, java.util.Map.of()));
+        ring.record(new com.ems.collector.transport.Sample(
+            10L, "bbb", java.time.Instant.now(),
+            null, com.ems.collector.transport.Quality.BAD, java.util.Map.of()));
+
+        var summary = service.healthSummary();
+
+        assertThat(summary.onlineCount()).isEqualTo(1L);
+        assertThat(summary.offlineCount()).isEqualTo(2L);
+        assertThat(summary.maintenanceCount()).isZero();
+    }
+
+    @Test
+    void healthSummary_staleGoodSampleCountsAsOffline() {
+        // 单个 meter，最近一次 GOOD 样本超出 freshness 窗口 → 离线。
+        Meter m = newMeter(1L, "M", "n");
+        m.setChannelId(10L);
+        m.setChannelPointKey("k");
+        when(meterRepo.findAll()).thenReturn(java.util.List.of(m));
+        when(thresholds.resolve(anyLong())).thenReturn(
+            new ThresholdResolver.Resolved(60, 3, false));
+        when(alarmRepo.countByStatus(any(AlarmStatus.class))).thenReturn(0L);
+        when(alarmRepo.findAll(any(Specification.class), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(java.util.List.of()));
+
+        ring.record(new com.ems.collector.transport.Sample(
+            10L, "k",
+            java.time.Instant.now().minus(java.time.Duration.ofMinutes(10)),
+            42.0, com.ems.collector.transport.Quality.GOOD, java.util.Map.of()));
+
+        var summary = service.healthSummary();
+
+        assertThat(summary.onlineCount()).isZero();
+        assertThat(summary.offlineCount()).isEqualTo(1L);
+    }
+
+    @Test
+    void healthSummary_maintenanceMetersExcludedFromOnlineOffline() {
+        // m1 在维护中，即使有近期 GOOD 样本也只计 maintenance、不计 online。
+        Meter m1 = newMeter(1L, "M1", "n1");
+        m1.setChannelId(10L);
+        m1.setChannelPointKey("aaa");
+        Meter m2 = newMeter(2L, "M2", "n2");
+        m2.setChannelId(10L);
+        m2.setChannelPointKey("bbb");
+        when(meterRepo.findAll()).thenReturn(java.util.List.of(m1, m2));
+        when(thresholds.resolve(1L)).thenReturn(
+            new ThresholdResolver.Resolved(60, 3, true));
+        when(thresholds.resolve(2L)).thenReturn(
+            new ThresholdResolver.Resolved(60, 3, false));
+        when(alarmRepo.countByStatus(any(AlarmStatus.class))).thenReturn(0L);
+        when(alarmRepo.findAll(any(Specification.class), any(PageRequest.class)))
+            .thenReturn(new PageImpl<>(java.util.List.of()));
+
+        ring.record(new com.ems.collector.transport.Sample(
+            10L, "aaa", java.time.Instant.now(),
+            42.0, com.ems.collector.transport.Quality.GOOD, java.util.Map.of()));
+        ring.record(new com.ems.collector.transport.Sample(
+            10L, "bbb", java.time.Instant.now(),
+            42.0, com.ems.collector.transport.Quality.GOOD, java.util.Map.of()));
+
+        var summary = service.healthSummary();
+
+        assertThat(summary.maintenanceCount()).isEqualTo(1L);
+        assertThat(summary.onlineCount()).isEqualTo(1L);
+        assertThat(summary.offlineCount()).isZero();
     }
 
     // ── helpers ───────────────────────────────────────────────────────────────

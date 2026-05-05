@@ -4,11 +4,12 @@
   --ems-color-bg-page: #F4F5F7;
   --ems-color-bg-container: #FFFFFF;
   --ems-color-bg-elevated: #FFFFFF;
+  --ems-color-muted: #F4F5F7;
   --ems-color-bg-header: #0E1A2B;
   --ems-color-bg-sider: #FFFFFF;
   --ems-color-text-primary: #16181D;
   --ems-color-text-secondary: #5A6470;
-  --ems-color-text-tertiary: #8A95A0;
+  --ems-color-text-tertiary: #6B7785;
   --ems-color-text-on-header: #FFFFFF;
   --ems-color-border: #E2E5E9;
   --ems-color-border-strong: #C9CED4;
@@ -45,3 +46,23 @@ html, body, #root {
   color: var(--ems-color-text-primary);
   font-family: var(--ems-font-family-sans);
 }
+
+/* Global focus ring — overrides AntD subtle default for shop-floor displays. Theme-agnostic. */
+:focus-visible {
+  outline: 2px solid var(--ems-color-brand-primary);
+  outline-offset: 2px;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+input:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Tabular numerals for data cells, statistics, and numeric inputs — keeps columns of numbers aligned. */
+.ant-table-cell,
+.ant-statistic-content-value,
+.ant-input-number-input,
+.ems-num {
+  font-variant-numeric: tabular-nums;
+}
+

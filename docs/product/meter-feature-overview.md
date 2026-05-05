@@ -1,22 +1,22 @@
 # 仪表与计量（ems-meter）· 功能概览
 
-> 适用版本：v1.1.0+ ｜ 最近更新：2026-05-01
+> 适用版本：v1.1.0+ ｜ 最近更新：2026-05-04
 > 受众：销售 / 客户 / 实施工程师
 
 ---
 
 ## §1 一句话价值
 
-每一块物理仪表（电表 / 水表 / 蒸汽表 / 气表 / 热量表）在系统里有个对应的"计量点"档案。档案里写明它是什么类型、属于哪个组织节点、用什么协议采集、阈值多严格、是否在维护期。所有时序数据都用计量点 ID 关联，所有告警和报表都从这里读元数据。
+每一块物理仪表（电表 / 水表 / 蒸汽表 / 气表 / 热量表）在系统里有一份对应的"计量点"档案。档案里写明它是什么类型、属于哪个组织节点、用什么协议采集、阈值多严格、是否在维护期。所有时序数据用计量点 ID 关联，报警和报表都从这里读元数据。
 
 ---
 
 ## §2 解决什么问题
 
 - **现场仪表数百块，型号品牌混杂，没有统一档案**：维修时找不到接线图，更换时不知道历史读数对应哪个计量口径。
-- **每块仪表的"重要度"不同，统一阈值要么漏报要么误报**：主变压器和照明回路对断线容忍度差几个数量级，需要逐表配置。
+- **每块仪表的"重要度"不同，统一阈值要么漏报要么误报**：主变压器和照明回路对断线的容忍度差几个数量级，需要逐表配置。
 - **计量层级想画成树（总表 → 分表 → 末端表）但没地方存**：手工拉 Excel 表关系，更换设备时改起来一团乱。
-- **维护期间告警泛滥**：年检 / 计划停机时几十块仪表同时离线，告警轰炸盖过了真异常。
+- **维护期间报警泛滥**：年检 / 计划停机时几十块仪表同时离线，报警轰炸盖过了真异常。
 
 ---
 
@@ -24,13 +24,20 @@
 
 - **仪表档案**：每块仪表存编码、名称、能源类型、所属组织节点、采集协议、设备地址、点位映射、单位（kWh / m³ / kg / GJ）、是否启用。
 - **3 种能源类型**（首版）：`ELEC` 电（kWh）、`WATER` 水（m³）、`STEAM` 蒸汽（t）。其他能源类型可定制扩展。
+- **量值类型 `valueKind`**（v1.1.0+）：每块仪表声明它的读数语义，决定 InfluxDB 查询用哪个聚合算子：
+  - `INTERVAL_DELTA`（缺省）：周期增量，每个采集周期就是 1 个轮询窗口的 kWh / m³ 增量；区间合计走 `sum`。
+  - `CUMULATIVE_ENERGY`：累积能量值（电表实抄读数），区间合计走 `last - first`，自动跨抄表归零。
+  - `INSTANT_POWER`：瞬时功率（kW）；区间合计走 `integral`（功率对时间积分），单位转换得到能量。
 - **仪表拓扑（树）**：通过 `MeterTopology` 表把仪表组织成"父表 → 子表"的层级关系，方便做"总分表对账"（总表读数 vs. 子表读数总和的差值看泄漏 / 偷电）。
 - **设备级阈值**：`silence_seconds`（静默超时秒数）和 `consecutive_failures`（连续失败次数）两个阈值可在每块仪表上单独覆盖全局默认。
-- **维护模式**：单台仪表可临时进入维护期，告警自动跳过，操作进审计日志。
-- **InfluxDB 字段映射**：`influxMeasurement` / `influxTagKey` / `influxTagValue` 三个字段定义"这块仪表的时序数据在 InfluxDB 哪里"，使一份代码同时支持多种 measurement 命名约定。
+- **维护模式**：单台仪表可临时进入维护期，报警自动跳过，操作进审计日志。
+- **真实采集状态**（v1.1.0+）：列表页"采集状态"列直接显示 `在线 / 离线 / 维护中 / 未启用`，由 `DiagnosticRingBuffer.lastGoodSampleAt` + 5 分钟新鲜度窗口判定，与"报警健康"卡口径一致；不再仅仅显示 enabled 标志。
+- **批量 CSV 导入**（v1.1.0+）：`/meters` 页支持「批量导入」CSV 文件；表头 `code, name, energyTypeId, orgNodeId`（必填）+ `enabled, channelName, channelPointKey`（可选）。流程：后端 `/parse-csv` 仅校验并返回解析结果（带行号），前端显示预览表格供用户确认，确认后再逐行调 `POST /` 创建——同名仪表自动跳过为「已存在」。整体上传上限 256KB（≈数千行）。仅 ADMIN 可见。
+- **InfluxDB 字段映射**：`influxMeasurement` / `influxTagKey` / `influxTagValue` 三个字段定义"这块仪表的时序数据在 InfluxDB 哪里"，让一份代码同时支持多种 measurement 命名约定。
 - **采集通道关联**：通过 `channelId` 字段绑定到具体采集通道（OPC UA / Modbus / MQTT），配合 ems-collector 工作。
 - **乐观锁防覆盖**：`version` 字段防多人同时改。
 - **能源类型字典**：`/api/v1/energy-types` 提供下拉选项数据。
+- **页面帮助提示**（v1.1.0+）：列表页标题旁的 ⓘ 图标悬停可看完整字段说明、量值类型解读、CSV 表头、删除影响等帮助内容。
 
 ---
 
@@ -38,11 +45,15 @@
 
 ### 场景 A：实施工程师入场 — 把现场仪表清单录入
 
-拿到客户提供的"仪表台账"Excel，逐行录入：每行一块仪表，填编码、名称、安装位置（挂到组织节点）、能源类型、协议（OPC UA / Modbus）、设备地址、点位。录完后把 InfluxDB 字段映射也填上（一般和编码同名）。然后到 `/collector` 看采集状态，一块块仪表开始有数据流入。
+拿到客户提供的"仪表台账"Excel，可选两种录入方式：
+- **逐行录入**（少量仪表）：在 `/meters` 页点「新建测点」，填编码、名称、安装位置（挂到组织节点）、能源类型、量值类型（INTERVAL_DELTA / CUMULATIVE_ENERGY / INSTANT_POWER）、协议绑定。
+- **CSV 批量导入**（数十至数千块）：把 Excel 另存为 CSV，表头按 `code, name, energyTypeId, orgNodeId`（必填）+ `enabled, channelName, channelPointKey`（可选）；点「批量导入」拖入文件即可。后端逐行校验，错误行返回行号方便定位。
+
+录完后到 `/collector` 看通道连接状态，回 `/meters` 看「采集状态」列从「—」变成「在线」就代表数据已经进 InfluxDB。
 
 ### 场景 B：年检 / 计划停机 — 提前开维护模式
 
-某车间 6 月 15 日做年检，预计 8 小时所有仪表都离线。运维提前一天进 `/meters`，把这批仪表挑出来批量开维护模式（带备注"6 月年检"）。年检期间无告警，年检结束关维护模式恢复监测。
+某车间 6 月 15 日做年检，预计 8 小时所有仪表都离线。运维提前一天进 `/meters`，把这批仪表挑出来批量开维护模式（带备注"6 月年检"）。年检期间无报警，年检结束关维护模式恢复监测。
 
 ### 场景 C：能源审计 — 总分表对账
 
@@ -93,10 +104,12 @@ ems-orgtree    每块仪表绑定到一个组织节点
 - **关键端点**：
   - `GET /` — 列表（含筛选：节点、能源类型、启用状态）
   - `GET /{id}` — 单仪表详情
-  - `POST /` / `PUT /{id}` — 新建 / 修改
-  - `DELETE /{id}` — 删除（被采集 / 告警 / 报表引用时拒绝）
+  - `POST /` / `PUT /{id}` — 新建 / 修改（请求体含 `valueKind` 字段，缺省为 `INTERVAL_DELTA`）
+  - `DELETE /{id}` — 删除（被采集 / 报警 / 报表引用时拒绝）
+  - `POST /parse-csv` — 批量导入 CSV，仅 ADMIN（v1.1.0+，详见 §3）
   - `GET /api/v1/meter-topology?parentId=X` — 拉某父表的拓扑子树
   - `PUT /api/v1/meter-topology/{childMeterId}` — 把子表挂到某父表下
+  - `GET /api/v1/alarms/meter-status` — 表计实时在线状态映射，列表页联表渲染（详见 [alarm-feature-overview.md](./alarm-feature-overview.md)）
 
 ---
 
@@ -115,6 +128,8 @@ ems-orgtree    每块仪表绑定到一个组织节点
 | `influx_tag_key` | varchar | tag key（通常是 `meter_code`）|
 | `influx_tag_value` | varchar | tag value（通常 = `code`）|
 | `channel_id` | bigint | 采集通道 ID |
+| `channel_point_key` | varchar | 该仪表在通道上对应的测点 key（v1.1.0+，缺省与 `code` 相同） |
+| `value_kind` | varchar | `INTERVAL_DELTA` / `CUMULATIVE_ENERGY` / `INSTANT_POWER`，决定时序聚合算子（V2.4.0 迁移引入，缺省 INTERVAL_DELTA） |
 | `silence_seconds` | int | 静默超时（秒），覆盖全局默认 |
 | `consecutive_failures` | int | 连续失败次数阈值，覆盖全局默认 |
 | `maintenance_mode` | bool | 是否维护期 |
@@ -144,5 +159,5 @@ ems-orgtree    每块仪表绑定到一个组织节点
 - 组织树：[orgtree-feature-overview.md](./orgtree-feature-overview.md)
 - 平面图：[floorplan-feature-overview.md](./floorplan-feature-overview.md)
 - 采集协议：[collector-protocols-user-guide.md](./collector-protocols-user-guide.md)
-- 告警：[alarm-feature-overview.md](./alarm-feature-overview.md)
+- 报警：[alarm-feature-overview.md](./alarm-feature-overview.md)
 - 平台总览：[product-overview.md](./product-overview.md)

@@ -48,7 +48,7 @@ docker compose ps
 - **用户名**：`admin`
 - **密码**：`admin123!`
 
-进入仪表盘（首页）。试跑环境刚起时**没有任何采集数据**，所有 KPI 显示空状态属于正常——这一步只验证"系统能启动、能登录、能渲染"。
+进入仪表盘（首页）。试跑环境刚起时没有任何采集数据，所有 KPI 显示空状态是正常的，这一步只验证"系统能启动、能登录、能渲染"。
 
 ---
 
@@ -100,7 +100,7 @@ docker compose down -v   # 同时删掉数据卷
 2. 现场施工：[field-installation-sop.md](./field-installation-sop.md)
 3. 看板上线：[dashboard-commissioning-sop.md](./dashboard-commissioning-sop.md)
 4. 5 分钟演示：[dashboard-demo-quickstart.md](./dashboard-demo-quickstart.md)
-5. 告警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
+5. 报警上线：[alarm-commissioning-sop.md](./alarm-commissioning-sop.md)
 6. 账单上线：[billing-commissioning-sop.md](./billing-commissioning-sop.md)
 7. 月报自动化：[report-automation-sop.md](./report-automation-sop.md)
 8. 生产能效：[production-energy-sop.md](./production-energy-sop.md)

@@ -26,6 +26,21 @@ public class RateLimitProperties {
     /** Bucket capacity = burstMultiplier x perMinute. */
     private int burstMultiplier = 2;
 
+    /**
+     * Per-IP limit for the login endpoint, per minute. Stricter than {@link #writePerMinute}
+     * to mitigate slow-rate dictionary / credential-stuffing attacks (OWASP API4:2023).
+     * RealityCheck 2026-05-02: 30 successive logins were accepted with prior config.
+     */
+    private int loginPerMinute = 10;
+
+    /**
+     * URI prefixes treated as login attempts and bucketed against {@link #loginPerMinute}.
+     * Matched BEFORE {@link #exemptPathPrefixes}, so the rest of {@code /api/v1/auth/*}
+     * (refresh, password-change, …) can still be exempt while login is throttled.
+     */
+    private List<String> loginPathPrefixes = new ArrayList<>(List.of(
+            "/api/v1/auth/login"));
+
     /** Path prefixes that bypass rate limiting (case-sensitive prefix match). */
     private List<String> exemptPathPrefixes = new ArrayList<>(List.of(
             "/actuator", "/error", "/login", "/api/v1/auth"));
@@ -60,6 +75,22 @@ public class RateLimitProperties {
 
     public void setBurstMultiplier(int burstMultiplier) {
         this.burstMultiplier = burstMultiplier;
+    }
+
+    public int getLoginPerMinute() {
+        return loginPerMinute;
+    }
+
+    public void setLoginPerMinute(int loginPerMinute) {
+        this.loginPerMinute = loginPerMinute;
+    }
+
+    public List<String> getLoginPathPrefixes() {
+        return loginPathPrefixes;
+    }
+
+    public void setLoginPathPrefixes(List<String> loginPathPrefixes) {
+        this.loginPathPrefixes = loginPathPrefixes;
     }
 
     public List<String> getExemptPathPrefixes() {

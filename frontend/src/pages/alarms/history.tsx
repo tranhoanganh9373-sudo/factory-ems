@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/authStore';
 import dayjs, { type Dayjs } from 'dayjs';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_HISTORY } from '@/components/pageHelp';
 import { StatusTag } from '@/components/StatusTag';
 
 interface FilterValues {
@@ -28,7 +29,7 @@ interface FilterValues {
 }
 
 export default function AlarmHistoryPage() {
-  useDocumentTitle('告警 - 历史');
+  useDocumentTitle('报警 - 历史');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { hasRole } = useAuthStore();
@@ -105,7 +106,7 @@ export default function AlarmHistoryPage() {
 
   const statusTag = (s: AlarmStatus) => {
     const tone = s === 'ACTIVE' ? 'error' : s === 'ACKED' ? 'warning' : 'success';
-    const label = s === 'ACTIVE' ? '告警中' : s === 'ACKED' ? '已确认' : '已恢复';
+    const label = s === 'ACTIVE' ? '报警中' : s === 'ACKED' ? '已确认' : '已恢复';
     return <StatusTag tone={tone}>{label}</StatusTag>;
   };
 
@@ -131,7 +132,7 @@ export default function AlarmHistoryPage() {
 
   return (
     <div>
-      <PageHeader title="告警历史" />
+      <PageHeader title="报警历史" helpContent={HELP_ALARM_HISTORY} />
 
       <Card style={{ marginBottom: 16 }}>
         <Form<FilterValues>
@@ -147,7 +148,7 @@ export default function AlarmHistoryPage() {
               allowClear
               style={{ width: 140 }}
               options={[
-                { value: 'ACTIVE', label: '告警中' },
+                { value: 'ACTIVE', label: '报警中' },
                 { value: 'ACKED', label: '已确认' },
                 { value: 'RESOLVED', label: '已恢复' },
               ]}
@@ -237,7 +238,7 @@ export default function AlarmHistoryPage() {
                   详情
                 </Button>
                 {isAdmin && a.status === 'ACTIVE' && (
-                  <Popconfirm title="确认该告警？" onConfirm={() => ack.mutate(a.id)}>
+                  <Popconfirm title="确认该报警？" onConfirm={() => ack.mutate(a.id)}>
                     <Button
                       size="small"
                       type="primary"
@@ -261,7 +262,7 @@ export default function AlarmHistoryPage() {
       />
 
       <Modal
-        title={detail ? `告警详情 #${detail.id}` : '告警详情'}
+        title={detail ? `报警详情 #${detail.id}` : '报警详情'}
         open={openId !== null}
         onCancel={closeDetail}
         footer={null}

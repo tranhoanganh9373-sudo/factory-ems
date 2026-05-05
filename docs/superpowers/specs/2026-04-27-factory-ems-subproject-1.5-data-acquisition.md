@@ -234,7 +234,7 @@ ems:
 |---|---|
 | A | TLS 隧道封装（stunnel 或 spring-boot 自带，给 Modbus TCP 套 TLS） |
 | B | 连接池 + 限流（同一 IP 多 device 共享 TCP 连接） |
-| C | 远程 collector heartbeat → 中心 alarm（接 Plan 1.3 的告警表） |
+| C | 远程 collector heartbeat → 中心 alarm（接 Plan 1.3 的报警表） |
 | D | 部署文档：onsite checklist + 网络拓扑示例 + 调试工具 |
 | E | 真实仪表对接 demo（用 1 块物理电表，记录从拆箱到上线全过程） |
 | F | tag `v1.5.0` 子项目 1.5 正式发布 |

@@ -17,6 +17,6 @@ describe('alarms/history', () => {
         </AntdApp>
       </QueryClientProvider>
     );
-    expect(screen.getByText('告警历史')).toBeInTheDocument();
+    expect(screen.getByText('报警历史')).toBeInTheDocument();
   });
 });

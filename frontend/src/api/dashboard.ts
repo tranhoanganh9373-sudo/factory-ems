@@ -62,6 +62,37 @@ export interface TopNItemDTO {
   total: number;
 }
 
+export interface EnergyBreakdownItem {
+  meterId: number | null;
+  code: string | null;
+  name: string;
+  value: number;
+  share: number | null;
+  isResidual: boolean;
+}
+export interface EnergyBreakdownDTO {
+  energyType: string;
+  unit: string;
+  rootTotal: number;
+  items: EnergyBreakdownItem[];
+}
+
+export type TopologyConsistencySeverity = 'OK' | 'INFO' | 'WARN' | 'WARN_NEGATIVE' | 'ALARM';
+
+export interface TopologyConsistencyDTO {
+  parentMeterId: number;
+  parentCode: string;
+  parentName: string;
+  energyType: string;
+  unit: string;
+  parentReading: number;
+  childrenSum: number;
+  childrenCount: number;
+  residual: number;
+  residualRatio: number | null;
+  severity: TopologyConsistencySeverity;
+}
+
 export interface TariffDistributionDTO {
   unit: string;
   total: number;
@@ -83,6 +114,24 @@ export interface EnergyIntensityDTO {
 export interface SankeyDTO {
   nodes: Array<{ id: string; name: string; energyType: string; unit: string }>;
   links: Array<{ source: string; target: string; value: number }>;
+}
+
+export interface EnergySourceMixDTO {
+  energySource: 'GRID' | 'SOLAR' | 'WIND' | 'STORAGE';
+  unit: string;
+  value: number;
+  share: number | null;
+}
+
+export interface PvCurveBucket {
+  ts: string;
+  generation: number;
+  load: number;
+}
+
+export interface PvCurveDTO {
+  unit: string;
+  buckets: PvCurveBucket[];
 }
 
 export interface FloorplanLivePoint {
@@ -150,10 +199,24 @@ export const dashboardApi = {
       })
       .then((r) => r.data as unknown as MeterDetailDTO),
 
-  getTopN: (q: DashboardQuery, limit = 10) =>
+  getTopN: (q: DashboardQuery, limit = 10, scope: 'LEAVES' | 'ROOTS' | 'ALL' = 'LEAVES') =>
     apiClient
-      .get<TopNItemDTO[]>('/dashboard/top-n', { params: { ...toParams(q), limit } })
+      .get<TopNItemDTO[]>('/dashboard/top-n', {
+        params: { ...toParams(q), limit, scope },
+      })
       .then((r) => r.data as unknown as TopNItemDTO[]),
+
+  getEnergyBreakdown: (q: DashboardQuery) =>
+    apiClient
+      .get<EnergyBreakdownDTO>('/dashboard/energy-breakdown', { params: toParams(q) })
+      .then((r) => r.data as unknown as EnergyBreakdownDTO),
+
+  getTopologyConsistency: (q: Pick<DashboardQuery, 'range' | 'from' | 'to' | 'orgNodeId'>) =>
+    apiClient
+      .get<TopologyConsistencyDTO[]>('/dashboard/topology-consistency', {
+        params: { range: q.range, from: q.from, to: q.to, orgNodeId: q.orgNodeId },
+      })
+      .then((r) => r.data as unknown as TopologyConsistencyDTO[]),
 
   getTariffDistribution: (q: Omit<DashboardQuery, 'energyType'>) =>
     apiClient
@@ -180,4 +243,18 @@ export const dashboardApi = {
         params: toParams(q as DashboardQuery),
       })
       .then((r) => r.data as unknown as FloorplanLiveDTO),
+
+  getEnergySourceMix: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<EnergySourceMixDTO[]>('/dashboard/energy-source-mix', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as EnergySourceMixDTO[]),
+
+  getPvCurve: (q: Omit<DashboardQuery, 'energyType'>) =>
+    apiClient
+      .get<PvCurveDTO>('/dashboard/pv-curve', {
+        params: toParams(q as DashboardQuery),
+      })
+      .then((r) => r.data as unknown as PvCurveDTO),
 };

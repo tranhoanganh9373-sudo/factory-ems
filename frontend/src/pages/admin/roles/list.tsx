@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { roleApi, RoleDTO } from '@/api/role';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ROLES } from '@/components/pageHelp';
 
 export default function RoleListPage() {
   useDocumentTitle('系统管理 - 角色');
   const { data = [], isLoading } = useQuery({ queryKey: ['roles'], queryFn: roleApi.list });
   return (
     <>
-      <PageHeader title="角色管理" />
+      <PageHeader title="角色管理" helpContent={HELP_ROLES} />
       <Card>
         <Table<RoleDTO>
           rowKey="id"

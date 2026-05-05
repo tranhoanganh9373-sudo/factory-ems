@@ -235,7 +235,7 @@ class DashboardIT {
     @Test @Order(5)
     void topN_returnsAllMeters_sortedByTotal() {
         var q = new RangeQuery(RangeType.CUSTOM, T0, T0.plus(2, ChronoUnit.HOURS), null, null);
-        List<TopNItemDTO> out = service.topN(q, 10);
+        List<TopNItemDTO> out = service.topN(q, 10, "ALL");
         assertThat(out).hasSize(3);
         // M2 (=2400) > M1 (=1200) > M3 (=600)
         assertThat(out.get(0).meterId()).isEqualTo(M2);
@@ -247,7 +247,7 @@ class DashboardIT {
     @Test @Order(6)
     void topN_withEnergyTypeFilter_excludesOthers() {
         var q = new RangeQuery(RangeType.CUSTOM, T0, T0.plus(2, ChronoUnit.HOURS), null, "ELEC");
-        List<TopNItemDTO> out = service.topN(q, 10);
+        List<TopNItemDTO> out = service.topN(q, 10, "ALL");
         assertThat(out).hasSize(2);
         assertThat(out.stream().map(TopNItemDTO::energyTypeCode))
             .containsOnly("ELEC");
@@ -261,7 +261,7 @@ class DashboardIT {
         permissions.set(2L, Set.of(LINE_B));
         try {
             var q = new RangeQuery(RangeType.CUSTOM, T0, T0.plus(2, ChronoUnit.HOURS), null, null);
-            List<TopNItemDTO> out = service.topN(q, 10);
+            List<TopNItemDTO> out = service.topN(q, 10, "ALL");
             assertThat(out).hasSize(1);
             assertThat(out.get(0).meterId()).isEqualTo(M2);
         } finally {

@@ -75,7 +75,7 @@ class ModbusRtuAdapterTransportTest {
     }
 
     @Test
-    @DisplayName("reopen success → recordSuccess and poll proceeds in same cycle")
+    @DisplayName("reopen success → poll proceeds in same cycle (success counted via sample sink, not transport)")
     void pollAll_reopenSucceeds_resetsAttemptCounterAndProceedsToPoll() throws Exception {
         ChannelStateRegistry registry = mock(ChannelStateRegistry.class);
 
@@ -116,7 +116,9 @@ class ModbusRtuAdapterTransportTest {
             assertThat(elapsedMs)
                     .as("first GOOD sample must arrive within first poll cycle (proves same-cycle polling)")
                     .isLessThan(longInterval.toMillis());
-            verify(registry, atLeastOnce()).recordSuccess(eq(8L), anyLong());
+            // 注意：recordSuccess 不再由 transport 在重连成功时调用——而是 sample sink 收到 GOOD
+            // sample 后由 ChannelService 的 cycle 聚合器上报。这里 sink 是 ConcurrentLinkedQueue，
+            // 没有走聚合器路径，所以 registry 上不期望直接出现 recordSuccess 调用。
         } finally {
             t.stop();
         }
@@ -142,8 +144,11 @@ class ModbusRtuAdapterTransportTest {
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(9L, fastPollCfg(), samples::add);
-            Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> created.get() >= 2);
-            verify(registry, atLeastOnce()).recordFailure(eq(9L), anyString());
+            // created.get() >= 2 fires the moment factory.get() returns, BEFORE
+            // failing.open() throws and recordFailure is invoked. Use the verify
+            // itself as the await condition to remove the race.
+            Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                    verify(registry, atLeastOnce()).recordFailure(eq(9L), anyString()));
             verify(failing, never()).readHolding(anyInt(), anyInt(), anyInt());
         } finally {
             t.stop();

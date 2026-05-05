@@ -17,6 +17,7 @@ import {
 } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_TARIFF } from '@/components/pageHelp';
 import { translate, TARIFF_PERIOD_LABEL } from '@/utils/i18n-dict';
 import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -192,7 +193,7 @@ export default function TariffPage() {
 
   return (
     <>
-      <PageHeader title="电价方案" />
+      <PageHeader title="电价方案" helpContent={HELP_TARIFF} />
       <Card
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>

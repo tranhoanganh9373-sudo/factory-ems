@@ -7,7 +7,9 @@ import { billsApi, type BillPeriodDTO, type BillPeriodStatus } from '@/api/bills
 import { usePermissions } from '@/hooks/usePermissions';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_BILL_PERIODS } from '@/components/pageHelp';
 import { StatusTag, type StatusTone } from '@/components/StatusTag';
+import { showTotal } from '@/utils/format';
 
 const PERIOD_STATUS: Record<BillPeriodStatus, { tone: StatusTone; label: string }> = {
   OPEN: { tone: 'info', label: '开放' },
@@ -126,7 +128,7 @@ export default function BillPeriodsPage() {
 
   return (
     <>
-      <PageHeader title="账期管理" />
+      <PageHeader title="账期管理" helpContent={HELP_BILL_PERIODS} />
       <Card
         extra={
           <Button type="primary" onClick={() => setCreateOpen(true)}>
@@ -138,7 +140,7 @@ export default function BillPeriodsPage() {
           rowKey="id"
           loading={isLoading}
           dataSource={periods}
-          pagination={{ pageSize: 50 }}
+          pagination={{ pageSize: 50, showTotal }}
           columns={[
             { title: 'ID', dataIndex: 'id', width: 80 },
             { title: '账期', dataIndex: 'yearMonth', width: 100 },

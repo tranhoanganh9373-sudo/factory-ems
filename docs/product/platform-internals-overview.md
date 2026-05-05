@@ -7,15 +7,15 @@
 
 ## §1 一句话价值
 
-**ems-core** 是所有业务模块的"公共件库"——统一响应包装、分页 DTO、异常处理、日志 trace、通用工具。**ems-timeseries** 是所有时序数据的"读取统一接口 + 预聚合层"——InfluxDB 客户端封装 + 5min / 1h / 1d 三级 rollup 加速查询。两模块本身没有 API，但是 16 个业务模块共同依赖的基础设施。
+ems-core 是所有业务模块的公共件库：统一响应包装、分页 DTO、异常处理、日志 trace、通用工具。ems-timeseries 是所有时序数据的读取统一接口加预聚合层：InfluxDB 客户端封装、5min / 1h / 1d 三级 rollup 加速查询。两个模块本身没有 API，但是 16 个业务模块共同依赖的基础设施。
 
 ---
 
 ## §2 解决什么问题
 
-- **业务模块各写一套响应格式**：A 模块返回 `{code, msg, data}`、B 模块返回 `{success, error, payload}`——前端要适配多套，维护痛苦。统一响应 + 异常处理可消除这类碎片化。
+- **业务模块各写一套响应格式**：A 模块返回 `{code, msg, data}`、B 模块返回 `{success, error, payload}`，前端要适配多套，维护痛苦。统一响应加异常处理可以消除这类碎片化。
 - **InfluxDB 直查 1 年明细数据慢得离谱**：1 块表 96 时段 × 365 天 = 35040 行；20 块表就是 70 万行；月度报表如果每次查原始数据，秒级超时。需要按时间窗预聚合（5min / 1h / 1d）。
-- **每个业务模块各自写 InfluxDB 查询**：仪表盘要查、报表要查、告警要查、成本要查——重复代码 + 易引入错误的 Flux 语法。
+- **每个业务模块各自写 InfluxDB 查询**：仪表盘要查、报表要查、报警要查、成本要查，重复代码且容易引入错误的 Flux 语法。
 - **时序数据的语义要统一**：什么是"能耗"（累计差值）、什么是"功率"（瞬时值）、不同单位之间不能搞混。一处建模，多处复用。
 
 ---
@@ -164,14 +164,14 @@ ems-collector ──写─→ InfluxDB ←─读── ems-timeseries
 ems-core ←──── 所有业务模块（编译期依赖）
 ```
 
-**ems-core**：横切公共件，被 16 个业务模块依赖，自身无业务。
-**ems-timeseries**：时序数据读取层，被 6+ 业务模块依赖（凡是要查能耗 / 功率的都走这里）。
+ems-core：横切公共件，被 16 个业务模块依赖，自身无业务。
+ems-timeseries：时序数据读取层，被 6+ 业务模块依赖（凡是要查能耗 / 功率的都走这里）。
 
 ---
 
 ## §8 接口入口
 
-ems-core 和 ems-timeseries 本身**不暴露 HTTP 接口**——它们是供其他模块编程引用的"内部库"。
+ems-core 和 ems-timeseries 本身不暴露 HTTP 接口，它们是供其他模块编程引用的内部库。
 
 **配置项**（在 `ems-app/application.yml` 中）：
 
@@ -250,6 +250,6 @@ ems-core 和 ems-timeseries 本身**不暴露 HTTP 接口**——它们是供其
 - 采集协议（写入 Influx 的源头）：[collector-protocols-user-guide.md](./collector-protocols-user-guide.md)
 - 仪表盘（消费方）：[dashboard-feature-overview.md](./dashboard-feature-overview.md)
 - 报表（消费方）：[report-feature-overview.md](./report-feature-overview.md)
-- 告警（消费方）：[alarm-feature-overview.md](./alarm-feature-overview.md)
+- 报警（消费方）：[alarm-feature-overview.md](./alarm-feature-overview.md)
 - 平台总览：[product-overview.md](./product-overview.md)
 - 可观测性（含 Influx 监控）：[observability-feature-overview.md](./observability-feature-overview.md)

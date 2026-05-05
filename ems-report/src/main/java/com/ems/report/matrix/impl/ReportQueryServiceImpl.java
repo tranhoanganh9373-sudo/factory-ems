@@ -91,7 +91,7 @@ public class ReportQueryServiceImpl implements ReportQueryService {
 
         // 拉时序点
         List<MeterRef> refs = visible.stream()
-                .map(m -> new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode())).toList();
+                .map(m -> new MeterRef(m.meterId(), m.influxTagValue(), m.energyTypeCode(), m.valueKind())).toList();
         List<MeterPoint> points = tsq.queryByMeter(refs, new TimeRange(req.from(), req.to()), req.granularity());
 
         // 聚合 (rowKey, colKey) → sum

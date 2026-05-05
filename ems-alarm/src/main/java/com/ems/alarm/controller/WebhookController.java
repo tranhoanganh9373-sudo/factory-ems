@@ -18,10 +18,13 @@ import com.ems.auth.security.AuthUser;
 import com.ems.core.dto.PageDTO;
 import com.ems.core.dto.Result;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -31,6 +34,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @PreAuthorize("hasRole('ADMIN')")
+@Validated
 public class WebhookController {
 
     private final WebhookConfigRepository cfgRepo;
@@ -85,8 +89,9 @@ public class WebhookController {
     }
 
     @GetMapping("/webhook-deliveries")
-    public Result<PageDTO<DeliveryLogDTO>> deliveries(@RequestParam(defaultValue = "1") int page,
-                                                       @RequestParam(defaultValue = "20") int size) {
+    public Result<PageDTO<DeliveryLogDTO>> deliveries(
+            @RequestParam(defaultValue = "1") @Min(1) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(200) int size) {
         Page<WebhookDeliveryLog> p = deliveryRepo.findAllByOrderByCreatedAtDesc(
                 PageRequest.of(page - 1, size));
         List<DeliveryLogDTO> items = p.getContent().stream().map(this::toDeliveryDto).toList();

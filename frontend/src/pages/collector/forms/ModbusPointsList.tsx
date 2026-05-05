@@ -8,13 +8,13 @@ interface Props {
 
 // 与后端 com.ems.collector.config.DataType 严格一致
 const DATA_TYPES = [
-  { value: 'UINT16', label: 'U16' },
-  { value: 'INT16', label: 'I16' },
-  { value: 'UINT32', label: 'U32' },
-  { value: 'INT32', label: 'I32' },
-  { value: 'FLOAT32', label: 'F32' },
-  { value: 'FLOAT64', label: 'F64' },
-  { value: 'BIT', label: 'BIT' },
+  { value: 'UINT16', label: 'UInt16' },
+  { value: 'INT16', label: 'Int16' },
+  { value: 'UINT32', label: 'UInt32' },
+  { value: 'INT32', label: 'Int32' },
+  { value: 'FLOAT32', label: 'Float32' },
+  { value: 'FLOAT64', label: 'Float64' },
+  { value: 'BIT', label: 'Bit' },
 ];
 
 // 与 ModbusTcpAdapterTransport / ModbusRtuAdapterTransport 解析的字符串一致
@@ -39,7 +39,7 @@ export function ModbusPointsList({ fields, ops }: Props) {
       <div style={{ marginBottom: 8, fontWeight: 500 }}>测点列表</div>
       {fields.map((f) => (
         <Space key={f.key} align="baseline" wrap style={{ marginBottom: 8 }}>
-          <Form.Item name={[f.name, 'key']} label="Key" rules={[{ required: true }]}>
+          <Form.Item name={[f.name, 'key']} label="标签名" rules={[{ required: true }]}>
             <Input style={{ width: 100 }} />
           </Form.Item>
           <Form.Item

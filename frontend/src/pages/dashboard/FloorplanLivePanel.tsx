@@ -97,7 +97,15 @@ export default function FloorplanLivePanel() {
           options={list.map((f) => ({ label: f.name, value: f.id }))}
         />
       </Space>
-      <div ref={containerRef} style={{ width: '100%', minHeight: 200, background: '#fafafa' }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          minHeight: 200,
+          background: 'var(--ems-color-muted, #fafafa)',
+          borderRadius: 4,
+        }}
+      >
         {img && data && (
           <Stage width={stageSize.width} height={stageSize.height}>
             <Layer>
@@ -112,7 +120,11 @@ export default function FloorplanLivePanel() {
                     <Text
                       x={11}
                       y={-7}
-                      text={`${p.label ?? p.meterCode}: ${p.value.toFixed(1)} ${p.unit}`}
+                      text={`${
+                        p.label && p.label !== p.meterCode
+                          ? p.label
+                          : p.meterName ?? p.meterCode
+                      }: ${p.value.toFixed(1)} ${p.unit}`}
                       fontSize={11}
                       fill={tokens.labelText}
                       shadowColor="black"

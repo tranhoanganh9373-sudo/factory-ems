@@ -35,13 +35,8 @@ export function OpcUaForm() {
       <Form.Item name={['protocolConfig', 'passwordRef']} label="密码（凭据引用）">
         <SecretInput refPrefix="opcua/password" placeholder="未设置（可空）" />
       </Form.Item>
-      <Form.Item
-        name={['protocolConfig', 'pollInterval']}
-        label="轮询间隔（ISO-8601，例 PT5S）"
-        rules={[{ required: true }]}
-        initialValue="PT5S"
-      >
-        <Input />
+      <Form.Item name="description" label="描述">
+        <Input.TextArea rows={2} />
       </Form.Item>
       <Form.List name={['protocolConfig', 'points']}>
         {(fields, ops) => <OpcUaPointsList fields={fields} ops={ops} />}

@@ -5,6 +5,7 @@ export type AlarmStatus = 'ACTIVE' | 'ACKED' | 'RESOLVED';
 export type AlarmType = 'SILENT_TIMEOUT' | 'CONSECUTIVE_FAIL' | 'COMMUNICATION_FAULT';
 export type DeliveryStatus = 'SUCCESS' | 'FAILED';
 export type ResolvedReason = 'AUTO' | 'MANUAL';
+export type MeterOnlineState = 'ONLINE' | 'OFFLINE' | 'MAINTENANCE';
 
 // ───── DTO ─────
 export interface AlarmListItemDTO {
@@ -40,6 +41,7 @@ export interface HealthSummaryDTO {
   offlineCount: number;
   alarmCount: number;
   maintenanceCount: number;
+  totalCount: number;
   topOffenders: Array<{ deviceId: number; deviceCode: string; activeAlarmCount: number }>;
 }
 
@@ -100,7 +102,7 @@ export interface DeliveryLogDTO {
   createdAt: string;
 }
 
-// ───── 告警操作 ─────
+// ───── 报警操作 ─────
 export const alarmApi = {
   list: (params: {
     status?: AlarmStatus;
@@ -123,6 +125,15 @@ export const alarmApi = {
 
   healthSummary: () =>
     apiClient.get<HealthSummaryDTO>('/alarms/health-summary').then((r) => r.data),
+
+  /**
+   * 表计采集状态映射（meter id → 'ONLINE' | 'OFFLINE' | 'MAINTENANCE'）。
+   * 与 healthSummary 同口径但粒度到单表，给表计列表页联表渲染。
+   */
+  meterStatus: () =>
+    apiClient
+      .get<Record<number, MeterOnlineState>>('/alarms/meter-status')
+      .then((r) => r.data),
 };
 
 // ───── 阈值规则 ─────

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
-import { App, Button, Space, Table, Tag } from 'antd';
-import { DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
+import { App, Button, Space, Table, Tag, Tooltip } from 'antd';
+import { DeleteOutlined, DownloadOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { HELP_ASYNC_EXPORT } from '@/components/pageHelp';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
@@ -166,7 +167,17 @@ export default function AsyncTaskList() {
       dataSource={tasks}
       pagination={false}
       size="small"
-      title={() => <strong>异步任务列表</strong>}
+      title={() => (
+        <Space>
+          <strong>异步任务列表</strong>
+          <Tooltip title={HELP_ASYNC_EXPORT} overlayStyle={{ maxWidth: 520 }} placement="bottomLeft">
+            <QuestionCircleOutlined
+              style={{ fontSize: 14, color: '#8c8c8c', cursor: 'help' }}
+              aria-label="异步导出帮助"
+            />
+          </Tooltip>
+        </Space>
+      )}
       components={{
         body: {
           row: PollingRow,

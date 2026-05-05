@@ -4,18 +4,18 @@
 > **作者**：brainstorming session（superpowers）
 > **范围**：factory-ems 商用化加固第 1 个 sub-project
 > **目标**：基础设施级别的 metrics + logs + traces + alerting 完整栈，独立 docker-compose，不耦合产品发版
-> **非目标**：业务告警（已由 ems-alarm 提供）、客户多租户隔离、k8s 化、客户自定义 dashboard 编辑器
+> **非目标**：业务报警（已由 ems-alarm 提供）、客户多租户隔离、k8s 化、客户自定义 dashboard 编辑器
 
 ---
 
 ## 1. 一句话价值
 
-为 factory-ems on-prem 单服务器部署提供**统一观测平面**：JVM / HTTP / DB / 业务模块的 metrics + 结构化日志 + 分布式追踪 + 多通道告警，让"线上跑得怎么样"从黑箱变成图表，从猜测变成证据。
+为 factory-ems on-prem 单服务器部署提供**统一观测平面**：JVM / HTTP / DB / 业务模块的 metrics + 结构化日志 + 分布式追踪 + 多通道报警，让"线上跑得怎么样"从黑箱变成图表，从猜测变成证据。
 
 ## 2. 解决什么问题
 
 - **看不见**：现在出问题只能 SSH 进去看日志、grep 异常；没有趋势、没有 SLO、没有跨模块视角
-- **响应慢**：故障被客户先发现而不是工程师；没有自动告警通道
+- **响应慢**：故障被客户先发现而不是工程师；没有自动报警通道
 - **改不动**：要做容错/性能优化但没有 baseline；改完不知道是真好还是假好
 - **客户问不出来**："系统稳不稳定？" "上个月可用性多少？" — 现在给不出数据
 - **远程支持难**：装到客户场地后，每次有问题都得现场上人；没有标准 dashboard 给客户运维看
@@ -24,8 +24,8 @@
 
 - **3 信号统一收口**：Metrics（Prometheus）+ Logs（Loki）+ Traces（Tempo），单 Grafana UI 统一查询和联动
 - **17 个业务 metrics**：覆盖 collector / alarm / meter / app 跨模块指标，与 Spring Boot 默认 metrics 互补
-- **4 个 SLO + 16 条告警规则**：可用性 99.5%、API p99 1s、数据新鲜度 5min、调度漂移 60s；critical/warning 两级
-- **多通道告警分发**：邮件 + 钉钉 + 企微 + 通用 webhook，按需启用，配置文件驱动
+- **4 个 SLO + 16 条报警规则**：可用性 99.5%、API p99 1s、数据新鲜度 5min、调度漂移 60s；critical/warning 两级
+- **多通道报警分发**：邮件 + 钉钉 + 企微 + 通用 webhook，按需启用，配置文件驱动
 - **7 个预置 dashboard**：SLO 总览 / 基础设施 / JVM / HTTP / 三个业务模块（collector/alarm/meter）
 - **零应用层改造**：所有改动在配置 + 新增独立 docker-compose；产品栈仅加 3 个依赖、1 个新配置类
 
@@ -38,7 +38,7 @@
 工厂打算从 200 台仪表扩到 500 台。看 SLO Overview 30 天历史，可用性 99.62%、p99 870ms（都比目标好），但调度漂移在 200 台时已经接近 60s 警戒线；得出结论：扩到 500 台需要先做调度优化。给客户的合同里 SLO 写 99.5% 有底气。
 
 **场景 C — 故障复盘**
-某次告警全压在凌晨 2 点 — 24 小时内回看：Grafana 圈定时间窗，看到 GC pause spike + heap 涨到 90% + 多条 webhook 失败连环出现。复盘报告直接截图 dashboard。
+某次报警全压在凌晨 2 点 — 24 小时内回看：Grafana 圈定时间窗，看到 GC pause spike + heap 涨到 90% + 多条 webhook 失败连环出现。复盘报告直接截图 dashboard。
 
 ## 5. 不在范围（v1）
 
@@ -52,7 +52,7 @@
 | k8s Operator | 暂不上 k8s |
 | 多租户隔离 | 单客户一套 |
 | 客户自助接收方接入向导 UI | 改文件重启即可 |
-| i18n 告警模板 | 默认中文 |
+| i18n 报警模板 | 默认中文 |
 | 高级抖动消除 | Alertmanager 内置 group_wait 够用 |
 
 ---
@@ -197,9 +197,9 @@ class AlarmDetectorImpl {
 | 名称 | 类型 | 单位 | 描述 | 额外 labels |
 |---|---|---|---|---|
 | `ems.alarm.detector.duration` | Timer | seconds | 一轮 alarm 检测扫描耗时 | — |
-| `ems.alarm.active.count` | Gauge | count | 当前 ACTIVE+ACKED 告警数 | `type` |
-| `ems.alarm.created.total` | Counter | count | 累计触发告警数 | `type` |
-| `ems.alarm.resolved.total` | Counter | count | 累计恢复告警数 | `reason` |
+| `ems.alarm.active.count` | Gauge | count | 当前 ACTIVE+ACKED 报警数 | `type` |
+| `ems.alarm.created.total` | Counter | count | 累计触发报警数 | `type` |
+| `ems.alarm.resolved.total` | Counter | count | 累计恢复报警数 | `reason` |
 | `ems.alarm.webhook.delivery.duration` | Timer | seconds | webhook 单次调用耗时 | `outcome`, `attempt` |
 
 `type`：`silent_timeout` / `consecutive_fail`（与 ems-alarm 模块一致）
@@ -246,7 +246,7 @@ class AlarmDetectorImpl {
 
 ---
 
-## 9. SLO 规则与告警
+## 9. SLO 规则与报警
 
 ### 9.1 四大 SLO
 
@@ -257,7 +257,7 @@ class AlarmDetectorImpl {
 | 数据新鲜度 | max ≤ 5min | `ems_meter_reading_lag_seconds` | `max(ems_meter_reading_lag_seconds)` |
 | 调度漂移 | abs ≤ 60s | `ems_app_scheduled_drift_seconds` | `max(abs(ems_app_scheduled_drift_seconds))` |
 
-### 9.2 Critical 告警（5 个）
+### 9.2 Critical 报警（5 个）
 
 5 分钟内必须响应，多通道（email + 钉钉 + 企微 + webhook）。
 
@@ -269,7 +269,7 @@ class AlarmDetectorImpl {
 | `EmsDbConnectionPoolExhausted` | `hikaricp_connections_active / hikaricp_connections_max > 0.95` | 3m |
 | `EmsDiskSpaceCritical` | `node_filesystem_avail_bytes / node_filesystem_size_bytes < 0.10` | 5m |
 
-### 9.3 Warning 告警（11 条）
+### 9.3 Warning 报警（11 条）
 
 24 小时内排查即可，仅邮件。
 
@@ -328,7 +328,7 @@ inhibit_rules:
 | D3 | `jvm-overview` | 后端工程 | Heap / Non-heap / GC pause / 线程 / 类加载 |
 | D4 | `http-overview` | 后端工程 | RPS / latency p50/p95/p99 / 状态码 / Top10 端点 |
 | D5 | `ems-collector` | 业务运维 | 在线/离线 / 采集耗时 / 失败率 by adapter / Top 失败设备 |
-| D6 | `ems-alarm` | 业务运维 | 活跃告警 by type / 检测耗时 / Webhook 成功率 |
+| D6 | `ems-alarm` | 业务运维 | 活跃报警 by type / 检测耗时 / Webhook 成功率 |
 | D7 | `ems-meter` | 数据/业务运维 | 数据新鲜度 by 设备 / 入库速率 by 能源类型 / 丢弃率 |
 
 ### 10.2 D1 (SLO Overview) 布局
@@ -436,7 +436,7 @@ ops/observability/
 | `OBS_SMTP_HOST` | 否 | SMTP 服务器地址 | `smtp.example.com:587` |
 | `OBS_SMTP_USER` | 否 | SMTP 用户 | `alerts@example.com` |
 | `OBS_SMTP_PASSWORD` | 否 | SMTP 密码 | — |
-| `OBS_ALERT_RECEIVER_EMAIL` | 否 | 告警邮件接收者（逗号分隔） | `oncall@x.com,ops@x.com` |
+| `OBS_ALERT_RECEIVER_EMAIL` | 否 | 报警邮件接收者（逗号分隔） | `oncall@x.com,ops@x.com` |
 | `OBS_DINGTALK_WEBHOOK` | 否 | 钉钉机器人 webhook URL | `https://oapi.dingtalk.com/...` |
 | `OBS_DINGTALK_SECRET` | 否 | 钉钉加签密钥 | — |
 | `OBS_WECHAT_WEBHOOK` | 否 | 企微机器人 webhook URL | `https://qyapi.weixin.qq.com/...` |
@@ -630,7 +630,7 @@ JSON Logback 已经实现，确保以下字段在 prod profile 必出：
 
 ### 17.2 已知关注的日志关键词
 
-供 Loki 检索 + Grafana 关键字告警建模：
+供 Loki 检索 + Grafana 关键字报警建模：
 
 - `level=ERROR` — 所有 ERROR 都关注
 - `level=WARN AND logger=com.ems.alarm.*` — alarm 模块 WARN
@@ -648,9 +648,9 @@ JSON Logback 已经实现，确保以下字段在 prod profile 必出：
 | `docs/product/observability-feature-overview.md` | 第 1-4 章 + 价值主张改写 | 销售/客户 |
 | `docs/product/observability-config-reference.md` | 第 11 章配置参考 | 实施工程师 |
 | `docs/product/observability-metrics-dictionary.md` | 第 8 章指标字典 | 数据/集成工程师 |
-| `docs/product/observability-slo-rules.md` | 第 9 章 SLO + 告警 | 客户管理/运维 |
+| `docs/product/observability-slo-rules.md` | 第 9 章 SLO + 报警 | 客户管理/运维 |
 | `docs/product/observability-dashboards-guide.md` | 第 10 章 dashboard 说明 | 客户/工程值班 |
-| `docs/product/observability-user-guide.md` | "如何看 dashboard / 如何处理告警" 操作手册 | 客户运维 |
+| `docs/product/observability-user-guide.md` | "如何看 dashboard / 如何处理报警" 操作手册 | 客户运维 |
 | `docs/api/observability-metrics-api.md` | 第 8 章 + Prometheus 抓取协议 | 第三方集成 |
 | `docs/ops/observability-runbook.md` | 故障排查 / 启停 / 升级 / 备份 | 运维 |
 | `docs/ops/observability-deployment.md` | 第 16 章 + 详细安装步骤 | 装机工程师 |

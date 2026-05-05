@@ -1,0 +1,87 @@
+Sat May  2 06:18:15 PDT 2026
+--- CREATE ---
+HTTP/1.1 201 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:18:15 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: 876dcb26d4f54562
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":0,"data":{"id":29,"code":"EVD-FINAL","name":"证据终版","energyTypeId":1,"energyTypeCode":"ELEC","energyTypeName":"电","unit":"kWh","orgNodeId":1,"influxMeasurement":"energy_reading","influxTagKey":"meter_code","influxTagValue":"EVD-FINAL","enabled":true,"channelId":null,"parentMeterId":null,"createdAt":"2026-05-02T13:18:15.426064138Z","updatedAt":"2026-05-02T13:18:15.426064138Z"},"message":"ok","traceId":"2d5bd24fd1f9c017bb5b04b4f0ffa053"}--- READ ---
+ID=
+HTTP/1.1 404 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:18:15 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: e4be6553756b476d
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":40004,"data":null,"message":"Not Found: api/v1/meters","traceId":"e4be6553756b476d"}--- DELETE ---
+HTTP/1.1 404 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:18:15 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: 4c1e91567ff54e12
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":40004,"data":null,"message":"Not Found: api/v1/meters","traceId":"4c1e91567ff54e12"}--- VERIFY DELETED ---
+HTTP/1.1 404 
+Server: nginx/1.29.8
+Date: Sat, 02 May 2026 13:18:15 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+X-Trace-Id: ad8f436c43af4c9c
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 0
+Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+Pragma: no-cache
+Expires: 0
+X-Frame-Options: DENY
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: no-referrer
+
+{"code":40004,"data":null,"message":"Not Found: api/v1/meters","traceId":"ad8f436c43af4c9c"}

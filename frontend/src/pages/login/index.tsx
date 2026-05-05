@@ -6,6 +6,7 @@ import { authApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/authStore';
 import { BrandLockup } from '@/components/BrandLockup';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import loginBgUrl from '@/assets/login-bg.jpg';
 
 export default function LoginPage() {
   useDocumentTitle('登录');
@@ -36,7 +37,9 @@ export default function LoginPage() {
       <div
         style={{
           flex: '0 0 60%',
-          background: '#0E1A2B',
+          // 深色 navy 渐变叠加在能源/科技背景图上：保持原 #0E1A2B 主色调与文字可读性，
+          // 同时透出底图纹理提供"科技风"质感。
+          background: `linear-gradient(135deg, rgba(14, 26, 43, 0.82), rgba(14, 26, 43, 0.92)), url(${loginBgUrl}) center/cover no-repeat`,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -57,12 +60,22 @@ export default function LoginPage() {
         <div style={{ width: 400, maxWidth: '100%' }}>
           <h2 style={{ marginBottom: 24, fontSize: 20, fontWeight: 600 }}>登录系统</h2>
           {errorMsg && <Alert type="error" message={errorMsg} style={{ marginBottom: 16 }} />}
-          <Form layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
+          <Form layout="vertical" onFinish={onFinish} size="large">
             <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input prefix={<UserOutlined />} placeholder="用户名" />
+              <Input
+                prefix={<UserOutlined />}
+                placeholder="用户名"
+                autoComplete="username"
+                aria-label="用户名"
+              />
             </Form.Item>
             <Form.Item name="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password prefix={<LockOutlined />} placeholder="密码" />
+              <Input.Password
+                prefix={<LockOutlined />}
+                placeholder="密码"
+                autoComplete="current-password"
+                aria-label="密码"
+              />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={loading} block>
               登录

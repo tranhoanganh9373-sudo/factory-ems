@@ -21,6 +21,8 @@ import { alarmRuleApi, type AlarmRuleOverrideDTO, type OverrideRequest } from '@
 import { useAuthStore } from '@/stores/authStore';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_ALARM_RULES } from '@/components/pageHelp';
+import { formatDateTime } from '@/utils/format';
 
 interface FormValues {
   deviceId: number;
@@ -31,7 +33,7 @@ interface FormValues {
 }
 
 export default function AlarmRulesPage() {
-  useDocumentTitle('告警 - 规则');
+  useDocumentTitle('报警 - 规则');
   const { message } = App.useApp();
   const qc = useQueryClient();
   const { hasRole } = useAuthStore();
@@ -115,7 +117,7 @@ export default function AlarmRulesPage() {
 
   return (
     <div>
-      <PageHeader title="告警规则" />
+      <PageHeader title="报警规则" helpContent={HELP_ALARM_RULES} />
 
       <Row gutter={16} style={{ marginBottom: 16 }}>
         <Col span={24}>
@@ -179,7 +181,10 @@ export default function AlarmRulesPage() {
             {
               title: '更新时间',
               dataIndex: 'updatedAt',
-              width: 200,
+              width: 180,
+              render: (v: string) => (
+                <span style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(v)}</span>
+              ),
             },
             {
               title: '操作',

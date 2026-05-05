@@ -166,6 +166,64 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 
 ---
 
+### §1.7 批量 CSV 解析（v1.1.0+）
+
+```bash
+curl -X POST -H "Authorization: Bearer $TOKEN" \
+  -F "channels=@channels.csv" \
+  -F "points=@points.csv" \
+  http://localhost:8888/api/v1/channel/parse-csv
+```
+
+- **路径**：`POST /api/v1/channel/parse-csv`
+- **角色**：ADMIN
+- **Content-Type**：`multipart/form-data`
+- **请求字段**：
+  - `channels`（必填，文件）：通道清单 CSV，表头 `name, protocol` + 协议特定列
+  - `points`（必填，文件）：测点清单 CSV，表头 `channelName, key, address, dataType` + 协议特定列
+- **功能**：解析两份 CSV 并返回 `ChannelDTO[]`，**不立即落库**——前端拿到列表后逐条调 `POST /channel` 创建
+
+→ `200 OK` 返回 `List<ChannelDTO>`：
+
+```json
+[
+  {
+    "id": null,
+    "name": "Line-A-Modbus",
+    "protocol": "MODBUS_TCP",
+    "protocolConfig": {
+      "host": "192.168.10.20",
+      "port": 502,
+      "unitId": 1,
+      "pollInterval": "PT5S",
+      "points": [
+        {"key": "active_power", "address": 40001, "dataType": "F32"}
+      ]
+    },
+    "description": null,
+    "createdAt": null,
+    "updatedAt": null
+  }
+]
+```
+
+> 解析后 `id` 为 null，落库后由后续 `POST /channel` 返回真实 ID。同名通道在创建阶段会被 409 拒绝；前端把这些标"已存在"。
+
+#### 错误响应
+
+| HTTP | 触发场景 | 说明 |
+|------|---------|------|
+| 400 | CSV 表头缺列 / 协议名拼错 / 测点 channelName 找不到对应通道 | `IllegalArgumentException` 经 `GlobalExceptionHandler` 映射；message 含失败行号 |
+| 401 | 未携带 token | — |
+| 403 | 非 ADMIN | — |
+| 413 | 文件超 256KB（全局 `spring.servlet.multipart.max-file-size`） | — |
+
+#### 实现备注
+
+后端入口 `ChannelController.parseCsv()`（`ems-collector/src/main/java/com/ems/collector/channel/ChannelController.java:103-111`）；解析逻辑 `ChannelCsvParser.parse(channelsIn, pointsIn)`。前端 UX 见 [collector-protocols-user-guide.md §3.4](../product/collector-protocols-user-guide.md)。
+
+---
+
 ## §2 Collector 诊断（`/api/v1/collector`）
 
 ADMIN 或 OPERATOR 可访问。
@@ -251,7 +309,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ]
 ```
 
-ADMIN-only。当 OPC UA channel 在 SIGN/SIGN_AND_ENCRYPT 模式下连接到信任库未收录的服务端时，证书会落入 `pending/`，同时触发 `OPC_UA_CERT_PENDING` 告警。
+ADMIN-only。当 OPC UA channel 在 SIGN/SIGN_AND_ENCRYPT 模式下连接到信任库未收录的服务端时，证书会落入 `pending/`，同时触发 `OPC_UA_CERT_PENDING` 报警。
 
 ### §2.6 批准服务端证书
 
@@ -262,7 +320,7 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
   http://localhost:8888/api/v1/collector/7/trust-cert
 ```
 
-→ `204 No Content`。后端将 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，自动解除关联告警。下次重连周期到达即恢复。
+→ `204 No Content`。后端将 `.der` 从 `pending/` 移到 `trusted/`，写审计 `CERT_TRUST`，自动解除关联报警。下次重连周期到达即恢复。
 
 ### §2.7 拒绝服务端证书
 
@@ -271,7 +329,7 @@ curl -X DELETE -H "Authorization: Bearer $TOKEN" \
   http://localhost:8888/api/v1/collector/cert-pending/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
 ```
 
-→ `204 No Content`。`.der` 移到 `rejected/` 留证；不再触发告警，但允许后续审计。
+→ `204 No Content`。`.der` 移到 `rejected/` 留证；不再触发报警，但允许后续审计。
 
 ---
 
@@ -476,4 +534,4 @@ ChannelEditor 把 `certRef` 填 `secret://opcua/plc-line1.pem`、`certPasswordRe
 - 用户操作指南：[docs/product/collector-protocols-user-guide.md](../product/collector-protocols-user-guide.md)
 - OPC UA 证书运维：[docs/ops/opcua-cert-management.md](../ops/opcua-cert-management.md)
 - 设计文档：`docs/superpowers/specs/2026-04-30-collector-protocols-design.md`
-- 告警相关 API：[alarm-api.md](./alarm-api.md)
+- 报警相关 API：[alarm-api.md](./alarm-api.md)

@@ -25,7 +25,7 @@ import java.util.Map;
  * </ul>
  *
  * <p>自定 DEGRADED status 用 {@link Status#OUT_OF_SERVICE}（actuator 内置含义"运维已知服务降级"），
- * 避免引入未注册的 status 名给监控告警添加噪音。
+ * 避免引入未注册的 status 名给监控报警添加噪音。
  */
 @Component("collector")
 public class CollectorHealthIndicator implements HealthIndicator {

@@ -18,6 +18,7 @@ import {
 } from 'antd';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { PageHeader } from '@/components/PageHeader';
+import { HELP_PRODUCTION_ENTRY } from '@/components/pageHelp';
 import { UploadOutlined, PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -143,7 +144,7 @@ export default function ProductionEntryPage() {
 
   return (
     <Space direction="vertical" size={16} style={{ display: 'flex' }}>
-      <PageHeader title="日产量录入" />
+      <PageHeader title="日产量录入" helpContent={HELP_PRODUCTION_ENTRY} />
       <Card
         extra={
           <Upload
