@@ -9,6 +9,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
+import { ensureBillPeriod, ensureCostRunSuccess } from './fixtures/billPeriodSetup.js';
 
 async function login(page: Page) {
   await page.goto('/login');
@@ -19,6 +20,13 @@ async function login(page: Page) {
 }
 
 const YM = '2026-03';
+
+// Ensure the bill period row exists and a SUCCESS cost-allocation run covers
+// it before the UI test tries to close the period.
+test.beforeAll(async () => {
+  await ensureBillPeriod(YM);
+  await ensureCostRunSuccess(YM);
+});
 
 test('bill period close → lock (with confirm) → unlock → reclose', async ({ page }) => {
   test.setTimeout(90_000);
@@ -48,9 +56,9 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
 
   // ---- close：按钮文字 "关账期 + 生成账单" 或 "重新生成" ----
   await periodRow.getByRole('button', { name: /关账期|重新生成/ }).click();
-  // Status tag shows CLOSED in English or Chinese equivalent（已关闭/CLOSED）
+  // StatusTag renders a plain <span> (not .ant-tag); match by text content.
   await expect(
-    periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
+    periodRow.locator('span').filter({ hasText: /^(CLOSED|已关闭)$/ }).first(),
   ).toBeVisible({ timeout: 15_000 });
 
   // ---- lock：二次确认输入 "我确认锁定 2026-03" ----
@@ -60,9 +68,9 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   await expect(lockModal).toBeVisible();
   await lockModal.locator('input').fill(`我确认锁定 ${YM}`);
   await lockModal.getByRole('button', { name: /锁\s*定/ }).click();
-  // Status tag shows LOCKED in English or Chinese（已锁定/LOCKED）
+  // StatusTag renders a plain <span>; match by text content.
   await expect(
-    periodRow.locator('.ant-tag').filter({ hasText: /LOCKED|已锁定/ }).first(),
+    periodRow.locator('span').filter({ hasText: /^(LOCKED|已锁定)$/ }).first(),
   ).toBeVisible({ timeout: 10_000 });
 
   // ---- unlock：仅 ADMIN 可解 ----
@@ -72,17 +80,13 @@ test('bill period close → lock (with confirm) → unlock → reclose', async (
   await unlockModal.locator('input').fill(`我确认解锁 ${YM}`);
   await unlockModal.getByRole('button', { name: /解\s*锁/ }).click();
   await expect(
-    periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
+    periodRow.locator('span').filter({ hasText: /^(CLOSED|已关闭)$/ }).first(),
   ).toBeVisible({ timeout: 10_000 });
 
   // ---- reclose（重写）----
   await periodRow.getByRole('button', { name: /重新生成/ }).click();
-  // Wait for success indication: toast text or tag update
-  await expect(
-    page.getByText(/已关闭，账单已生成/).or(
-      periodRow.locator('.ant-tag').filter({ hasText: /CLOSED|已关闭/ }).first(),
-    ),
-  ).toBeVisible({ timeout: 15_000 });
+  // Wait for the success toast message (emitted by closeMu.onSuccess)
+  await expect(page.getByText(/已关闭，账单已生成/)).toBeVisible({ timeout: 15_000 });
 
   // ---- 通过"查看账单"链接跳到 /bills?periodId=... ----
   await periodRow.getByRole('button', { name: /查看账单/ }).click();
