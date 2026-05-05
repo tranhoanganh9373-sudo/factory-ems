@@ -6,6 +6,7 @@ import com.ems.meter.entity.EnergySource;
 import com.ems.meter.entity.FeedInTariff;
 import com.ems.meter.entity.FlowDirection;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.repository.FeedInTariffRepository;
 import com.ems.meter.repository.MeterRepository;
 import com.ems.tariff.entity.PeriodType;
@@ -25,11 +26,15 @@ import java.util.Map;
  * 计算指定 org 在日期区间内的上网卖电（feed-in）收入。
  *
  * 算法：
- *  1. 查找 org 下 energySource 匹配且 flowDirection=EXPORT 的所有 meter
+ *  1. 查找 org 下 role=GRID_TIE 且 flowDirection=EXPORT 的所有 meter（物理并网出线表）
  *  2. 读取每个 meter 的小时级用量，通过 TariffService 按小时分类到 4 个时段
- *  3. 汇总每时段 kWh，乘以对应 FeedInTariff 价格
- *  4. 无 EXPORT meter 或用量为零 → 返回 ZERO
+ *  3. 汇总每时段 kWh，乘以对应 FeedInTariff 价格（按 source 取价，例如 SOLAR/WIND/STORAGE）
+ *  4. 无 GRID_TIE+EXPORT meter 或用量为零 → 返回 ZERO
  *  5. 有用量但找不到对应 FeedInTariff 行 → IllegalStateException
+ *
+ * source 参数用于在 {@link FeedInTariffRepository#findEffective} 中选择价格档位
+ * （SOLAR/WIND/STORAGE 等），不用于过滤 meter —— 标准 PV 接线下，物理卖电点是
+ * GRID_TIE+GRID+EXPORT 的并网出线表，而不是 SOLAR+EXPORT。
  *
  * TODO (cross-date tariff): 当区间横跨多个 FeedInTariff 的 effective_from 边界时，
  * 当前实现以 `to` 日期查找最新生效价，未对区间内价格变更做分段处理。
@@ -93,10 +98,18 @@ public class FeedInRevenueServiceImpl implements FeedInRevenueService {
     // Private helpers
     // ------------------------------------------------------------------
 
+    /**
+     * Finds the physical EXPORT (sell-back) meters for any GRID_TIE installation
+     * under the org node. The {@code source} parameter is intentionally unused here:
+     * it's used downstream in tariff lookup (which price band to apply, e.g. SOLAR
+     * vs WIND vs STORAGE), not in meter filtering. Standard PV wiring places the
+     * sell-back meter at GRID_TIE+GRID+EXPORT, while the SOLAR-source meter sits
+     * inside the array as GENERATE+SOLAR+IMPORT.
+     */
     private List<Meter> findExportMeters(Long orgNodeId, EnergySource source) {
         return meterRepository.findByOrgNodeIdIn(List.of(orgNodeId)).stream()
+            .filter(m -> m.getRole() == MeterRole.GRID_TIE)
             .filter(m -> m.getFlowDirection() == FlowDirection.EXPORT)
-            .filter(m -> m.getEnergySource() == source)
             .toList();
     }
 
