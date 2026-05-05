@@ -292,8 +292,11 @@ class ModbusTcpAdapterTransportTest {
         ConcurrentLinkedQueue<Sample> samples = new ConcurrentLinkedQueue<>();
         try {
             t.start(9L, fastPollCfg(), samples::add);
-            Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> created.get() >= 2);
-            verify(registry, atLeastOnce()).recordFailure(eq(9L), anyString());
+            // created.get() >= 2 fires the moment factory.get() returns, BEFORE
+            // failing.open() throws and recordFailure is invoked. Use the verify
+            // itself as the await condition to remove the race.
+            Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted(() ->
+                    verify(registry, atLeastOnce()).recordFailure(eq(9L), anyString()));
             verify(failing, never()).readHolding(anyInt(), anyInt(), anyInt());
         } finally {
             t.stop();
