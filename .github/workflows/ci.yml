@@ -116,7 +116,11 @@ jobs:
           OBS_SMTP_PASSWORD: x
           OBS_ALERT_RECEIVER_EMAIL: oncall@example.com
           OBS_GENERIC_WEBHOOK: http://example.com/wh
-        run: amtool check-config ops/observability/alertmanager/alertmanager.yml
+        # amtool check-config does NOT expand ${VAR} placeholders; pre-expand
+        # with envsubst (provided by gettext-base, present on ubuntu runners).
+        run: |
+          envsubst < ops/observability/alertmanager/alertmanager.yml > /tmp/alertmanager.expanded.yml
+          amtool check-config /tmp/alertmanager.expanded.yml
 
       - name: Validate Grafana dashboards JSON
         run: |
