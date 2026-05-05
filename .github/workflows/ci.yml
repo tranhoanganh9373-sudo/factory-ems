@@ -65,6 +65,8 @@ jobs:
         run: docker build -t factory-ems:ci -f ems-app/Dockerfile .
       - name: Build frontend
         run: cd frontend && pnpm install --frozen-lockfile && pnpm build
+      - name: Prepare .env from example
+        run: cp .env.example .env
       - name: Start stack
         run: docker compose -f docker-compose.yml up -d --wait
       - name: Install Playwright
