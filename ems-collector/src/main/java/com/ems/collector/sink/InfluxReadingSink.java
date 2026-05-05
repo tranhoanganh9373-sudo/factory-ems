@@ -39,7 +39,7 @@ import java.util.Map;
  * 这条路径就生效。InfluxDBClient 由 ems-timeseries 的 InfluxConfig 提供。
  */
 @Component
-@ConditionalOnBean(InfluxDBClient.class)
+@ConditionalOnBean({InfluxDBClient.class, BufferStore.class})
 public class InfluxReadingSink implements ReadingSink {
 
     private static final Logger log = LoggerFactory.getLogger(InfluxReadingSink.class);
