@@ -5,6 +5,17 @@
  */
 
 import { test, expect, Download, Page } from '@playwright/test';
+import { ensurePeriodClosed } from './fixtures/billPeriodSetup.js';
+
+// cost-export needs a CLOSED bill period so that bills appear in the dropdown
+// and the export button is enabled. ensurePeriodClosed handles the full
+// prerequisite chain (period row → SUCCESS cost run → API close) without
+// going through the UI.
+const EXPORT_YM = '2026-03';
+
+test.beforeAll(async () => {
+  await ensurePeriodClosed(EXPORT_YM);
+});
 
 async function login(page: Page) {
   await page.goto('/login');
