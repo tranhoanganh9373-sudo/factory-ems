@@ -40,7 +40,7 @@ test('async CSV export creates task, reaches READY, and downloads', async ({ pag
   await page.evaluate(() => localStorage.removeItem('ems-report-tasks'));
   await page.goto('/report');
   // 用 card 标题精准匹配，避免 strict-mode 撞上 4 个含"导出"的元素
-  await expect(page.locator('.ant-card-head-title').filter({ hasText: '报表' }).first()).toBeVisible({
+  await expect(page.getByRole('main').getByText('即席查询').first()).toBeVisible({
     timeout: 10_000,
   });
 

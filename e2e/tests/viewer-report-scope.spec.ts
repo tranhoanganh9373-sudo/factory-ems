@@ -23,8 +23,9 @@ import { test, expect, Page } from '@playwright/test';
 const VIEWER_NAME = 'e2e_report_viewer';
 const VIEWER_PASS = 'reportViewer123!';
 // mock-data 用 冲压车间 (MOCK-WS-A) 作为顶层授权子树；其余车间应被过滤。
-const PERMITTED_ORG = '冲压车间';
-const FORBIDDEN_ORG_LABELS = ['焊接车间', '涂装车间', '总装车间'];
+const PERMITTED_ORG = '测试车间';
+// Meters assigned to 测试工厂 (orgNodeId=4, parent of 测试车间) are outside the subtree.
+const FORBIDDEN_ORG_LABELS = ['测试工厂'];
 // mock-data 覆盖 2026-02-01..03-31；today (2026-04-26+) 没有 rollup。
 const REPORT_DATE = '2026-03-15';
 
@@ -59,7 +60,7 @@ async function ensureViewerWithSubtreePerm(
   if (createRes.ok()) {
     userId = (await createRes.json()).data.id as number;
   } else {
-    const listRes = await req.get('/api/v1/users?page=1&size=500', { headers: auth });
+    const listRes = await req.get('/api/v1/users?page=1&size=200', { headers: auth });
     const items = (await listRes.json()).data.items as Array<{ id: number; username: string }>;
     userId = items.find((u) => u.username === username)?.id ?? null;
   }

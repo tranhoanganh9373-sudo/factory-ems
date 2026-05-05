@@ -17,6 +17,9 @@ test('audit log shows login and user-creation events', async ({ page }) => {
 
   await page.goto('/admin/audit');
   await expect(page.getByRole('main').getByText('审计日志')).toBeVisible();
-  await expect(page.getByRole('main').getByText('LOGIN').first()).toBeVisible({ timeout: 10_000 });
+  // Wait for table rows to load before asserting cell content
+  await expect(page.locator('.ant-table-row').first()).toBeVisible({ timeout: 15_000 });
+  // UI translates action codes to Chinese: LOGIN → 登录
+  await expect(page.getByRole('main').getByText('登录').first()).toBeVisible({ timeout: 10_000 });
   await expect(page.getByRole('main').getByText(uname).first()).toBeVisible({ timeout: 10_000 });
 });

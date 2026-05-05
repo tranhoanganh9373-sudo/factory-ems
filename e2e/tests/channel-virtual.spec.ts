@@ -42,7 +42,7 @@ test('admin can create VIRTUAL channel and see it appear in realtime table', asy
 
   // Open ChannelEditor drawer
   await page.getByRole('button', { name: /新\s*增\s*通\s*道/ }).click();
-  await expect(page.getByText('新增通道')).toBeVisible();
+  await expect(page.getByText('新增通道').first()).toBeVisible();
 
   // Channel name
   await page.getByLabel('通道名称').fill(channelName);
@@ -55,14 +55,10 @@ test('admin can create VIRTUAL channel and see it appear in realtime table', asy
     .click();
   await pickSelectOption(page, '虚拟（模拟）');
 
-  // Add one virtual point. Default mode=CONSTANT, params placeholder='{"value": 0}'
+  // Add one virtual point. Default mode=CONSTANT
   await page.getByRole('button', { name: /\+\s*新增测点/ }).click();
-  // The newest "Key" input is the last Key field added by the FormList
-  const lastKey = page
-    .locator('label:has-text("Key")')
-    .last()
-    .locator('xpath=following::input[1]');
-  await lastKey.fill('test-point');
+  // 标签名 is the tag-key field for the virtual point (label text includes the asterisk)
+  await page.getByLabel(/标签名/).last().fill('test-point');
 
   // Save
   await page.getByRole('button', { name: /^保\s*存$/ }).click();

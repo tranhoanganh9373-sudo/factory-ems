@@ -26,7 +26,7 @@ const SCREENSHOT_DIR = path.resolve(
   '../../docs/qa/screenshots/2026-04-30-redesign'
 );
 
-const BASE_URL = process.env.QA_BASE_URL || 'http://localhost:5173';
+const BASE_URL = process.env.QA_BASE_URL || process.env.E2E_BASE_URL || 'http://localhost:8888';
 const ADMIN_USER = process.env.QA_ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.QA_ADMIN_PASS || 'admin123!';
 

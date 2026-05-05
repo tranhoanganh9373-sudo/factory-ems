@@ -23,10 +23,10 @@ import { test, expect } from '@playwright/test';
 
 const VIEWER_NAME = 'e2e_dashboard_viewer';
 const VIEWER_PASS = 'viewerDash123!';
-// 冲压车间 (MOCK-WS-A) is the permitted subtree — meters under 焊接车间/涂装车间 must not appear.
-// 冲压车间 子树包括 ELEC-001..005 + WATER-001..003；其他车间含 STEAM 与 ELEC-006..009。
-const PERMITTED_ORG = '冲压车间';
-const FORBIDDEN_METERS = ['MOCK-M-STEAM-001', 'MOCK-M-STEAM-002', 'MOCK-M-ELEC-009'];
+// 测试车间 (MOCK-WS-A, id=5) is the permitted subtree — meters assigned directly to
+// 测试工厂 (orgNodeId=4, outside the subtree) must not appear for this viewer.
+const PERMITTED_ORG = '测试车间';
+const FORBIDDEN_METERS = ['1f-3vqx0d', 'MOCK-M-ELEC-MAIN'];
 
 /** API helper: create viewer (idempotent) + grant SUBTREE perm on the named org.
  *  避开 UI（admin/users 列表分页 + 模态框时序）一致性问题。 */
@@ -68,7 +68,7 @@ async function ensureViewerWithSubtreePerm(
     userId = (await createRes.json()).data.id as number;
   } else {
     // Search by listing all (keyword filter is buggy — returns 0 matches even when user exists)
-    const listRes = await request.get('/api/v1/users?page=1&size=500', { headers: auth });
+    const listRes = await request.get('/api/v1/users?page=1&size=200', { headers: auth });
     const items = (await listRes.json()).data.items as Array<{ id: number; username: string }>;
     userId = items.find((u) => u.username === username)?.id ?? null;
   }
