@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -67,13 +68,13 @@ class FeatureFlagControllerTest {
         }
     }
 
-    @Configuration
+    @TestConfiguration
     static class EnabledConfig {
         @Bean
         PvFeatureProperties pv() { return new PvFeatureProperties(true); }
     }
 
-    @Configuration
+    @TestConfiguration
     static class DisabledConfig {
         @Bean
         PvFeatureProperties pv() { return new PvFeatureProperties(false); }
