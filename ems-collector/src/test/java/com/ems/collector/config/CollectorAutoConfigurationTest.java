@@ -1,6 +1,7 @@
 package com.ems.collector.config;
 
 import com.ems.collector.buffer.BufferStore;
+import com.ems.collector.poller.ReadingSink;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
@@ -37,5 +38,27 @@ class CollectorAutoConfigurationTest {
                         "ems.collector.buffer.path=" + tmp.resolve("buffer.db").toAbsolutePath()
                 )
                 .run(context -> assertThat(context).hasSingleBean(BufferStore.class));
+    }
+
+    @Test
+    void noopReadingSink_created_whenCollectorDisabled() {
+        contextRunner
+                .withPropertyValues("ems.collector.enabled=false")
+                .run(context -> assertThat(context).hasSingleBean(ReadingSink.class));
+    }
+
+    @Test
+    void noopReadingSink_created_whenPropertyAbsent() {
+        contextRunner.run(context -> assertThat(context).hasSingleBean(ReadingSink.class));
+    }
+
+    @Test
+    void noopReadingSink_skipped_whenCollectorEnabled(@TempDir Path tmp) {
+        contextRunner
+                .withPropertyValues(
+                        "ems.collector.enabled=true",
+                        "ems.collector.buffer.path=" + tmp.resolve("buffer.db").toAbsolutePath()
+                )
+                .run(context -> assertThat(context).doesNotHaveBean(ReadingSink.class));
     }
 }

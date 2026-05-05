@@ -23,10 +23,15 @@ import java.time.Clock;
 @EnableConfigurationProperties(CollectorProperties.class)
 public class CollectorAutoConfiguration {
 
+    /** Noop ReadingSink — wired when collector disabled (no InfluxReadingSink) so
+     *  CollectorService still satisfies its constructor dependency.
+     *  Use {@link ConditionalOnProperty} (not {@link ConditionalOnMissingBean}) to
+     *  guarantee mutual exclusion with InfluxReadingSink — @ConditionalOnMissingBean
+     *  evaluation order with @Component-scanned alternatives is not deterministic. */
     @Bean
-    @ConditionalOnMissingBean
+    @ConditionalOnProperty(name = "ems.collector.enabled", havingValue = "false", matchIfMissing = true)
     public ReadingSink defaultReadingSink() {
-        return reading -> { /* noop until Phase G */ };
+        return reading -> { /* noop */ };
     }
 
     @Bean
