@@ -11,6 +11,7 @@ import com.ems.cost.repository.CostAllocationRuleRepository;
 import com.ems.cost.repository.CostAllocationRunRepository;
 import com.ems.cost.service.impl.CostAllocationServiceImpl;
 import com.ems.cost.service.impl.DirectAllocationStrategy;
+import com.ems.cost.service.BillPeriodLookupPort;
 import com.ems.tariff.service.HourPrice;
 import com.ems.tariff.service.TariffPriceLookupService;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,6 +56,7 @@ class CostAllocationServiceAsyncRunTest {
     private static final ZoneOffset Z = ZoneOffset.ofHours(8);
     private static final OffsetDateTime START = OffsetDateTime.of(2026, 3, 1, 0, 0, 0, 0, Z);
     private static final OffsetDateTime END   = START.plusHours(3);
+    private static final Long BILL_PERIOD_ID = 555L;
 
     private CostAllocationRuleRepository ruleRepository;
     private CostAllocationRunRepository runRepository;
@@ -61,6 +64,7 @@ class CostAllocationServiceAsyncRunTest {
     private MeterUsageReader meterUsage;
     private TariffPriceLookupService tariffLookup;
     private MeterMetadataPort meterMetadata;
+    private BillPeriodLookupPort billPeriodLookup;
     private Executor executor;
     private CapturingExecutor capturingExecutor;
     private CostAllocationServiceImpl service;
@@ -82,6 +86,9 @@ class CostAllocationServiceAsyncRunTest {
         meterUsage = mock(MeterUsageReader.class);
         tariffLookup = mock(TariffPriceLookupService.class);
         meterMetadata = mock(MeterMetadataPort.class);
+        billPeriodLookup = mock(BillPeriodLookupPort.class);
+        when(billPeriodLookup.findBoundariesById(BILL_PERIOD_ID))
+                .thenReturn(new BillPeriodLookupPort.BillPeriodBoundaries(START, END));
         executor = Runnable::run; // sync by default
         capturingExecutor = new CapturingExecutor();
 
@@ -89,7 +96,7 @@ class CostAllocationServiceAsyncRunTest {
         AllocationAlgorithmFactory factory = new AllocationAlgorithmFactory(List.of(direct));
         service = new CostAllocationServiceImpl(
                 ruleRepository, runRepository, lineRepository, factory,
-                meterUsage, tariffLookup, meterMetadata, executor, NOOP_TX);
+                meterUsage, tariffLookup, meterMetadata, billPeriodLookup, executor, NOOP_TX);
     }
 
     private CostAllocationRule directRule(Long ruleId) {
@@ -130,10 +137,10 @@ class CostAllocationServiceAsyncRunTest {
         service = new CostAllocationServiceImpl(
                 ruleRepository, runRepository, lineRepository,
                 new AllocationAlgorithmFactory(List.of(new DirectAllocationStrategy())),
-                meterUsage, tariffLookup, meterMetadata, capturingExecutor, NOOP_TX);
+                meterUsage, tariffLookup, meterMetadata, billPeriodLookup, capturingExecutor, NOOP_TX);
         stubSaveAssignsId(42L);
 
-        Long runId = service.submitRun(START, END, List.of(7L, 8L), 99L);
+        Long runId = service.submitRun(BILL_PERIOD_ID, List.of(7L, 8L), 99L);
 
         assertThat(runId).isEqualTo(42L);
         AtomicReference<CostAllocationRun> saved = new AtomicReference<>();
@@ -155,10 +162,10 @@ class CostAllocationServiceAsyncRunTest {
         service = new CostAllocationServiceImpl(
                 ruleRepository, runRepository, lineRepository,
                 new AllocationAlgorithmFactory(List.of(new DirectAllocationStrategy())),
-                meterUsage, tariffLookup, meterMetadata, capturingExecutor, NOOP_TX);
+                meterUsage, tariffLookup, meterMetadata, billPeriodLookup, capturingExecutor, NOOP_TX);
         stubSaveAssignsId(43L);
 
-        service.submitRun(START, END, null, null);
+        service.submitRun(BILL_PERIOD_ID, null, null);
 
         AtomicReference<CostAllocationRun> saved = new AtomicReference<>();
         verify(runRepository).save(argThat(r -> { saved.set(r); return true; }));
@@ -170,14 +177,30 @@ class CostAllocationServiceAsyncRunTest {
         service = new CostAllocationServiceImpl(
                 ruleRepository, runRepository, lineRepository,
                 new AllocationAlgorithmFactory(List.of(new DirectAllocationStrategy())),
-                meterUsage, tariffLookup, meterMetadata, capturingExecutor, NOOP_TX);
+                meterUsage, tariffLookup, meterMetadata, billPeriodLookup, capturingExecutor, NOOP_TX);
         stubSaveAssignsId(44L);
 
-        service.submitRun(START, END, List.of(), 1L);
+        service.submitRun(BILL_PERIOD_ID, List.of(), 1L);
 
         AtomicReference<CostAllocationRun> saved = new AtomicReference<>();
         verify(runRepository).save(argThat(r -> { saved.set(r); return true; }));
         assertThat(saved.get().getRuleIds()).isNull();
+    }
+
+    @Test
+    void submitRun_propagates_BillPeriodNotFoundException_when_port_throws() {
+        service = new CostAllocationServiceImpl(
+                ruleRepository, runRepository, lineRepository,
+                new AllocationAlgorithmFactory(List.of(new DirectAllocationStrategy())),
+                meterUsage, tariffLookup, meterMetadata, billPeriodLookup, capturingExecutor, NOOP_TX);
+        Long missingId = 9999L;
+        when(billPeriodLookup.findBoundariesById(missingId))
+                .thenThrow(new BillPeriodLookupPort.BillPeriodNotFoundException(missingId));
+
+        assertThatThrownBy(() -> service.submitRun(missingId, null, 1L))
+                .isInstanceOf(BillPeriodLookupPort.BillPeriodNotFoundException.class)
+                .hasMessageContaining("9999");
+        verify(runRepository, never()).save(any());
     }
 
     // ---------- executeRun happy path ----------

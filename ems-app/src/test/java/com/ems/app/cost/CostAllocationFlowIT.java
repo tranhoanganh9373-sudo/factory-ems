@@ -1,6 +1,8 @@
 package com.ems.app.cost;
 
 import com.ems.app.FactoryEmsApplication;
+import com.ems.billing.entity.BillPeriod;
+import com.ems.billing.repository.BillPeriodRepository;
 import com.ems.cost.entity.AllocationAlgorithm;
 import com.ems.cost.entity.CostAllocationLine;
 import com.ems.cost.entity.CostAllocationRule;
@@ -75,19 +77,33 @@ class CostAllocationFlowIT {
     @Autowired TariffPlanRepository planRepo;
     @Autowired TariffPeriodRepository periodRepo;
     @Autowired RollupHourlyRepository rollupRepo;
+    @Autowired BillPeriodRepository billPeriodRepo;
     @Autowired JdbcTemplate jdbc;
 
     private Long sourceMeterId;
     private Long workshopAId;
     private Long workshopBId;
     private Long ruleId;
+    private Long billPeriodId;
 
     @BeforeEach
     void seed() {
-        // Wipe just the cost tables; everything else can stay across tests in the suite
+        // Wipe cost tables + bill_period (FK chain: bill_line -> bill -> bill_period)
         jdbc.update("DELETE FROM cost_allocation_line");
         jdbc.update("DELETE FROM cost_allocation_run");
         jdbc.update("DELETE FROM cost_allocation_rule");
+        jdbc.update("DELETE FROM bill_line");
+        jdbc.update("DELETE FROM bill");
+        jdbc.update("DELETE FROM bill_period");
+
+        // Seed bill_period that exactly matches PERIOD_START/PERIOD_END so submitRun
+        // can resolve its boundaries via BillPeriodLookupPort.
+        BillPeriod bp = new BillPeriod();
+        bp.setYearMonth("2026-03");
+        bp.setPeriodStart(PERIOD_START);
+        bp.setPeriodEnd(PERIOD_END);
+        bp = billPeriodRepo.save(bp);
+        billPeriodId = bp.getId();
 
         // org tree (V1.0.8 already seeds reference data; we add our own under unique codes)
         OrgNode plant = newOrg(null, "IT-PLANT", "测试厂区");
@@ -169,7 +185,7 @@ class CostAllocationFlowIT {
     @Test
     void async_run_persists_lines_with_4band_split_and_supersedes_on_rerun() {
         // ---- first run ----
-        Long firstRunId = service.submitRun(PERIOD_START, PERIOD_END, List.of(ruleId), 1L);
+        Long firstRunId = service.submitRun(billPeriodId, List.of(ruleId), 1L);
 
         await().atMost(30, TimeUnit.SECONDS).pollInterval(200, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
@@ -200,7 +216,7 @@ class CostAllocationFlowIT {
         assertThat(sumBands(b)).isEqualByComparingTo(b.getAmount());
 
         // ---- second run, same period: prior SUCCESS becomes SUPERSEDED ----
-        Long secondRunId = service.submitRun(PERIOD_START, PERIOD_END, List.of(ruleId), 1L);
+        Long secondRunId = service.submitRun(billPeriodId, List.of(ruleId), 1L);
         await().atMost(30, TimeUnit.SECONDS).pollInterval(200, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     CostAllocationRun r = runRepo.findById(secondRunId).orElseThrow();

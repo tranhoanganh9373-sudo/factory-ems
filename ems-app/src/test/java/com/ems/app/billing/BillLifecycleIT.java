@@ -167,17 +167,17 @@ class BillLifecycleIT {
 
     @Test
     void close_lock_unlock_reclose_full_lifecycle() {
-        // 1) cost run → SUCCESS
-        Long runId = costService.submitRun(PERIOD_START, PERIOD_END, List.of(ruleId), 1L);
+        // 1) ensurePeriod first — submitRun 现在通过 billPeriodId 解析边界
+        BillPeriodDTO p = billing.ensurePeriod(YearMonth.of(2026, 3));
+        assertThat(p.status()).isEqualTo(BillPeriodStatus.OPEN);
+
+        // 2) cost run → SUCCESS
+        Long runId = costService.submitRun(p.id(), List.of(ruleId), 1L);
         await().atMost(60, TimeUnit.SECONDS).pollInterval(300, TimeUnit.MILLISECONDS)
                 .untilAsserted(() -> {
                     CostAllocationRun r = runRepo.findById(runId).orElseThrow();
                     assertThat(r.getStatus()).isEqualTo(RunStatus.SUCCESS);
                 });
-
-        // 2) ensurePeriod
-        BillPeriodDTO p = billing.ensurePeriod(YearMonth.of(2026, 3));
-        assertThat(p.status()).isEqualTo(BillPeriodStatus.OPEN);
 
         // 3) generateBills → CLOSED + bills 落库
         BillPeriodDTO closed = billing.generateBills(p.id(), 1L);

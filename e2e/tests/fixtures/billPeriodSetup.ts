@@ -1,18 +1,13 @@
 /**
  * Bill period setup fixture.
  *
- * Ensures that a SUCCESS cost_allocation_run exists that covers the UTC
- * boundaries of the given YearMonth bill period so that
- * `PUT /api/v1/bills/periods/{id}/close` does not return 409.
+ * Ensures that a SUCCESS cost_allocation_run exists that covers the
+ * given YearMonth bill period so that `PUT /api/v1/bills/periods/{id}/close`
+ * does not return 409.
  *
- * The backend (BillingServiceImpl) stores period boundaries in Asia/Shanghai
- * (UTC+8), so 2026-03 → periodStart = 2026-02-28T16:00:00Z,
- *                        periodEnd   = 2026-03-31T16:00:00Z.
- *
- * The coverage query in CostAllocationRunRepository is:
- *   r.periodStart <= :start AND r.periodEnd >= :end
- *
- * We compute the same boundaries and submit a cost run that matches exactly.
+ * After issue #24 fix: cost-allocation/runs accepts {billPeriodId, ruleIds}
+ * — backend resolves boundaries from bill_period directly. No timezone math
+ * needed in this fixture anymore.
  */
 
 const BASE_URL = process.env.E2E_BASE_URL || 'http://localhost:8888';
@@ -33,28 +28,6 @@ async function adminToken(): Promise<string> {
   return token;
 }
 
-/**
- * Compute the UTC boundary strings for a YearMonth bill period.
- *
- * Backend uses ZoneOffset.ofHours(8):
- *   periodStart = ym.atDay(1).atStartOfDay().atOffset(+8) → stored as UTC
- *   periodEnd   = ym.plusMonths(1).atDay(1).atStartOfDay().atOffset(+8) → UTC
- *
- * Example: ym="2026-03"
- *   periodStart = 2026-03-01T00:00:00+08:00 = 2026-02-28T16:00:00Z
- *   periodEnd   = 2026-04-01T00:00:00+08:00 = 2026-03-31T16:00:00Z
- */
-function periodBoundaries(ym: string): { periodStart: string; periodEnd: string } {
-  const [year, month] = ym.split('-').map(Number);
-  // Subtract 8 hours from local midnight to get UTC equivalent
-  const startUtc = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0) - 8 * 3600 * 1000);
-  const endUtc   = new Date(Date.UTC(year, month,     1, 0, 0, 0) - 8 * 3600 * 1000);
-  return {
-    periodStart: startUtc.toISOString().replace('.000Z', 'Z'),
-    periodEnd:   endUtc.toISOString().replace('.000Z', 'Z'),
-  };
-}
-
 /** Return the id of the first enabled cost rule, or throw if none exist. */
 async function firstEnabledRuleId(token: string): Promise<number> {
   const res = await fetch(`${BASE_URL}/api/v1/cost/rules`, {
@@ -68,11 +41,10 @@ async function firstEnabledRuleId(token: string): Promise<number> {
   return enabled.id;
 }
 
-/** Submit a cost-allocation run and return its runId. */
+/** Submit a cost-allocation run for the given billPeriodId and return its runId. */
 async function submitRun(
   token: string,
-  periodStart: string,
-  periodEnd: string,
+  billPeriodId: number,
   ruleId: number,
 ): Promise<number> {
   const res = await fetch(`${BASE_URL}/api/v1/cost/runs`, {
@@ -81,7 +53,7 @@ async function submitRun(
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ periodStart, periodEnd, ruleIds: [ruleId] }),
+    body: JSON.stringify({ billPeriodId, ruleIds: [ruleId] }),
   });
   if (!res.ok) {
     const text = await res.text();
@@ -124,9 +96,9 @@ async function pollUntilSuccess(token: string, runId: number): Promise<void> {
  */
 export async function ensureCostRunSuccess(ym: string): Promise<void> {
   const token = await adminToken();
-  const { periodStart, periodEnd } = periodBoundaries(ym);
+  const billPeriodId = await ensureBillPeriodWithToken(token, ym);
   const ruleId = await firstEnabledRuleId(token);
-  const runId = await submitRun(token, periodStart, periodEnd, ruleId);
+  const runId = await submitRun(token, billPeriodId, ruleId);
   await pollUntilSuccess(token, runId);
 }
 
@@ -182,9 +154,8 @@ export async function ensurePeriodClosed(ym: string): Promise<void> {
   if (currentStatus === 'LOCKED') return; // already locked — bills exist
 
   // Step 3: ensure SUCCESS cost run
-  const { periodStart, periodEnd } = periodBoundaries(ym);
   const ruleId = await firstEnabledRuleId(token);
-  const runId = await submitRun(token, periodStart, periodEnd, ruleId);
+  const runId = await submitRun(token, periodId, ruleId);
   await pollUntilSuccess(token, runId);
 
   // Step 4: close via API

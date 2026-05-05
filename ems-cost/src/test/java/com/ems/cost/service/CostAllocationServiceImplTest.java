@@ -9,6 +9,7 @@ import com.ems.cost.repository.CostAllocationRuleRepository;
 import com.ems.cost.repository.CostAllocationRunRepository;
 import com.ems.cost.service.impl.CostAllocationServiceImpl;
 import com.ems.cost.service.impl.DirectAllocationStrategy;
+import com.ems.cost.service.BillPeriodLookupPort;
 import com.ems.tariff.service.HourPrice;
 import com.ems.tariff.service.TariffPriceLookupService;
 import org.junit.jupiter.api.Test;
@@ -43,6 +44,7 @@ class CostAllocationServiceImplTest {
     private final MeterUsageReader meterUsage = mock(MeterUsageReader.class);
     private final TariffPriceLookupService tariffLookup = mock(TariffPriceLookupService.class);
     private final MeterMetadataPort meterMetadata = mock(MeterMetadataPort.class);
+    private final BillPeriodLookupPort billPeriodLookup = mock(BillPeriodLookupPort.class);
     private final Executor executor = Runnable::run; // synchronous executor for dry-run tests (unused)
     private final PlatformTransactionManager txManager = mock(PlatformTransactionManager.class);
 
@@ -50,7 +52,7 @@ class CostAllocationServiceImplTest {
     private final AllocationAlgorithmFactory factory = new AllocationAlgorithmFactory(List.of(direct));
     private final CostAllocationServiceImpl service =
             new CostAllocationServiceImpl(ruleRepository, runRepository, lineRepository, factory,
-                    meterUsage, tariffLookup, meterMetadata, executor, txManager);
+                    meterUsage, tariffLookup, meterMetadata, billPeriodLookup, executor, txManager);
 
     private CostAllocationRule directRule(Long id) {
         CostAllocationRule r = new CostAllocationRule();
