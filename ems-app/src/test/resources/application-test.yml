@@ -12,3 +12,6 @@ ems:
   login:
     max-failed-attempts: 5
     lockout-minutes: 15
+  feature:
+    pv:
+      enabled: true
