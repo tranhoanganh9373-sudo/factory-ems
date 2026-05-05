@@ -26,4 +26,11 @@ public interface FeedInTariffRepository extends JpaRepository<FeedInTariff, Long
         var rows = findEffectiveOrdered(region, source, period, asOf, PageRequest.of(0, 1));
         return rows.isEmpty() ? Optional.empty() : Optional.of(rows.get(0));
     }
+
+    /** Admin UI 列表：按 (region, energy_source, period_type) 分组、effective_from 倒序，便于前端识别"当前生效"行。 */
+    List<FeedInTariff> findAllByOrderByRegionAscEnergySourceAscPeriodTypeAscEffectiveFromDesc();
+
+    /** 唯一键去重检测——和 V2.6.0 schema 上的 UNIQUE (region, energy_source, period_type, effective_from) 一致。 */
+    boolean existsByRegionAndEnergySourceAndPeriodTypeAndEffectiveFrom(
+            String region, EnergySource energySource, String periodType, LocalDate effectiveFrom);
 }
