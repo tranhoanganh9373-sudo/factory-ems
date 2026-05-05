@@ -158,6 +158,10 @@ export default function AppLayout() {
           { key: '/floorplan', label: <Link to="/floorplan">平面图</Link> },
           { key: '/collector', label: <Link to="/collector">采集器状态</Link> },
           { key: '/meters', label: <Link to="/meters">测点管理</Link> },
+          {
+            key: '/settings/energy-params',
+            label: <Link to="/settings/energy-params">能源参数</Link>,
+          },
           { key: '/admin/cert-approval', label: <Link to="/admin/cert-approval">证书审批</Link> },
           { key: '/admin/audit', label: <Link to="/admin/audit">审计日志</Link> },
           { key: '/admin/users', label: <Link to="/admin/users">用户</Link> },

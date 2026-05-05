@@ -13,6 +13,7 @@ import UserPermissionPage from '@/pages/admin/users/permissions';
 import RoleListPage from '@/pages/admin/roles/list';
 import AuditListPage from '@/pages/admin/audit/list';
 import CertApprovalPage from '@/pages/admin/cert-approval';
+import EnergyParamsPage from '@/pages/settings/EnergyParamsPage';
 import DashboardPage from '@/pages/dashboard';
 import ReportPage from '@/pages/report';
 import TariffPage from '@/pages/tariff';
@@ -104,6 +105,16 @@ export function AppRouter() {
           <Route path="roles" element={<RoleListPage />} />
           <Route path="audit" element={<AuditListPage />} />
           <Route path="cert-approval" element={<CertApprovalPage />} />
+        </Route>
+        <Route
+          path="settings"
+          element={
+            <ProtectedRoute requiredRole="ADMIN">
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route path="energy-params" element={<EnergyParamsPage />} />
         </Route>
         <Route
           path="collector"
