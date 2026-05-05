@@ -136,4 +136,24 @@ public class DashboardController {
             @RequestParam(required = false) Long orgNodeId) {
         return Result.ok(service.topologyConsistency(new RangeQuery(range, from, to, orgNodeId, null)));
     }
+
+    /** ⑫ 能源来源构成（PV 功能门控） */
+    @GetMapping("/energy-source-mix")
+    public Result<List<EnergySourceMixDTO>> energySourceMix(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.energySourceMix(new RangeQuery(range, from, to, orgNodeId, null)));
+    }
+
+    /** ⑬ PV 发电曲线（PV 功能门控） */
+    @GetMapping("/pv-curve")
+    public Result<PvCurveDTO> pvCurve(
+            @RequestParam(defaultValue = "TODAY") RangeType range,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
+            @RequestParam(required = false) Long orgNodeId) {
+        return Result.ok(service.pvCurve(new RangeQuery(range, from, to, orgNodeId, null)));
+    }
 }

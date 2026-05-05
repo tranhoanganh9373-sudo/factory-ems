@@ -1,5 +1,6 @@
 package com.ems.dashboard.service;
 
+import com.ems.core.config.PvFeatureProperties;
 import com.ems.core.constant.ValueKind;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.impl.DashboardServiceImpl;
@@ -9,6 +10,9 @@ import com.ems.floorplan.dto.FloorplanDTO;
 import com.ems.floorplan.dto.FloorplanPointDTO;
 import com.ems.floorplan.dto.FloorplanWithPointsDTO;
 import com.ems.floorplan.service.FloorplanService;
+import com.ems.meter.entity.EnergySource;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterTopologyRepository;
@@ -43,9 +47,9 @@ class DashboardServiceImplTest {
     FloorplanService floorplans;
     DashboardServiceImpl svc;
 
-    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA);
-    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA);
+    static final MeterRecord M1 = new MeterRecord(1L, "M-1", "总表-电", 10L, "M-1", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M2 = new MeterRecord(2L, "M-2", "总表-水", 10L, "M-2", 2L, "WATER", "m³", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+    static final MeterRecord M3 = new MeterRecord(3L, "M-3", "支表-电", 11L, "M-3", 1L, "ELEC", "kWh", true, ValueKind.INTERVAL_DELTA, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
 
     @BeforeEach
     void setup() {
@@ -56,7 +60,8 @@ class DashboardServiceImplTest {
         production = mock(ProductionEntryService.class);
         topology = mock(MeterTopologyRepository.class);
         floorplans = mock(FloorplanService.class);
-        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans);
+        svc = new DashboardServiceImpl(support, tsq, tariff, energyTypes, production, topology, floorplans,
+                new PvFeatureProperties(false), mock(com.ems.dashboard.service.SolarSelfConsumptionService.class));
     }
 
     /* ---------------- KPI ---------------- */

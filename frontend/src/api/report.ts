@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useAuthStore } from '@/stores/authStore';
+import { apiClient } from './client';
 
 // Granularity matches the backend enum com.ems.timeseries.model.Granularity
 export type Granularity = 'HOUR' | 'DAY' | 'MONTH';
@@ -108,3 +109,15 @@ export async function getFileToken(
   const text = await (res.data as Blob).text();
   return JSON.parse(text) as FileTokenDTO;
 }
+
+export interface CarbonReportDTO {
+  selfConsumptionKwh: number;
+  gridFactor: number;
+  solarFactor: number;
+  reductionKg: number;
+}
+
+export const fetchCarbon = (params: { orgNodeId: number; from: string; to: string }) =>
+  apiClient
+    .get<CarbonReportDTO>('/report/carbon', { params })
+    .then((r) => r.data as unknown as CarbonReportDTO);

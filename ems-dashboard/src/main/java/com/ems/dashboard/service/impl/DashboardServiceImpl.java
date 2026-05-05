@@ -1,5 +1,6 @@
 package com.ems.dashboard.service.impl;
 
+import com.ems.core.config.PvFeatureProperties;
 import com.ems.core.exception.ForbiddenException;
 import com.ems.dashboard.dto.*;
 import com.ems.dashboard.service.DashboardService;
@@ -9,7 +10,10 @@ import com.ems.dashboard.support.RangeResolver;
 import com.ems.floorplan.dto.FloorplanPointDTO;
 import com.ems.floorplan.dto.FloorplanWithPointsDTO;
 import com.ems.floorplan.service.FloorplanService;
+import com.ems.meter.entity.EnergySource;
 import com.ems.meter.entity.EnergyType;
+import com.ems.meter.entity.FlowDirection;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.entity.MeterTopology;
 import com.ems.meter.repository.EnergyTypeRepository;
 import com.ems.meter.repository.MeterTopologyRepository;
@@ -19,6 +23,7 @@ import com.ems.timeseries.model.Granularity;
 import com.ems.timeseries.model.MeterPoint;
 import com.ems.timeseries.model.TimePoint;
 import com.ems.timeseries.model.TimeRange;
+import com.ems.dashboard.service.SolarSelfConsumptionService;
 import com.ems.timeseries.query.TimeSeriesQueryService;
 import com.ems.timeseries.query.TimeSeriesQueryService.MeterRef;
 import org.springframework.stereotype.Service;
@@ -52,12 +57,16 @@ public class DashboardServiceImpl implements DashboardService {
     private final ProductionEntryService production;
     private final MeterTopologyRepository topology;
     private final FloorplanService floorplans;
+    private final PvFeatureProperties pvProps;
+    private final SolarSelfConsumptionService selfConsumption;
 
     public DashboardServiceImpl(DashboardSupport support, TimeSeriesQueryService tsq,
                                 TariffService tariff, EnergyTypeRepository energyTypes,
                                 ProductionEntryService production,
                                 MeterTopologyRepository topology,
-                                FloorplanService floorplans) {
+                                FloorplanService floorplans,
+                                PvFeatureProperties pvProps,
+                                SolarSelfConsumptionService selfConsumption) {
         this.support = support;
         this.tsq = tsq;
         this.tariff = tariff;
@@ -65,6 +74,8 @@ public class DashboardServiceImpl implements DashboardService {
         this.production = production;
         this.topology = topology;
         this.floorplans = floorplans;
+        this.pvProps = pvProps;
+        this.selfConsumption = selfConsumption;
     }
 
     /* ---------------- ① KPI ---------------- */
@@ -75,6 +86,11 @@ public class DashboardServiceImpl implements DashboardService {
         List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), query.energyType());
         if (meters.isEmpty()) return List.of();
 
+        if (!pvProps.enabled()) return legacyKpi(meters, range);
+        return pvAwareKpi(meters, range);
+    }
+
+    private List<KpiDTO> legacyKpi(List<MeterRecord> meters, TimeRange range) {
         // 拓扑根聚合：只把"可见集合的根"参与求和，避免父表 + 子表的双重计算
         List<MeterRecord> roots = support.filterToVisibleRoots(meters);
         List<MeterRef> refs = toRefs(roots);
@@ -100,6 +116,64 @@ public class DashboardServiceImpl implements DashboardService {
         )));
         out.sort(Comparator.comparing(KpiDTO::energyType));
         return out;
+    }
+
+    private List<KpiDTO> pvAwareKpi(List<MeterRecord> meters, TimeRange range) {
+        List<MeterRecord> consumeMeters = meters.stream()
+            .filter(m -> m.role() == MeterRole.CONSUME).toList();
+        List<MeterRecord> gridImport = meters.stream()
+            .filter(m -> m.role() == MeterRole.GRID_TIE && m.flowDirection() == FlowDirection.IMPORT).toList();
+        List<MeterRecord> gridExport = meters.stream()
+            .filter(m -> m.role() == MeterRole.GRID_TIE && m.flowDirection() == FlowDirection.EXPORT).toList();
+        List<MeterRecord> generateMeters = meters.stream()
+            .filter(m -> m.role() == MeterRole.GENERATE).toList();
+
+        boolean hasPvOrGridTie = !gridImport.isEmpty() || !gridExport.isEmpty() || !generateMeters.isEmpty();
+        if (!hasPvOrGridTie) return legacyKpi(consumeMeters, range);
+
+        Map<String, String> unitOf = unitByEnergyType(meters);
+
+        Map<String, Double> cur = computeTotal(gridImport, gridExport, generateMeters, range);
+        long len = range.durationSeconds();
+        Map<String, Double> prev = computeTotal(gridImport, gridExport, generateMeters,
+                                                RangeResolver.shiftBack(range, len));
+        TimeRange yoyRange = new TimeRange(
+            range.start().atZone(RangeResolver.ZONE).minusYears(1).toInstant(),
+            range.end().atZone(RangeResolver.ZONE).minusYears(1).toInstant()
+        );
+        Map<String, Double> prevYear = computeTotal(gridImport, gridExport, generateMeters, yoyRange);
+
+        List<KpiDTO> out = new ArrayList<>(cur.size());
+        cur.forEach((type, v) -> out.add(new KpiDTO(
+            type, unitOf.get(type), v,
+            ratio(v, prev.get(type)),
+            ratio(v, prevYear.get(type))
+        )));
+        out.sort(Comparator.comparing(KpiDTO::energyType));
+        return out;
+    }
+
+    private Map<String, Double> computeTotal(List<MeterRecord> gridImport,
+                                             List<MeterRecord> gridExport,
+                                             List<MeterRecord> generateMeters,
+                                             TimeRange range) {
+        Map<String, Double> gridIn   = tsq.sumByEnergyType(toRefs(gridImport), range);
+        Map<String, Double> gridOut  = tsq.sumByEnergyType(toRefs(gridExport), range);
+        Map<String, Double> generate = tsq.sumByEnergyType(toRefs(generateMeters), range);
+
+        // total = Σ(GRID_TIE.import) − Σ(GRID_TIE.export) + Σ(GENERATE.production)
+        Set<String> types = new HashSet<>();
+        types.addAll(gridIn.keySet());
+        types.addAll(gridOut.keySet());
+        types.addAll(generate.keySet());
+        Map<String, Double> total = new HashMap<>();
+        for (String t : types) {
+            double v = gridIn.getOrDefault(t, 0.0)
+                     - gridOut.getOrDefault(t, 0.0)
+                     + generate.getOrDefault(t, 0.0);
+            total.put(t, v);
+        }
+        return total;
     }
 
     /* ---------------- ② Realtime series ---------------- */
@@ -164,6 +238,48 @@ public class DashboardServiceImpl implements DashboardService {
         });
         out.sort(Comparator.comparing(CompositionDTO::energyType));
         return out;
+    }
+
+    /* ---------------- ③b Energy source mix (PV-gated) ---------------- */
+
+    @Override
+    public List<EnergySourceMixDTO> energySourceMix(RangeQuery query) {
+        if (!pvProps.enabled()) return List.of();
+
+        TimeRange range = RangeResolver.resolve(query);
+        List<MeterRecord> meters = support.resolveMeters(query.orgNodeId(), null);
+        if (meters.isEmpty()) return List.of();
+
+        Map<EnergySource, List<MeterRecord>> bySource = meters.stream()
+            .collect(java.util.stream.Collectors.groupingBy(MeterRecord::energySource));
+
+        Map<EnergySource, Double> totalBySource = new java.util.EnumMap<>(EnergySource.class);
+        String unit = meters.get(0).unit();
+        for (var entry : bySource.entrySet()) {
+            List<MeterRecord> roots = support.filterToVisibleRoots(entry.getValue());
+            Map<String, Double> sums = tsq.sumByEnergyType(toRefs(roots), range);
+            double v = sums.values().stream().mapToDouble(Double::doubleValue).sum();
+            totalBySource.put(entry.getKey(), v);
+        }
+
+        double grandTotal = totalBySource.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        List<EnergySourceMixDTO> out = new ArrayList<>(totalBySource.size());
+        totalBySource.forEach((src, v) -> {
+            Double share = grandTotal > 0 ? v / grandTotal : null;
+            out.add(new EnergySourceMixDTO(src, unit, v, share));
+        });
+        out.sort(Comparator.comparing(d -> d.energySource().name()));
+        return out;
+    }
+
+    /* ---------------- ③c PV curve (PV-gated) ---------------- */
+
+    @Override
+    public PvCurveDTO pvCurve(RangeQuery query) {
+        if (!pvProps.enabled()) return new PvCurveDTO("kWh", List.of());
+        TimeRange range = RangeResolver.resolve(query);
+        return selfConsumption.curve(query.orgNodeId(), range);
     }
 
     /* ---------------- ④ Meter detail ---------------- */

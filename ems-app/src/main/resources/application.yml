@@ -82,3 +82,6 @@ ems:
       history-retention-days: 7
       enter-threshold: -0.15
       exit-threshold: -0.10
+  feature:
+    pv:
+      enabled: false  # v1.2.0 PV 总闸（灰度后切 true）

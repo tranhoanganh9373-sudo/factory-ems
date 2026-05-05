@@ -1,6 +1,9 @@
 import { apiClient } from './client';
 
 export type ValueKind = 'INTERVAL_DELTA' | 'CUMULATIVE_ENERGY' | 'INSTANT_POWER';
+export type MeterRole = 'CONSUME' | 'GENERATE' | 'GRID_TIE';
+export type EnergySource = 'GRID' | 'SOLAR' | 'WIND' | 'STORAGE';
+export type FlowDirection = 'IMPORT' | 'EXPORT';
 
 export interface MeterImportRow {
   code: string;
@@ -11,6 +14,9 @@ export interface MeterImportRow {
   channelName: string | null;
   channelPointKey: string | null;
   valueKind: ValueKind | null;
+  role: MeterRole | null;
+  energySource: EnergySource | null;
+  flowDirection: FlowDirection | null;
 }
 
 export interface EnergyTypeDTO {
@@ -37,6 +43,9 @@ export interface MeterDTO {
   channelPointKey: string | null;
   parentMeterId: number | null;
   valueKind: ValueKind;
+  role: MeterRole;
+  energySource: EnergySource;
+  flowDirection: FlowDirection;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +59,9 @@ export interface CreateMeterReq {
   channelId?: number | null;
   channelPointKey?: string | null;
   valueKind?: ValueKind | null;
+  role?: MeterRole | null;
+  energySource?: EnergySource | null;
+  flowDirection?: FlowDirection | null;
 }
 
 export interface UpdateMeterReq {
@@ -61,6 +73,9 @@ export interface UpdateMeterReq {
   channelId?: number | null;
   channelPointKey?: string | null;
   valueKind?: ValueKind | null;
+  role?: MeterRole | null;
+  energySource?: EnergySource | null;
+  flowDirection?: FlowDirection | null;
 }
 
 export interface BindParentMeterReq {

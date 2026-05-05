@@ -1,11 +1,8 @@
 package com.ems.mockdata;
 
 import com.ems.mockdata.config.ScaleProfile;
-import com.ems.mockdata.seed.*;
-import com.ems.mockdata.timeseries.InfluxBatchWriter;
-import com.ems.mockdata.timeseries.RollupBatchWriter;
-import com.ems.mockdata.timeseries.TimeseriesGenerator;
-import com.ems.mockdata.production.ProductionEntryGenerator;
+import com.ems.mockdata.scenario.MockScenario;
+import com.ems.mockdata.scenario.ScenarioContext;
 import com.ems.mockdata.verify.SanityChecker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +19,6 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
 import java.util.List;
 
 @SpringBootApplication(
@@ -45,41 +41,14 @@ public class MockDataApplication implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(MockDataApplication.class);
 
-    private final OrgTreeSeeder orgTreeSeeder;
-    private final MeterSeeder meterSeeder;
-    private final MeterTopologySeeder meterTopologySeeder;
-    private final TariffSeeder tariffSeeder;
-    private final ShiftSeeder shiftSeeder;
-    private final UserSeeder userSeeder;
-    private final TimeseriesGenerator timeseriesGenerator;
-    private final InfluxBatchWriter influxBatchWriter;
-    private final RollupBatchWriter rollupBatchWriter;
-    private final ProductionEntryGenerator productionEntryGenerator;
+    private final List<MockScenario> scenarios;
     private final SanityChecker sanityChecker;
     private final MockDataReseter reseter;
 
-    public MockDataApplication(OrgTreeSeeder orgTreeSeeder,
-                               MeterSeeder meterSeeder,
-                               MeterTopologySeeder meterTopologySeeder,
-                               TariffSeeder tariffSeeder,
-                               ShiftSeeder shiftSeeder,
-                               UserSeeder userSeeder,
-                               TimeseriesGenerator timeseriesGenerator,
-                               InfluxBatchWriter influxBatchWriter,
-                               RollupBatchWriter rollupBatchWriter,
-                               ProductionEntryGenerator productionEntryGenerator,
+    public MockDataApplication(List<MockScenario> scenarios,
                                SanityChecker sanityChecker,
                                MockDataReseter reseter) {
-        this.orgTreeSeeder = orgTreeSeeder;
-        this.meterSeeder = meterSeeder;
-        this.meterTopologySeeder = meterTopologySeeder;
-        this.tariffSeeder = tariffSeeder;
-        this.shiftSeeder = shiftSeeder;
-        this.userSeeder = userSeeder;
-        this.timeseriesGenerator = timeseriesGenerator;
-        this.influxBatchWriter = influxBatchWriter;
-        this.rollupBatchWriter = rollupBatchWriter;
-        this.productionEntryGenerator = productionEntryGenerator;
+        this.scenarios = scenarios;
         this.sanityChecker = sanityChecker;
         this.reseter = reseter;
     }
@@ -102,7 +71,6 @@ public class MockDataApplication implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) throws Exception {
-        // parse args
         ScaleProfile scale = parseScale(args);
         int months = parseInt(args, "months", scale.defaultMonths());
         long seed = parseLong(args, "seed", 42L);
@@ -112,9 +80,10 @@ public class MockDataApplication implements ApplicationRunner {
         boolean reset = parseBoolean(args, "reset", false);
         boolean noInflux = parseBoolean(args, "no-influx", false);
         boolean verifyOnly = parseBoolean(args, "verify-only", false);
+        String scenarioName = parseString(args, "mock.scenario.name", "basic");
 
-        log.info("mock-data-generator starting: scale={} months={} seed={} start={} seedOnly={} reset={} noInflux={}",
-            scale, months, seed, startDate, seedOnly, reset, noInflux);
+        log.info("mock-data-generator starting: scenario={} scale={} months={} seed={} start={} seedOnly={} reset={} noInflux={}",
+            scenarioName, scale, months, seed, startDate, seedOnly, reset, noInflux);
 
         if (verifyOnly) {
             LocalDate endDate = startDate.plusMonths(months);
@@ -127,40 +96,17 @@ public class MockDataApplication implements ApplicationRunner {
             reseter.reset();
         }
 
-        boolean doMaster = "all".equals(seedOnly) || "master".equals(seedOnly);
-        boolean doTimeseries = "all".equals(seedOnly) || "timeseries".equals(seedOnly);
+        ScenarioContext ctx = new ScenarioContext(scale, months, seed, startDate, seedOnly, reset, noInflux);
 
-        if (doMaster) {
-            log.info("--- Phase B: master data seeding ---");
-            orgTreeSeeder.seed();
-            meterSeeder.seed(scale);
-            meterTopologySeeder.seed();
-            tariffSeeder.seed();
-            shiftSeeder.seed();
-            userSeeder.seed();
-        }
+        MockScenario chosen = scenarios.stream()
+            .filter(s -> s.name().equals(scenarioName))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(
+                "Unknown mock.scenario.name=" + scenarioName +
+                "; valid: " + scenarios.stream().map(MockScenario::name).toList()));
 
-        if (doTimeseries) {
-            log.info("--- Phase C/D/E: timeseries generation ---");
-            LocalDate endDate = startDate.plusMonths(months);
-            timeseriesGenerator.generate(scale, startDate, endDate, seed, noInflux,
-                influxBatchWriter, rollupBatchWriter);
-        }
-
-        if (doMaster) {
-            log.info("--- Phase F: production entries ---");
-            LocalDate endDate = startDate.plusMonths(months);
-            productionEntryGenerator.generate(seed, startDate, endDate);
-        }
-
-        log.info("--- Phase G: sanity check ---");
-        LocalDate endDate = startDate.plusMonths(months);
-        boolean ok = sanityChecker.check(startDate, endDate);
-        if (!ok) {
-            log.error("Sanity check FAILED");
-            System.exit(2);
-        }
-        log.info("mock-data-generator completed successfully");
+        log.info("Selected scenario: {}", chosen.name());
+        chosen.seed(ctx);
     }
 
     private ScaleProfile parseScale(ApplicationArguments args) {

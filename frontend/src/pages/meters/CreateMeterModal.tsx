@@ -1,6 +1,13 @@
 import { Modal, Form, Input, Select, Switch, message } from 'antd';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { meterApi, CreateMeterReq, ValueKind } from '@/api/meter';
+import {
+  meterApi,
+  CreateMeterReq,
+  ValueKind,
+  MeterRole,
+  EnergySource,
+  FlowDirection,
+} from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 import { channelApi } from '@/api/channel';
 
@@ -27,9 +34,7 @@ const VALUE_KIND_TOOLTIP = (
       <li>典型场景：安科瑞 ACR 系列 0x003F (UINT32 总电能 kWh)、电表"电度"寄存器</li>
       <li style={{ color: '#faad14' }}>注意：区间内换表/计数器归零会得到负数或异常值</li>
     </ul>
-    <div style={{ marginTop: 10, marginBottom: 4, fontWeight: 600 }}>
-      瞬时功率 (INSTANT_POWER)
-    </div>
+    <div style={{ marginTop: 10, marginBottom: 4, fontWeight: 600 }}>瞬时功率 (INSTANT_POWER)</div>
     <ul style={{ margin: 0, paddingLeft: 18 }}>
       <li>含义：寄存器是当前瞬时值（W / kW）</li>
       <li style={{ color: '#ff4d4f' }}>暂不支持区间合计（需要时间积分）</li>
@@ -85,6 +90,9 @@ interface FormValues {
   channelPointKey?: string | null;
   enabled?: boolean;
   valueKind?: ValueKind;
+  role?: MeterRole;
+  energySource?: EnergySource;
+  flowDirection?: FlowDirection;
 }
 
 export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -145,6 +153,9 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
             channelId: v.channelId ?? null,
             channelPointKey,
             valueKind: v.valueKind ?? 'INTERVAL_DELTA',
+            role: v.role ?? 'CONSUME',
+            energySource: v.energySource ?? 'GRID',
+            flowDirection: v.flowDirection ?? 'IMPORT',
           });
         })
       }
@@ -174,6 +185,27 @@ export function CreateMeterModal({ open, onClose }: { open: boolean; onClose: ()
           tooltip={{ title: VALUE_KIND_TOOLTIP, overlayStyle: { maxWidth: 420 } }}
         >
           <Select options={VALUE_KIND_OPTIONS} />
+        </Form.Item>
+        <Form.Item name="role" label="角色" initialValue="CONSUME">
+          <Select>
+            <Select.Option value="CONSUME">纯耗电</Select.Option>
+            <Select.Option value="GENERATE">光伏发电</Select.Option>
+            <Select.Option value="GRID_TIE">并网点</Select.Option>
+          </Select>
+        </Form.Item>
+        <Form.Item name="energySource" label="来源" initialValue="GRID">
+          <Select>
+            <Select.Option value="GRID">电网</Select.Option>
+            <Select.Option value="SOLAR">光伏</Select.Option>
+            <Select.Option value="WIND">风电</Select.Option>
+            <Select.Option value="STORAGE">储能</Select.Option>
+          </Select>
+        </Form.Item>
+        <Form.Item name="flowDirection" label="方向" initialValue="IMPORT">
+          <Select>
+            <Select.Option value="IMPORT">进口</Select.Option>
+            <Select.Option value="EXPORT">出口</Select.Option>
+          </Select>
         </Form.Item>
         <Form.Item name="orgNodeId" label="组织节点" rules={[{ required: true }]}>
           <Select
