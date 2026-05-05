@@ -10,10 +10,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -45,6 +47,23 @@ class GlobalExceptionHandlerTest {
            .andExpect(jsonPath("$.code").value(40000));
     }
 
+    @Test
+    void responseStatus404_returns404_notInternalError() throws Exception {
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(ctl).setControllerAdvice(handler).build();
+        mvc.perform(get("/rse-404"))
+           .andExpect(status().isNotFound())
+           .andExpect(jsonPath("$.code").value(40004))
+           .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("channel not found: 14")));
+    }
+
+    @Test
+    void responseStatus409_returns409() throws Exception {
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(ctl).setControllerAdvice(handler).build();
+        mvc.perform(get("/rse-409"))
+           .andExpect(status().isConflict())
+           .andExpect(jsonPath("$.code").value(40009));
+    }
+
     @Configuration
     static class TestCfg {
         @Bean MeterRegistry meterRegistry() { return new SimpleMeterRegistry(); }
@@ -54,5 +73,11 @@ class GlobalExceptionHandlerTest {
     static class TestCtl {
         @GetMapping("/not-found") public String nf() { throw new NotFoundException("User", 42); }
         @GetMapping("/biz-err") public String biz() { throw new BusinessException(40000, "bad"); }
+        @GetMapping("/rse-404") public String rse404() {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "channel not found: 14");
+        }
+        @GetMapping("/rse-409") public String rse409() {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "duplicate");
+        }
     }
 }
