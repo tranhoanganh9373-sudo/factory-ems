@@ -47,6 +47,7 @@ FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S ems && adduser -S -G ems ems
 WORKDIR /app
 COPY --from=build --chown=ems:ems /build/ems-app/target/factory-ems.jar /app/factory-ems.jar
+RUN mkdir -p /data/collector /data/ems_uploads && chown -R ems:ems /data
 USER ems
 EXPOSE 8080
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseZGC"
