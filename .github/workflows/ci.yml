@@ -61,12 +61,10 @@ jobs:
         with: { version: 9 }
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm, cache-dependency-path: frontend/pnpm-lock.yaml }
-      - name: Build backend image
-        run: docker build -t factory-ems:ci -f ems-app/Dockerfile .
-      - name: Build frontend
-        run: cd frontend && pnpm install --frozen-lockfile && pnpm build
       - name: Prepare .env from example
         run: cp .env.example .env
+      - name: Build images via compose
+        run: docker compose -f docker-compose.yml build
       - name: Start stack
         run: docker compose -f docker-compose.yml up -d --wait
       - name: Install Playwright
