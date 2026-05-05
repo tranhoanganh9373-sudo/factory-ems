@@ -4,6 +4,7 @@ import com.ems.meter.entity.EnergySource;
 import com.ems.meter.entity.FeedInTariff;
 import com.ems.meter.entity.FlowDirection;
 import com.ems.meter.entity.Meter;
+import com.ems.meter.entity.MeterRole;
 import com.ems.meter.repository.FeedInTariffRepository;
 import com.ems.meter.repository.MeterRepository;
 import com.ems.cost.service.MeterUsageReader;
@@ -53,18 +54,40 @@ class FeedInRevenueServiceImplTest {
     // Helper builders
     // ------------------------------------------------------------------
 
-    private Meter exportMeter(Long id, EnergySource source) {
+    /**
+     * Build a physical sell-back meter (standard PV接线下的并网出线表):
+     * role=GRID_TIE, source=GRID, dir=EXPORT.
+     */
+    private Meter gridTieExportMeter(Long id) {
         Meter m = new Meter();
         m.setId(id);
         m.setCode("M-" + id);
-        m.setName("Export Meter " + id);
+        m.setName("Grid-Tie Export Meter " + id);
         m.setEnergyTypeId(10L);
         m.setOrgNodeId(ORG_ID);
         m.setInfluxMeasurement("electricity");
         m.setInfluxTagKey("meter");
         m.setInfluxTagValue("M-" + id);
+        m.setRole(MeterRole.GRID_TIE);
+        m.setEnergySource(EnergySource.GRID);
         m.setFlowDirection(FlowDirection.EXPORT);
+        return m;
+    }
+
+    /** Generic builder for arbitrary role/source/direction combos used in negative tests. */
+    private Meter meter(Long id, MeterRole role, EnergySource source, FlowDirection dir) {
+        Meter m = new Meter();
+        m.setId(id);
+        m.setCode("M-" + id);
+        m.setName("Meter " + id);
+        m.setEnergyTypeId(10L);
+        m.setOrgNodeId(ORG_ID);
+        m.setInfluxMeasurement("electricity");
+        m.setInfluxTagKey("meter");
+        m.setInfluxTagValue("M-" + id);
+        m.setRole(role);
         m.setEnergySource(source);
+        m.setFlowDirection(dir);
         return m;
     }
 
@@ -74,13 +97,14 @@ class FeedInRevenueServiceImplTest {
     }
 
     // ------------------------------------------------------------------
-    // Test 1: multi-period TOU tariff sums correctly
+    // Test 1: multi-period TOU tariff sums correctly (happy path)
     // 100 kWh PEAK × 0.45 + 200 kWh FLAT × 0.40 + 50 kWh VALLEY × 0.35
     // = 45 + 80 + 17.5 = 142.5
+    // Meter is GRID_TIE+EXPORT (the physical sell-back point).
     // ------------------------------------------------------------------
     @Test
     void multiPeriodTariff_sumsCorrectly() {
-        Meter m = exportMeter(100L, EnergySource.SOLAR);
+        Meter m = gridTieExportMeter(100L);
         when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID))).thenReturn(List.of(m));
 
         // 10 PEAK hours × 10 kWh = 100 kWh (day 1, hours 0-9)
@@ -135,7 +159,7 @@ class FeedInRevenueServiceImplTest {
     // ------------------------------------------------------------------
     @Test
     void noTariffRow_throwsIllegalStateException() {
-        Meter m = exportMeter(101L, EnergySource.SOLAR);
+        Meter m = gridTieExportMeter(101L);
         when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID))).thenReturn(List.of(m));
 
         List<HourlyUsage> usages = List.of(
@@ -155,17 +179,70 @@ class FeedInRevenueServiceImplTest {
     }
 
     // ------------------------------------------------------------------
-    // Test 3: zero export (no EXPORT meters) → returns ZERO, no tariff lookup
+    // Test 3: no GRID_TIE+EXPORT meter under the org → returns ZERO,
+    // no usage or tariff lookup performed.
     // ------------------------------------------------------------------
     @Test
     void zeroExport_returnsZero() {
-        Meter importMeter = exportMeter(102L, EnergySource.SOLAR);
-        importMeter.setFlowDirection(FlowDirection.IMPORT);
-        when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID))).thenReturn(List.of(importMeter));
+        Meter consumeMeter = meter(102L, MeterRole.CONSUME, EnergySource.GRID, FlowDirection.IMPORT);
+        when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID))).thenReturn(List.of(consumeMeter));
 
         BigDecimal revenue = service.computeRevenue(ORG_ID, EnergySource.SOLAR, FROM, TO);
 
         assertThat(revenue).isEqualByComparingTo(BigDecimal.ZERO);
         verifyNoInteractions(usageReader, tariffRepo);
+    }
+
+    // ------------------------------------------------------------------
+    // Test 4: SOLAR+IMPORT generation main meter is NOT picked up —
+    // only GRID_TIE+EXPORT counts. (Issue #26 regression guard.)
+    // The PV array's SOLAR-source meter sits inside the array as
+    // GENERATE+SOLAR+IMPORT, not at the sell-back point.
+    // ------------------------------------------------------------------
+    @Test
+    void solarImportGenerationMeter_isNotTreatedAsExport() {
+        Meter pvSolarMain = meter(200L, MeterRole.GENERATE, EnergySource.SOLAR, FlowDirection.IMPORT);
+        when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID))).thenReturn(List.of(pvSolarMain));
+
+        BigDecimal revenue = service.computeRevenue(ORG_ID, EnergySource.SOLAR, FROM, TO);
+
+        assertThat(revenue).isEqualByComparingTo(BigDecimal.ZERO);
+        verifyNoInteractions(usageReader, tariffRepo);
+    }
+
+    // ------------------------------------------------------------------
+    // Test 5: standard PV scenario (Issue #26 fix verification).
+    // Meter is role=GRID_TIE, source=GRID, dir=EXPORT (并网出线表).
+    // computeRevenue(orgNodeId, EnergySource.SOLAR, ...) should return
+    // revenue priced by the SOLAR tariff band — NOT zero.
+    //
+    // 15,000 kWh × 0.40 元/kWh (FLAT, SOLAR) = 6,000 元
+    // ------------------------------------------------------------------
+    @Test
+    void pvScenario_gridTieExportMeter_returnsSolarTariffRevenue() {
+        Meter gridTieExport = gridTieExportMeter(300L);
+        // The PV-SOLAR-MAIN must be ignored even when present alongside the export meter.
+        Meter pvSolarMain = meter(301L, MeterRole.GENERATE, EnergySource.SOLAR, FlowDirection.IMPORT);
+        when(meterRepository.findByOrgNodeIdIn(List.of(ORG_ID)))
+            .thenReturn(List.of(gridTieExport, pvSolarMain));
+
+        // 15,000 kWh of FLAT-classified hourly export readings on the GRID_TIE+EXPORT meter.
+        List<HourlyUsage> usages = List.of(
+            new HourlyUsage(
+                OffsetDateTime.of(2025, 1, 15, 12, 0, 0, 0, TZ),
+                new BigDecimal("15000"))
+        );
+        when(usageReader.hourly(eq(300L), any(), any())).thenReturn(usages);
+        when(tariffService.resolvePeriodType(eq(10L), any(OffsetDateTime.class))).thenReturn("FLAT");
+
+        // Tariff lookup uses the source argument (SOLAR), not the meter's energy_source (GRID).
+        when(tariffRepo.findEffective("CN", EnergySource.SOLAR, "FLAT", TO))
+            .thenReturn(Optional.of(tariff("FLAT", "0.40")));
+
+        BigDecimal revenue = service.computeRevenue(ORG_ID, EnergySource.SOLAR, FROM, TO);
+
+        assertThat(revenue).isEqualByComparingTo("6000");
+        // The PV-SOLAR-MAIN (id=301) must not have been read.
+        verify(usageReader, never()).hourly(eq(301L), any(), any());
     }
 }
