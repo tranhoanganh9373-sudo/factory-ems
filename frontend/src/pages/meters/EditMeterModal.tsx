@@ -1,7 +1,15 @@
 import { Modal, Form, Input, Select, Switch, message, Typography } from 'antd';
 import { useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { meterApi, MeterDTO, UpdateMeterReq, ValueKind, MeterRole, EnergySource, FlowDirection } from '@/api/meter';
+import {
+  meterApi,
+  MeterDTO,
+  UpdateMeterReq,
+  ValueKind,
+  MeterRole,
+  EnergySource,
+  FlowDirection,
+} from '@/api/meter';
 import { orgTreeApi, OrgNodeDTO } from '@/api/orgtree';
 import { channelApi } from '@/api/channel';
 
@@ -28,9 +36,7 @@ const VALUE_KIND_TOOLTIP = (
       <li>典型场景：安科瑞 ACR 系列 0x003F (UINT32 总电能 kWh)、电表"电度"寄存器</li>
       <li style={{ color: '#faad14' }}>注意：区间内换表/计数器归零会得到负数或异常值</li>
     </ul>
-    <div style={{ marginTop: 10, marginBottom: 4, fontWeight: 600 }}>
-      瞬时功率 (INSTANT_POWER)
-    </div>
+    <div style={{ marginTop: 10, marginBottom: 4, fontWeight: 600 }}>瞬时功率 (INSTANT_POWER)</div>
     <ul style={{ margin: 0, paddingLeft: 18 }}>
       <li>含义：寄存器是当前瞬时值（W / kW）</li>
       <li style={{ color: '#ff4d4f' }}>暂不支持区间合计（需要时间积分）</li>
