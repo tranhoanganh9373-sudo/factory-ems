@@ -82,6 +82,6 @@ test('dashboard KPI, charts, and TopN render correctly', async ({ page }) => {
 
   // 抽屉里至少能看到 测点 / MOCK 之类文本
   await expect(
-    drawer.getByText(/MOCK-M|测点|meter/i).first()
+    drawer.getByText(/MOCK-|测点|meter/i).first()
   ).toBeVisible({ timeout: 10_000 });
 });

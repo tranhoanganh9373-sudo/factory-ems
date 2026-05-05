@@ -13,13 +13,13 @@ test('alarm smoke: health + history + rules + webhook (admin)', async ({ page })
 
   // 1) 健康总览页
   await page.goto('/alarms/health');
-  await expect(page.getByText(/在线设备/)).toBeVisible();
+  await expect(page.getByText(/在线测点/)).toBeVisible();
   await expect(page.getByText(/报警中/)).toBeVisible();
 
   // 2) Webhook 配置 + 测试（指向不可达端口期望失败/非2xx，不强求文案）
   await page.goto('/alarms/webhook');
-  // 等待表单加载
-  await expect(page.getByText(/Webhook/i).first()).toBeVisible();
+  // 等待表单加载 — 页面标题为"报警通知配置"
+  await expect(page.getByText(/报警通知配置/).first()).toBeVisible();
   // URL 输入框可能用 label 也可能用占位符，宽容匹配
   const urlInput = page.locator('input[id*="url" i], input[placeholder*="http" i]').first();
   await urlInput.fill('http://127.0.0.1:1/'); // 不可达端口
@@ -33,7 +33,7 @@ test('alarm smoke: health + history + rules + webhook (admin)', async ({ page })
 
   // 3) 阈值规则页 — 可达 + 显示默认值卡 + 表格
   await page.goto('/alarms/rules');
-  await expect(page.getByText(/全局默认|默认阈值|静默超时/)).toBeVisible();
+  await expect(page.getByText(/全局默认|默认阈值|静默超时/).first()).toBeVisible();
 
   // 4) 历史页 — 可达 + 表格存在
   await page.goto('/alarms/history');

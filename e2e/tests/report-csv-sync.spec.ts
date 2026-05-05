@@ -55,7 +55,7 @@ async function readFirstBytes(download: any, n: number): Promise<number[]> {
 test('sync CSV export downloads a valid UTF-8 BOM csv file', async ({ page }) => {
   await login(page);
   await page.goto('/report');
-  await expect(page.locator('.ant-card-head-title').filter({ hasText: '报表' }).first()).toBeVisible({
+  await expect(page.getByRole('main').getByText('即席查询').first()).toBeVisible({
     timeout: 10_000,
   });
 

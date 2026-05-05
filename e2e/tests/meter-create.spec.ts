@@ -30,21 +30,21 @@ async function pickSelectOption(page: any, text: string) {
 }
 
 test('admin can create and delete a meter', async ({ page }) => {
-  const meterCode = `E2E-M-${Date.now()}`;
-  const meterName = 'E2E 测点';
+  // 编码字段已移除（后端自动生成）；用唯一名称标识行
+  const meterName = `E2E-测点-${Date.now()}`;
 
   await login(page);
   await page.goto('/meters');
-  await expect(page.getByRole('main').getByText('测点管理')).toBeVisible();
+  await expect(page.getByRole('main').getByText('表计管理')).toBeVisible();
 
   // Open create form
   await page.getByRole('button', { name: /新建测点/ }).click();
 
-  // Fill code/name — Form.Item label 是"编码"/"名称"（modal 标题已有"新建测点"前缀）
-  await page.getByLabel('编码').fill(meterCode);
+  // Wait for modal to open, then fill name
+  await expect(page.locator('.ant-modal')).toBeVisible({ timeout: 10_000 });
   await page.getByLabel('名称').fill(meterName);
 
-  // Energy type — 通过 Form.Item 包装找到 .ant-select-selector，点击它能稳定打开 dropdown。
+  // Energy type
   await page
     .locator('.ant-form-item')
     .filter({ hasText: '能源类型' })
@@ -60,25 +60,10 @@ test('admin can create and delete a meter', async ({ page }) => {
     .click();
   const orgOpt = page
     .locator('.ant-select-tree-title, .ant-select-item-option')
-    .filter({ hasText: /冲压车间|MOCK-WS-A/ })
+    .filter({ hasText: /测试车间|MOCK-WS-A/ })
     .first();
   await orgOpt.waitFor({ state: 'visible' });
   await orgOpt.dispatchEvent('click');
-
-  // Influx fields — measurement is pre-filled by convention; set tag value = code
-  // Only fill if the fields are visible/required
-  const influxMeasurementInput = page.getByLabel('Measurement');
-  if (await influxMeasurementInput.isVisible()) {
-    await influxMeasurementInput.fill('energy_reading');
-  }
-  const influxTagKeyInput = page.getByLabel('Tag Key');
-  if (await influxTagKeyInput.isVisible()) {
-    await influxTagKeyInput.fill('meter_code');
-  }
-  const influxTagValueInput = page.getByLabel('Tag Value');
-  if (await influxTagValueInput.isVisible()) {
-    await influxTagValueInput.fill(meterCode);
-  }
 
   // Submit
   await page.getByRole('button', { name: '确 定' }).click();
@@ -86,20 +71,19 @@ test('admin can create and delete a meter', async ({ page }) => {
   // Assert toast / success message
   await expect(page.getByText(/已创建|创建成功|success/i)).toBeVisible({ timeout: 10_000 });
 
-  // Assert new row appears in the table
-  await expect(page.locator('.ant-table-row').filter({ hasText: meterCode })).toBeVisible({
+  // Assert new row appears in the table (find by unique name)
+  await expect(page.locator('.ant-table-row').filter({ hasText: meterName })).toBeVisible({
     timeout: 10_000,
   });
 
-  // ── Cleanup: delete the row (try/finally to always attempt cleanup) ──
+  // ── Cleanup: delete the row ──
   try {
-    const row = page.locator('.ant-table-row').filter({ hasText: meterCode });
+    const row = page.locator('.ant-table-row').filter({ hasText: meterName });
     await row.getByRole('button', { name: /删除/ }).click();
     // Confirm the AntD Popconfirm
     await page.getByRole('button', { name: /确认|确 定|是/ }).last().click();
     await expect(row).toHaveCount(0, { timeout: 10_000 });
   } catch {
-    // Cleanup failure should not fail the test — log and continue
-    console.warn('[K1] Cleanup (delete meter) failed for code:', meterCode);
+    console.warn('[K1] Cleanup (delete meter) failed for name:', meterName);
   }
 });

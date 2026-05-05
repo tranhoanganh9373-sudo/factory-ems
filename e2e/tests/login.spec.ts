@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('admin can login and logout', async ({ page }) => {
   await page.goto('/login');
-  await expect(page.getByText('工厂能源管理系统')).toBeVisible();
+  await expect(page.getByText('松羽科技集团', { exact: true })).toBeVisible();
 
   await page.getByPlaceholder('用户名').fill('admin');
   await page.getByPlaceholder('密码').fill('admin123!');
